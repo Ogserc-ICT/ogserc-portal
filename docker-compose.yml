@@ -1,0 +1,35 @@
+# Portability check: runs the production image against a local PostgreSQL.
+# Day-to-day development uses `pnpm dev` with the hosted dev database instead.
+#
+#   PAYLOAD_SECRET=<random string> docker compose up --build
+#   then open http://localhost:3000
+
+services:
+  app:
+    build: .
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgres://ogserc:ogserc@db:5432/ogserc
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?Set PAYLOAD_SECRET in your shell before running docker compose}
+      SITE_URL: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ogserc
+      POSTGRES_PASSWORD: ogserc
+      POSTGRES_DB: ogserc
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ogserc -d ogserc']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

@@ -29,13 +29,16 @@ Do not add new libraries without explaining why and getting approval. Prefer wha
 
 ## Commands
 
-(Update this section once the project is scaffolded.)
-
 - `pnpm dev`: start the dev server
 - `pnpm build`: production build
+- `pnpm start`: run the production build
 - `pnpm lint`: lint
-- `pnpm typecheck`: TypeScript check
-- `pnpm test:e2e`: Playwright tests
+- `pnpm typecheck`: TypeScript check (generates Next.js route types first)
+- `pnpm test:e2e`: Playwright tests with axe accessibility checks (mobile 360px and desktop)
+- `pnpm migrate:create <name>`: create a migration after changing collections (schema push is off; see docs/DECISIONS.md D-008)
+- `pnpm migrate` / `pnpm migrate:status`: apply / list migrations
+- `pnpm generate:types` and `pnpm generate:importmap`: regenerate Payload types and admin import map after collection changes
+- `pnpm audit --audit-level high`: dependency audit as run in CI
 
 Before saying a task is done, run lint, typecheck, and the relevant tests, and fix failures.
 
@@ -60,6 +63,7 @@ Before saying a task is done, run lint, typecheck, and the relevant tests, and f
 - Documents always show status (draft, published, superseded, revoked), and superseded documents remain accessible.
 - Use server components by default; use client components only when interactivity needs them.
 - Write small, focused functions. Add comments only where intent is not obvious.
+- Before writing Next.js code, consult the version-matched docs in node_modules/next/dist/docs/ (see AGENTS.md). If AGENTS.md ever conflicts with this file or docs/SRS.md, CLAUDE.md and the SRS take precedence.
 
 ## Security and data rules
 
@@ -115,5 +119,5 @@ The site must be movable to any host that runs Node.js or Docker (a VPS, Railway
 9. Media Center and Resources: news, tenders, events, galleries, reports, publications
 10. Site-wide search including PDF text
 11. SEO (sitemap, metadata), analytics, performance and accessibility pass
-12. Playwright tests for critical flows, security checklist review, README, RUNBOOK
+12. Playwright tests for critical flows, security checklist review, set up a strict Content Security Policy (see docs/DECISIONS.md D-011), README, RUNBOOK
 13. Staging deploy and launch checklist (backup restore test, monitoring, spend limits, email SPF/DKIM/DMARC, placeholder content removed)
