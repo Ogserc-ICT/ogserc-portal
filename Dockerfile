@@ -2,7 +2,7 @@
 # Build:  docker build -t ogserc-portal .
 # Run:    docker run --env-file .env -p 3000:3000 ogserc-portal
 
-FROM node:22-alpine AS base
+FROM node:26-alpine AS base
 RUN apk add --no-cache libc6-compat && corepack enable
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -24,7 +24,7 @@ ENV DATABASE_URL=postgres://build:build@localhost:5432/build \
 RUN pnpm build
 
 # 3. Small runtime image, running as a non-root user.
-FROM node:22-alpine AS runner
+FROM node:26-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
