@@ -63,6 +63,7 @@ Before saying a task is done, run lint, typecheck, and the relevant tests, and f
 - Documents always show status (draft, published, superseded, revoked), and superseded documents remain accessible.
 - Use server components by default; use client components only when interactivity needs them.
 - Write small, focused functions. Add comments only where intent is not obvious.
+- Before writing Next.js code, consult the version-matched docs in node_modules/next/dist/docs/ (see AGENTS.md). If AGENTS.md ever conflicts with this file or docs/SRS.md, CLAUDE.md and the SRS take precedence.
 
 ## Security and data rules
 
