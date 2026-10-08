@@ -131,3 +131,13 @@ At scaffold time:
 **Checked:** with temporary probe imports through `@/*` in a public page and in the Payload config, `pnpm typecheck`, `pnpm lint`, `pnpm build` (Next.js/Turbopack), the Payload CLI (`migrate:status`, `generate:importmap`) and `pnpm test:e2e` all passed. The probe text appeared in the built page. Pointing the probe at a missing file made the typecheck fail, which shows the alias is really being resolved. The probes were then removed and the full suite passed again. The existing `@payload-config` imports in the admin and API routes resolve in the same build.
 
 **Rule from now on:** import from `src/` with `@/…` (or a relative path), never with a bare folder name such as `collections/…`.
+
+## D-017 Accounts and repository need not be in OGSERC's name (2026-10-08)
+
+**Decision:** The SRS no longer requires hosting, domain, database, service accounts, or the code repository to be registered in OGSERC's name. They may be held under whichever accounts the developer and OGSERC choose, and the repository may be a private repository under the developer's own GitHub account. In place of ownership, the SRS now requires that account access and recovery steps be recorded in `docs/RUNBOOK.md`, and that more than one trusted person can administer each account where practical.
+
+**Changed in `docs/SRS.md`:** Section 2.2 (constraints), NFR-SEC-14 (domain security: registrar lock and two-factor stay, the ownership clause is removed), NFR-OPS-01 (repository), NFR-HOST-01 (accounts), acceptance criteria 7 and 10, and open item 9.
+
+**Why:** Project owner's decision (2026-10-08). The security controls that protect the accounts (two-factor authentication, registrar lock, DNSSEC, protected main branch, secret scanning) are unchanged; only the requirement about whose name the accounts are in was removed.
+
+**Trade-off:** If accounts are held by one person, access depends on that person. The runbook must therefore record how to access, recover, and transfer each account, so the site can still be moved or maintained by someone else.

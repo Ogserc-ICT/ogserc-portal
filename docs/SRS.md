@@ -57,7 +57,7 @@ LASERC's structure and functionality are used as the template. OGSERC's own logo
 ### 2.2 Constraints and assumptions
 - The site must work well on low-bandwidth mobile connections, since most Nigerian users browse on phones.
 - Official content (documents, fees, procedures) will be supplied by OGSERC. Delays in supply affect the launch date.
-- Hosting accounts, domain, and database must be owned by OGSERC, not by an individual.
+- Hosting, domain, database, and service accounts may be held under whichever accounts the developer and OGSERC choose; nothing in this specification requires them to be in OGSERC's name. Account details and recovery steps are recorded in the runbook.
 - Personal data collected from consumers is subject to the Nigeria Data Protection Act (2023).
 
 ### 2.3 Proposed technology (for the build; open to review)
@@ -382,7 +382,7 @@ Page, Document (with category), Draft Regulation, Licencee, Licence, Tariff (wit
 - **NFR-SEC-13** The database user used by the app has only the permissions it needs; the database is not open to the public internet except through the managed provider's secured connection.
 
 **Infrastructure and operations**
-- **NFR-SEC-14** The domain is registered in OGSERC's name with registrar lock, two-factor on the registrar and hosting accounts, and DNSSEC where supported. A CDN/WAF layer (for example Cloudflare) provides DDoS and bot protection.
+- **NFR-SEC-14** The domain has registrar lock enabled, two-factor authentication is on the registrar and hosting accounts, and DNSSEC where supported. A CDN/WAF layer (for example Cloudflare) provides DDoS and bot protection.
 - **NFR-SEC-15** Email from the domain uses SPF, DKIM, and DMARC, so messages are authentic and the domain cannot easily be spoofed.
 - **NFR-SEC-16** Backups cover the database and uploaded files, are encrypted, and are restore-tested. Monitoring alerts on downtime, error spikes, and suspicious login activity.
 - **NFR-SEC-17** A short incident response plan names who is told, who can take the site offline, how credentials are rotated, and how affected people are notified. A `security.txt` page tells researchers how to report a vulnerability.
@@ -396,7 +396,7 @@ Page, Document (with category), Draft Regulation, Licencee, Licence, Tariff (wit
 
 ### 12.2 Operations and delivery quality
 
-- **NFR-OPS-01** The source code is held in a repository in OGSERC's name (or a shared organisation), with a protected main branch and changes merged through pull requests.
+- **NFR-OPS-01** The source code is held in a private repository, which may live under the developer's own GitHub account, with a protected main branch and changes merged through pull requests.
 - **NFR-OPS-02** Automated checks run on every push: lint, type check, end-to-end tests (Playwright), and an automated accessibility check (axe). A failing check blocks merging.
 - **NFR-OPS-03** A staging site mirrors production; every change is tested there first.
 - **NFR-OPS-04** A `docs/DECISIONS.md` records major technical choices and the reasons for them.
@@ -431,7 +431,7 @@ The software used to build the portal is free and open-source (Next.js, Tailwind
 **Estimated Phase 1 running cost:** roughly USD 20 to 40 per month in total, excluding the domain.
 
 **Requirements**
-- **NFR-HOST-01** All hosting, database, domain, and service accounts shall be registered in OGSERC's name, with at least two named administrators.
+- **NFR-HOST-01** Hosting, database, domain, and service accounts may be registered under any account chosen by the developer and OGSERC. Where practical, more than one trusted person should be able to administer each account, and how to access and move them is documented in the runbook.
 - **NFR-HOST-02** OGSERC shall approve a monthly hosting budget before launch.
 - **NFR-HOST-03** Hosting spend limits and alerts shall be enabled so usage cannot create unexpected bills.
 - **NFR-HOST-04** If OGSERC or the State Government requires locally hosted infrastructure, the deployment approach shall be reviewed before the build proceeds.
@@ -447,10 +447,10 @@ The software used to build the portal is free and open-source (Next.js, Tailwind
 4. The licencee register and tariff lookup work on real OGSERC data.
 5. The site passes mobile, accessibility, and performance checks in Section 12.
 6. A backup has been restored successfully on a test environment.
-7. OGSERC owns the hosting, domain, and database accounts.
+7. Hosting, domain, and database accounts are set up, and their access and recovery steps are recorded in the runbook.
 8. README and runbook are delivered.
 9. Staff two-factor authentication is enforced, and the Section 12.1 security checklist is passed and recorded.
-10. Automated checks (lint, type check, Playwright, accessibility) pass in the repository, and the repository is in OGSERC's name.
+10. Automated checks (lint, type check, Playwright, accessibility) pass in the repository.
 11. All placeholder content is replaced with OGSERC-approved content.
 12. Legal pages (Privacy Policy, Terms, Cookie Notice, Accessibility Statement) are published.
 13. Domain email is configured with SPF, DKIM, and DMARC, and the contact form delivers to the OGSERC inbox.
@@ -470,7 +470,7 @@ Phases 2 and 3 will have acceptance criteria written before they begin.
 6. Complaint escalation procedure, categories, and response timelines.
 7. Contact details and office locations.
 8. Approval workflow: who may publish what.
-9. Domain name and who owns and administers hosting accounts.
+9. Domain name and which accounts will host the site.
 10. Preferred payment platform for Phase 3.
 11. Data retention and privacy policy approval.
 12. Who maintains the site after launch.
