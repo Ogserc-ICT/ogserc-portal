@@ -1,17 +1,25 @@
-import { mongooseAdapter } from '@payloadcms/db-mongodb'
+import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import { buildConfig } from 'payload'
-import { fileURLToPath } from 'url'
 import sharp from 'sharp'
+import { fileURLToPath } from 'url'
 
-import { Users } from './collections/Users'
 import { Media } from './collections/Media'
+import { Users } from './collections/Users'
+import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+function requireEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) throw new Error(`Missing required environment variable: ${name}`)
+  return value
+}
+
 export default buildConfig({
+  serverURL: process.env.SITE_URL,
   admin: {
     user: Users.slug,
     importMap: {
@@ -20,13 +28,23 @@ export default buildConfig({
   },
   collections: [Users, Media],
   editor: lexicalEditor(),
-  secret: process.env.PAYLOAD_SECRET || '',
+  secret: requireEnv('PAYLOAD_SECRET'),
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
-  db: mongooseAdapter({
-    url: process.env.DATABASE_URL || '',
+  // The site reads content through Payload's local API and REST; GraphQL is unused.
+  graphQL: {
+    disable: true,
+  },
+  db: postgresAdapter({
+    pool: {
+      connectionString: requireEnv('DATABASE_URL'),
+    },
+    // Schema changes go through committed migration files, never automatic "push".
+    push: false,
+    migrationDir: path.resolve(dirname, 'migrations'),
+    prodMigrations: migrations,
   }),
   sharp,
-  plugins: [],
+  telemetry: false,
 })

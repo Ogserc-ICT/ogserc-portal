@@ -9,7 +9,7 @@
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",
     "test:e2e": "cross-env NODE_OPTIONS=--no-deprecation playwright test",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
@@ -29,7 +29,15 @@
       "esbuild",
       "sharp",
       "unrs-resolver"
-    ]
+    ],
+    "overrides": {
+      "undici": "7.29.1"
+    },
+    "auditConfig": {
+      "ignoreGhsas": [
+        "GHSA-vfj7-8cjw-p6xm"
+      ]
+    }
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.90.2",
@@ -42,7 +50,7 @@
     "payload": "3.90.2",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "sharp": "0.35.4"
+    "sharp": "0.35.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
@@ -52,7 +60,7 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "dotenv": "16.4.7",
-    "eslint": "10.12.0",
+    "eslint": "9.39.5",
     "eslint-config-next": "16.4.0",
     "postcss": "8.5.29",
     "prettier": "3.9.9",

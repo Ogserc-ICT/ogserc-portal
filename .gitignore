@@ -1,5 +1,29 @@
-﻿.env
+# Secrets: only .env.example (placeholders) is committed
+.env
 .env.*
 !.env.example
+
+# Dependencies
 node_modules/
+
+# Next.js build output
 .next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Local uploads (production uses S3-compatible storage)
+/media
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.pem
+npm-debug.log*
+.vercel
