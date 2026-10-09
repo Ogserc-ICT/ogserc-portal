@@ -382,7 +382,7 @@ Page, Document (with category), Draft Regulation, Licencee, Licence, Tariff (wit
 - **NFR-SEC-13** The database user used by the app has only the permissions it needs; the database is not open to the public internet except through the managed provider's secured connection.
 
 **Infrastructure and operations**
-- **NFR-SEC-14** The domain has registrar lock enabled, two-factor authentication is on the registrar and hosting accounts, and DNSSEC where supported. A CDN/WAF layer (for example Cloudflare) provides DDoS and bot protection.
+- **NFR-SEC-14** The domain has registrar lock enabled; the registrar and hosting accounts use two-factor authentication; DNSSEC is enabled where supported. A CDN/WAF layer (for example Cloudflare) provides DDoS and bot protection.
 - **NFR-SEC-15** Email from the domain uses SPF, DKIM, and DMARC, so messages are authentic and the domain cannot easily be spoofed.
 - **NFR-SEC-16** Backups cover the database and uploaded files, are encrypted, and are restore-tested. Monitoring alerts on downtime, error spikes, and suspicious login activity.
 - **NFR-SEC-17** A short incident response plan names who is told, who can take the site offline, how credentials are rotated, and how affected people are notified. A `security.txt` page tells researchers how to report a vulnerability.

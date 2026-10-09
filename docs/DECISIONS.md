@@ -141,3 +141,11 @@ At scaffold time:
 **Why:** Project owner's decision (2026-10-08). The security controls that protect the accounts (two-factor authentication, registrar lock, DNSSEC, protected main branch, secret scanning) are unchanged; only the requirement about whose name the accounts are in was removed.
 
 **Trade-off:** If accounts are held by one person, access depends on that person. The runbook must therefore record how to access, recover, and transfer each account, so the site can still be moved or maintained by someone else.
+
+## D-018 Repository stays under the developer's account; account recovery documented (2026-10-09)
+
+**Decision:** Follows D-017. The repository stays under the `thekamiyeoladipo` GitHub account, which owns every file in `.github/CODEOWNERS`. The repository documentation no longer assumes it will move to an OGSERC organisation. `docs/RUNBOOK.md` gains Section 9, "Account access and recovery": an account register (GitHub, hosting, database, domain registrar, DNS/CDN, file storage, email sending, receiving mailbox, monitoring, analytics, and the payment provider for Phase 3), with placeholders for account holders, administrators, and where credentials are stored, plus recovery and move steps for each account. NFR-SEC-14 in the SRS is reworded for readability; its meaning is unchanged.
+
+**Why:** Once ownership is no longer required (D-017), the SRS requires that access and recovery steps be recorded instead (Section 2.2, NFR-HOST-01, acceptance criterion 7). The register uses placeholders only: no passwords, keys, or recovery codes are kept in the repository (NFR-SEC-10).
+
+**Consequence to check:** on a private repository under a personal account, GitHub branch protection and secret scanning may need a paid plan or add-on. RUNBOOK Section 2 asks for this to be confirmed. If either is unavailable, record the alternative here.
