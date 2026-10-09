@@ -172,7 +172,7 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 
 **GitHub**
 - Recover: sign in with recovery codes, or use GitHub's account recovery from the sign-in page.
-- Move: Settings → General → Danger Zone → *Transfer ownership* to another user or organisation. Issues, pull requests, and history move with it. Afterwards, update `.github/CODEOWNERS`, check that the repository is still private, and redo the settings in Section 2 (rulesets and secret scanning do not always carry over).
+- Move: Settings → General → Danger Zone → *Transfer ownership* to another user or organisation. Issues, pull requests, and history move with it. Afterwards, update `.github/CODEOWNERS`, check that the repository is still private, redo the GitHub settings in Section 2.5, and run `pnpm hooks:install` in any new clone (Section 2.2). If the new account's plan supports branch rulesets and secret scanning, turn them on as described at the end of Section 2.5.
 
 **Hosting**
 - Recover: through another member of the hosting team or project, or the provider's recovery process.

@@ -175,3 +175,20 @@ At scaffold time:
 **SRS:** NFR-OPS-01 and NFR-SEC-10 are updated to allow these alternatives where the hosting plan lacks the feature.
 
 **Revisit when:** the repository moves to a plan that enforces rulesets and offers secret scanning. Then add a `main` ruleset requiring all four checks, and turn on GitHub secret scanning with push protection. Keep the gitleaks job as a second check.
+
+## D-020 Documentation matches the free-plan safeguards (2026-10-09)
+
+**Decision:** Statements about protecting `main`, blocking merges, and secret scanning now describe what is actually in place (D-019).
+
+- **SRS NFR-OPS-02:** "A failing check blocks merging" becomes "A failing check blocks merging where the hosting plan enforces it; otherwise merging only after every check is green is a documented rule."
+- **CLAUDE.md, Workflow item 7:** now lists every CI check (lint, typecheck, dependency audit, build, Playwright with axe, secret scan, Docker build), and says GitHub does not enforce green checks on the current plan, so waiting for green is a rule to follow, not a setting.
+- **RUNBOOK §9.3 (GitHub, Move):** no longer assumes rulesets and secret scanning exist. After a transfer: redo §2.5, run `pnpm hooks:install` in any new clone, and turn on rulesets and secret scanning only if the new plan supports them.
+
+**Superseded statements:** older entries are not edited. Where they conflict with D-019, D-019 applies:
+
+- **D-017:** its list of unchanged controls includes "protected main branch" and "secret scanning". On the current plan, these are the D-019 alternatives (rule, pre-push hook, Claude Code deny rules, green CI checks, and gitleaks in CI), not GitHub features.
+- **D-018:** its "Consequence to check" is answered. The free plan offers neither feature for private repositories.
+
+**Checked and already accurate:** README (Contributing), `.github/pull_request_template.md`, RUNBOOK §2, SRS NFR-OPS-01 and NFR-SEC-10, and the comments in `scripts/git-hooks/pre-push`.
+
+**Why:** Documents that claim a protection exists when it does not invite people to rely on it, for example merging on the assumption that GitHub would have stopped a failing change.

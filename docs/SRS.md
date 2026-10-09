@@ -397,7 +397,7 @@ Page, Document (with category), Draft Regulation, Licencee, Licence, Tariff (wit
 ### 12.2 Operations and delivery quality
 
 - **NFR-OPS-01** The source code is held in a private repository, which may live under the developer's own GitHub account. Changes are merged through pull requests. The main branch is protected where the hosting plan supports it, otherwise by a documented rule, a local pre-push hook, and CI checks that must be green before merging.
-- **NFR-OPS-02** Automated checks run on every push: lint, type check, end-to-end tests (Playwright), and an automated accessibility check (axe). A failing check blocks merging.
+- **NFR-OPS-02** Automated checks run on every push: lint, type check, end-to-end tests (Playwright), and an automated accessibility check (axe). A failing check blocks merging where the hosting plan enforces it; otherwise merging only after every check is green is a documented rule.
 - **NFR-OPS-03** A staging site mirrors production; every change is tested there first.
 - **NFR-OPS-04** A `docs/DECISIONS.md` records major technical choices and the reasons for them.
 - **NFR-OPS-05** Local development uses a hosted development database (for example a free Neon development branch) so a modest computer is not slowed down; Docker is used for the production build and portability check.
