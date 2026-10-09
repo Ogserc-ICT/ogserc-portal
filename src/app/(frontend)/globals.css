@@ -1,3 +1,72 @@
 @import 'tailwindcss';
 
-/* The OGSERC theme (brand colours, type scale, spacing) is added in build step 2. */
+/*
+ * OGSERC design tokens. This is the only place colour values are defined (docs/DECISIONS.md D-023).
+ * Tailwind's default palette is removed so only these colours can be used.
+ * Contrast ratios for every text pairing are listed in D-024.
+ */
+@theme {
+  --color-*: initial;
+
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* Brand greens, sampled from the OGSERC logo (SRS 2.4). */
+  --color-green-50: #eef6ef; /* derived tint: section backgrounds */
+  --color-green-100: #dceddc; /* derived tint: hover backgrounds, text on dark green */
+  --color-green-300: #a5d07d; /* light green highlight: tints only, dark text on it */
+  --color-green-500: #1d9d62; /* mid green: 3.5:1 on white, so large text, icons and borders only */
+  --color-green-700: #1d7248; /* deep green: links, secondary buttons, menu bar */
+  --color-green-900: #0d4126; /* darkest green: utility bar, hero, footer */
+
+  /* Gold accent from the lightning bolt. Never text on white (1.5:1). */
+  --color-gold-400: #fed009;
+  --color-gold-500: #e6bc00; /* derived: primary button hover */
+
+  /*
+   * PLACEHOLDER: dark olive-brown neutral. SRS 2.4 says to sample it from the full logo lockup
+   * with the commission name, which OGSERC has not supplied yet. Replace this value when it arrives.
+   */
+  --color-ink: #4a3f2a;
+  --color-ink-muted: #5c5546; /* derived: secondary text */
+
+  /* Derived functional colours. */
+  --color-line: #c9d8cc; /* decorative borders and dividers */
+  --color-line-strong: #7a8c7e; /* form control borders: 3.6:1 on white (non-text 3:1) */
+  --color-danger: #b42318; /* error and revoked states */
+}
+
+@theme inline {
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    @apply bg-white font-sans text-ink antialiased;
+  }
+
+  /* Visible focus everywhere: darkest green on light backgrounds, gold inside .on-dark areas. */
+  :focus-visible {
+    outline: 3px solid var(--color-green-900);
+    outline-offset: 2px;
+  }
+
+  .on-dark :focus-visible {
+    outline-color: var(--color-gold-400);
+  }
+
+  .on-light :focus-visible {
+    outline-color: var(--color-green-900);
+  }
+}
