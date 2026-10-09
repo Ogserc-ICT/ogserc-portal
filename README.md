@@ -73,6 +73,12 @@ The first time you run tests, install the browser: `pnpm exec playwright install
 
 Never push directly to `main`: work on a branch and open a pull request. CI runs lint, typecheck, a dependency audit, the production build, Playwright + axe tests, a secret scan, and a Docker build. **GitHub does not block merging when checks fail on this plan, so wait until every check is green before you merge.** See [RUNBOOK §2](docs/RUNBOOK.md#2-protecting-main-and-scanning-for-secrets). Fill in the pull request template, including the security checklist when a change touches auth, uploads, forms, or access control.
 
+## Design system
+
+Colours, fonts and other design tokens are defined once, in `src/app/(frontend)/globals.css` (Tailwind v4 `@theme`). Tailwind's default palette is switched off, and lint fails on any hex colour written elsewhere in `src/`. Shared components live in `src/components/ui/` (buttons, cards, badges, form controls) and `src/components/layout/` (header, menu, footer). The menu structure is in `src/lib/navigation.ts`.
+
+With the site running, `/design-system` shows every colour and component for review, and `node scripts/design-review-screenshots.mjs` saves screenshots to `docs/design-review/`. See docs/DECISIONS.md D-023 to D-031.
+
 ## Project structure
 
 ```

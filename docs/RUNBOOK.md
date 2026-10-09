@@ -228,3 +228,16 @@ For each one, check whether the reason in D-022 still holds. For example: do Pay
 Never upgrade only one of these; production, CI, and development must run the same Node major.
 
 Last review: `<date>` by `<name>`. Next review due: `<date + 3 months>`.
+
+## 11. Placeholders to remove before launch
+
+Build step 2 added temporary placeholders so OGSERC could review the design before real content existed. Step 13 (launch checklist) must confirm every item below is gone:
+
+- [ ] `src/lib/placeholder-content.ts` deleted; all homepage content comes from the CMS (replaced in step 4, D-028).
+- [ ] No text containing "OGSERC to supply" on any page (search the site and the database).
+- [ ] The `ink` colour in `src/app/(frontend)/globals.css` replaced with the olive-brown sampled from OGSERC's full logo lockup, and the contrast checks in D-024 re-run (`pnpm test:e2e` includes axe).
+- [ ] `src/components/layout/CrestPlaceholder.tsx` replaced with the Ogun State crest image (D-029).
+- [ ] Hero photograph supplied, or the gradient approved by OGSERC as final.
+- [ ] Contact section map added (or removed) once the office address is confirmed.
+- [ ] `src/app/(frontend)/design-system/` (the review page) deleted (D-031).
+- [ ] No menu entry in `src/lib/navigation.ts` still has `ready: false`, and `/being-prepared` is removed or unused (D-027).
