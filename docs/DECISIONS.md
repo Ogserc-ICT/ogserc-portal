@@ -203,3 +203,31 @@ At scaffold time:
 **Checked:** README, `docs/RUNBOOK.md`, `CLAUDE.md`, and `.github/pull_request_template.md` contain neither inaccuracy, and no other npm, npx, or yarn commands appear in them. No changes were needed there.
 
 **Why:** Keeps the requirements consistent with what the repository actually runs.
+
+## D-022 Dependabot: weekly grouped updates, deliberately pinned majors ignored (2026-10-09)
+
+**Decision:** Updates D-002 (exact pins, Dependabot pull requests) and D-012 (dependency audit). `.github/dependabot.yml` now:
+
+- runs every **Monday** for npm, GitHub Actions, and Docker;
+- puts all **minor and patch** npm updates (except Payload) into **one weekly pull request** (`minor-and-patch` group, `patterns: ['*']`);
+- keeps every **Payload** update (`payload`, `@payloadcms/*`) in one `payload` group, so all Payload packages always move to the same version together;
+- puts all **GitHub Actions** updates into one pull request;
+- limits open pull requests to **5** for npm, **2** for GitHub Actions, and **2** for Docker;
+- **ignores the major versions** listed below.
+
+**Major versions deliberately ignored:**
+
+| Dependency | Pinned at | Major ignored | Reason |
+|---|---|---|---|
+| `typescript` | 5.9.3 | 6, 7, ... | D-005: Payload and Next.js are tested against TypeScript 5.x; TypeScript 7 is a rewrite of the compiler. |
+| `eslint` | 9.39.5 | 10, ... | D-004: `eslint-plugin-jsx-a11y`, `eslint-plugin-react` and `eslint-plugin-import` do not support ESLint 10, and the accessibility rules must run on a supported combination. |
+| `@types/node` | 22.x | 23, ... | The type definitions must match the Node.js major we run (Node 22 in `.nvmrc`, CI, and the Dockerfile); newer types would let code use features that Node 22 does not have. |
+| `node` Docker image | `22-alpine` | 23, ... | The Node major changes deliberately, together with `.nvmrc`, CI, and `@types/node` (see `docs/RUNBOOK.md` §10), so production never runs a different Node major from development and CI. |
+
+**Why:** Seven separate pull requests arrived in the first week, including major upgrades that contradict D-004 and D-005. Grouping routine updates means one review and one CI run per week. Ignoring pinned majors stops Dependabot proposing upgrades that have already been decided against, while minor and patch fixes for the same packages still arrive.
+
+**Trade-off:** ignored majors never arrive as pull requests, so they are easy to forget. `docs/RUNBOOK.md` §10 sets a review every three months, or sooner when a security notice mentions one of them.
+
+**Not affected:** Dependabot *security* updates (turned on in GitHub settings, RUNBOOK §2.5) are separate from these version-update rules and still open pull requests when a vulnerability fix exists. Majors of packages that are not pinned (for example `cross-env`, `dotenv`) still arrive as individual pull requests within the limit.
+
+**Checked:** the file parses as YAML and validates against the SchemaStore `dependabot-2.0` schema. A copy with a deliberately invalid value was rejected by the same check.
