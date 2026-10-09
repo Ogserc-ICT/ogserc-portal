@@ -192,3 +192,14 @@ At scaffold time:
 **Checked and already accurate:** README (Contributing), `.github/pull_request_template.md`, RUNBOOK §2, SRS NFR-OPS-01 and NFR-SEC-10, and the comments in `scripts/git-hooks/pre-push`.
 
 **Why:** Documents that claim a protection exists when it does not invite people to rely on it, for example merging on the assumption that GitHub would have stopped a failing change.
+
+## D-021 SRS wording matches the CI triggers and package manager (2026-10-09)
+
+**Decision:** Two SRS requirements now describe the CI as it is configured in `.github/workflows/ci.yml`.
+
+- **NFR-OPS-02:** "Automated checks run on every push" becomes "on every pull request and on every push to main". The workflow runs on `pull_request` and on `push` to `main` only. A push to a branch with no open pull request does not run CI.
+- **NFR-SEC-11:** "`npm audit` in CI" becomes "`pnpm audit` in CI". The project uses pnpm (D-002), and CI runs `pnpm audit --audit-level high` (D-012).
+
+**Checked:** README, `docs/RUNBOOK.md`, `CLAUDE.md`, and `.github/pull_request_template.md` contain neither inaccuracy, and no other npm, npx, or yarn commands appear in them. No changes were needed there.
+
+**Why:** Keeps the requirements consistent with what the repository actually runs.
