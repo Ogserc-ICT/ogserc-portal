@@ -149,3 +149,57 @@ At scaffold time:
 **Why:** Once ownership is no longer required (D-017), the SRS requires that access and recovery steps be recorded instead (Section 2.2, NFR-HOST-01, acceptance criterion 7). The register uses placeholders only: no passwords, keys, or recovery codes are kept in the repository (NFR-SEC-10).
 
 **Consequence to check:** on a private repository under a personal account, GitHub branch protection and secret scanning may need a paid plan or add-on. RUNBOOK Section 2 asks for this to be confirmed. If either is unavailable, record the alternative here.
+
+## D-019 Safeguards for a private repository on GitHub's free plan (2026-10-09)
+
+**Decision:** No branch protection rule is created. On GitHub's free personal plan, branch protection is not enforced and secret scanning is not offered for private repositories. Instead:
+
+1. **Rule:** nothing is pushed directly to `main`. Every change goes through a pull request and is merged only when all CI checks are green. This is documented in `docs/RUNBOOK.md` §2, the README, and the pull request template.
+2. **Local pre-push hook:** `scripts/git-hooks/pre-push`, installed with `pnpm hooks:install` (sets `core.hooksPath`), refuses any push whose remote ref is `refs/heads/main`. That covers `git push origin main`, `git push origin HEAD:main`, and deleting `main`. Tested by feeding the hook simulated pushes (to a branch, to `main`, `HEAD:main`, deleting `main`, a branch called `main-fix`, a tag) and by `git push --dry-run` from a temporary branch: blocked for `main`, allowed for other branches, skipped with `--no-verify`.
+3. **Claude Code project settings:** `.claude/settings.json` adds `permissions.deny` rules for `git push` commands aimed at `main` (`… main`, `… *:main`, `… *:refs/heads/main`, with or without trailing options), for both the Bash and PowerShell tools. Claude Code's documentation (code.claude.com/docs/en/permissions and /permission-modes, checked 2026-10-09) states that deny rules are checked before allow rules, block in every permission mode including `bypassPermissions`, and apply to each part of a compound command. Both forms were tested in this repository and refused. `.claude/settings.local.json` is ignored by git.
+4. **Secret scanning in CI:** a `Secret scan (gitleaks)` job downloads the gitleaks CLI v8.30.1, checks its SHA-256 checksum, and scans the full commit history. It exits with code 1, failing the check, on any finding, and redacts secrets from the log. Locally, the same version found nothing in the repository's 15 commits, and caught both fake secrets planted in a throwaway test repository (exit code 1).
+
+**Why:**
+
+- **Layers:** the hook and the Claude Code rules stop mistakes before they reach GitHub; the green-check rule and the PR template cover merging, which neither of them can control.
+- **The CLI, not the Action:** the gitleaks CLI is MIT-licensed and free for any use. The official `gitleaks/gitleaks-action` has used its own licence since v2: free for personal accounts, but it needs a licence key for organisation accounts. Running the CLI directly avoids that dependency and keeps working if the repository moves.
+- **Pinned and checked:** pinning the version and checksum means CI runs exactly the binary that was reviewed.
+
+**Limits:**
+
+- **The hook:** it only runs where `pnpm hooks:install` has been run, and `git push --no-verify` skips it.
+- **The Claude Code rules:** they match the command text. The documentation says they are not a security boundary; a form like `git -C . push origin main` is not matched, but the hook catches it.
+- **Merging:** nothing technically stops a merge with failing checks. The person merging must wait for green.
+- **Upgrades:** Dependabot does not update the pinned gitleaks version, so upgrade it by hand (RUNBOOK §2.4).
+
+**SRS:** NFR-OPS-01 and NFR-SEC-10 are updated to allow these alternatives where the hosting plan lacks the feature.
+
+**Revisit when:** the repository moves to a plan that enforces rulesets and offers secret scanning. Then add a `main` ruleset requiring all four checks, and turn on GitHub secret scanning with push protection. Keep the gitleaks job as a second check.
+
+## D-020 Documentation matches the free-plan safeguards (2026-10-09)
+
+**Decision:** Statements about protecting `main`, blocking merges, and secret scanning now describe what is actually in place (D-019).
+
+- **SRS NFR-OPS-02:** "A failing check blocks merging" becomes "A failing check blocks merging where the hosting plan enforces it; otherwise merging only after every check is green is a documented rule."
+- **CLAUDE.md, Workflow item 7:** now lists every CI check (lint, typecheck, dependency audit, build, Playwright with axe, secret scan, Docker build), and says GitHub does not enforce green checks on the current plan, so waiting for green is a rule to follow, not a setting.
+- **RUNBOOK §9.3 (GitHub, Move):** no longer assumes rulesets and secret scanning exist. After a transfer: redo §2.5, run `pnpm hooks:install` in any new clone, and turn on rulesets and secret scanning only if the new plan supports them.
+
+**Superseded statements:** older entries are not edited. Where they conflict with D-019, D-019 applies:
+
+- **D-017:** its list of unchanged controls includes "protected main branch" and "secret scanning". On the current plan, these are the D-019 alternatives (rule, pre-push hook, Claude Code deny rules, green CI checks, and gitleaks in CI), not GitHub features.
+- **D-018:** its "Consequence to check" is answered. The free plan offers neither feature for private repositories.
+
+**Checked and already accurate:** README (Contributing), `.github/pull_request_template.md`, RUNBOOK §2, SRS NFR-OPS-01 and NFR-SEC-10, and the comments in `scripts/git-hooks/pre-push`.
+
+**Why:** Documents that claim a protection exists when it does not invite people to rely on it, for example merging on the assumption that GitHub would have stopped a failing change.
+
+## D-021 SRS wording matches the CI triggers and package manager (2026-10-09)
+
+**Decision:** Two SRS requirements now describe the CI as it is configured in `.github/workflows/ci.yml`.
+
+- **NFR-OPS-02:** "Automated checks run on every push" becomes "on every pull request and on every push to main". The workflow runs on `pull_request` and on `push` to `main` only. A push to a branch with no open pull request does not run CI.
+- **NFR-SEC-11:** "`npm audit` in CI" becomes "`pnpm audit` in CI". The project uses pnpm (D-002), and CI runs `pnpm audit --audit-level high` (D-012).
+
+**Checked:** README, `docs/RUNBOOK.md`, `CLAUDE.md`, and `.github/pull_request_template.md` contain neither inaccuracy, and no other npm, npx, or yarn commands appear in them. No changes were needed there.
+
+**Why:** Keeps the requirements consistent with what the repository actually runs.

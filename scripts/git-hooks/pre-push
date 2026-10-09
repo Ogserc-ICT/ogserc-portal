@@ -1,0 +1,35 @@
+#!/bin/sh
+# Blocks pushing directly to main. Changes reach main only through a pull request.
+# GitHub's free plan does not enforce branch protection on private repositories,
+# so this local hook is the guard (see docs/RUNBOOK.md, Section 2).
+#
+# Install once per clone:  pnpm hooks:install
+# Deliberate bypass:       git push --no-verify   (emergencies only)
+
+protected_branch="main"
+blocked=0
+
+# Git passes one line per ref being pushed: <local ref> <local sha> <remote ref> <remote sha>
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/$protected_branch" ]; then
+    blocked=1
+  fi
+done
+
+if [ "$blocked" -eq 1 ]; then
+  cat >&2 <<MSG
+
+  Push to '$protected_branch' blocked.
+
+  Changes reach '$protected_branch' only through a pull request:
+    1. git switch -c <type>/<short-description>
+    2. git push -u origin <type>/<short-description>
+    3. Open a pull request on GitHub and wait for every CI check to be green.
+
+  Bypassing on purpose (emergencies only): git push --no-verify
+
+MSG
+  exit 1
+fi
+
+exit 0

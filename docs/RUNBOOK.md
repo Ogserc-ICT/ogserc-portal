@@ -19,19 +19,61 @@ Every setting comes from environment variables. The full list, with explanations
 | `SMTP_*`, `EMAIL_FROM`, `CONTACT_FORM_TO` | From step 5 | Email for the contact form. |
 | `TURNSTILE_*` | From step 5 | Bot protection on forms. |
 
-## 2. GitHub repository settings (one-time, done by hand)
+## 2. Protecting `main` and scanning for secrets
 
-These cannot be set from code. Do them once in GitHub, and again if the repository is ever transferred to another account (see Section 9). NFR-OPS-01 requires a private repository with a protected main branch and changes merged through pull requests.
+The repository is private and on GitHub's free personal plan. On that plan, **GitHub does not enforce branch protection and does not offer secret scanning for private repositories.** NFR-OPS-01 and NFR-SEC-10 allow for this. Until the plan changes, `main` is protected by the rule, the hook, the Claude Code settings and the CI checks below, and secrets are caught by a scanner in CI (D-019 in `docs/DECISIONS.md`).
 
-> **Check the GitHub plan.** For a *private* repository under a personal account, branch protection (step 1) and secret scanning (step 2) may need a paid GitHub plan or add-on. Confirm on GitHub's current pricing pages. If a setting is unavailable, record that in `docs/DECISIONS.md` together with what is used instead.
+### 2.1 The rule
 
-1. **Protect `main`.** Settings → Rules → Rulesets → New branch ruleset.
-   - Target: the default branch.
-   - Turn on: *Restrict deletions*, *Require a pull request before merging* (1 approval), *Require status checks to pass*, *Block force pushes*.
-   - Under status checks, add: `Lint, typecheck, audit`, `Build and end-to-end tests (Playwright + axe)`, and `Docker image builds`. They appear in the list after CI has run once.
-2. **Secret scanning.** Settings → Code security → turn on *Secret scanning* and *Push protection* (NFR-SEC-10).
-3. **Dependabot.** On the same page, turn on *Dependabot alerts* and *Dependabot security updates*. Version updates are already configured in `.github/dependabot.yml`.
-4. **Account security.** Require two-factor authentication for everyone with access to the repository.
+**Nothing is pushed directly to `main`.** Every change goes on a branch, then through a pull request, and is merged only when every CI check is green.
+
+> **GitHub will not stop you.** On this plan, the *Merge pull request* button works even when checks are failing or still running. **You must wait until every check shows a green tick before merging.** A red or yellow check means do not merge.
+
+The checks that must all be green on every pull request:
+
+- `Lint, typecheck, audit`
+- `Build and end-to-end tests (Playwright + axe)`
+- `Secret scan (gitleaks)`
+- `Docker image builds`
+
+### 2.2 Local pre-push hook (install once per clone)
+
+A git hook in `scripts/git-hooks/pre-push` refuses any push whose destination is `main` (including `git push origin HEAD:main` and deleting `main`), and explains what to do instead. Install it once in every clone:
+
+```sh
+pnpm hooks:install
+```
+
+This runs `git config core.hooksPath scripts/git-hooks`, telling git to use the hooks committed in the repository. Check it with `git config core.hooksPath`, which should print `scripts/git-hooks`.
+
+- **It is a safety net, not a lock.** It only runs on machines where it is installed, and anyone can skip it on purpose with `git push --no-verify`. Use that only in an emergency, and record why in the pull request or `docs/DECISIONS.md`.
+- It does not affect merging a pull request on GitHub; it only stops direct pushes from your computer.
+
+### 2.3 Claude Code settings
+
+`.claude/settings.json` (committed) has `permissions.deny` rules that stop Claude Code from running `git push` commands aimed at `main`, such as `git push origin main` and `git push origin HEAD:main`, through its Bash or PowerShell tools. Deny rules apply in every permission mode. They match the command as written, so an unusual form (for example `git -C . push origin main`) is not caught by them; the pre-push hook catches that case. Personal Claude Code settings go in `.claude/settings.local.json`, which git ignores.
+
+### 2.4 Secret scanning in CI
+
+The `Secret scan (gitleaks)` CI job scans the **entire commit history** with [gitleaks](https://github.com/gitleaks/gitleaks) (MIT licence, free for any account) and **fails the check if it finds a secret**. The log shows the file and commit but hides the secret itself.
+
+If it fails:
+
+1. Treat the secret as leaked, even though the repository is private. **Rotate it first** (create a new key or password with the provider and revoke the old one), then update the environment variables where it is used.
+2. Remove it from the code. Because the scan covers history, a later commit that deletes the secret does not clear the check. Ask for help to rewrite the branch history before merging.
+3. If the finding is a false positive (not a real secret), add `gitleaks:allow` as a comment on that line, or add the finding's fingerprint (shown in the CI log) to a `.gitleaksignore` file, and explain it in the pull request.
+
+**Upgrading gitleaks:** Dependabot does not update it. To upgrade, change `GITLEAKS_VERSION` in `.github/workflows/ci.yml` and replace `GITLEAKS_SHA256` with the `linux_x64.tar.gz` line from that release's `checksums.txt`.
+
+### 2.5 GitHub settings that do work on the free plan
+
+Do these once, and again if the repository is transferred to another account (see Section 9):
+
+1. **Dependabot.** Settings → Advanced Security (or Code security) → turn on *Dependabot alerts* and *Dependabot security updates*. Version updates are already configured in `.github/dependabot.yml`.
+2. **Account security.** Turn on two-factor authentication for every GitHub account with access to the repository.
+3. **Keep the repository private.** Settings → General → Danger Zone should show *Change visibility: private*.
+
+**If the plan is upgraded** (or the repository moves to an organisation plan that supports these features): add a branch ruleset for `main` (Settings → Rules → Rulesets) that requires a pull request and all four checks above, blocks force pushes, and restricts deletion. Turn on GitHub secret scanning and push protection too. Keep the gitleaks job. Record the change in `docs/DECISIONS.md`.
 
 ## 3. Database migrations
 
@@ -130,7 +172,7 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 
 **GitHub**
 - Recover: sign in with recovery codes, or use GitHub's account recovery from the sign-in page.
-- Move: Settings → General → Danger Zone → *Transfer ownership* to another user or organisation. Issues, pull requests, and history move with it. Afterwards, update `.github/CODEOWNERS`, check that the repository is still private, and redo the settings in Section 2 (rulesets and secret scanning do not always carry over).
+- Move: Settings → General → Danger Zone → *Transfer ownership* to another user or organisation. Issues, pull requests, and history move with it. Afterwards, update `.github/CODEOWNERS`, check that the repository is still private, redo the GitHub settings in Section 2.5, and run `pnpm hooks:install` in any new clone (Section 2.2). If the new account's plan supports branch rulesets and secret scanning, turn them on as described at the end of Section 2.5.
 
 **Hosting**
 - Recover: through another member of the hosting team or project, or the provider's recovery process.
