@@ -207,3 +207,24 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 
 **Payment provider (Phase 3)**
 - Not set up in Phase 1. When it is, add its recovery and move steps here, including how webhook signing secrets are rotated (NFR-SEC-21).
+
+## 10. Planned upgrades
+
+Dependabot is told to **ignore some major versions** on purpose (D-022 in `docs/DECISIONS.md`): TypeScript, ESLint, `@types/node`, and the Docker Node image. **Ignored majors never arrive as pull requests**, so nobody is reminded about them automatically. Review them on purpose:
+
+- **every three months**, and
+- **straight away** when a security notice (GitHub Dependabot alert, `pnpm audit`, or the project's own advisory) mentions one of them.
+
+For each one, check whether the reason in D-022 still holds. For example: do Payload and Next.js now support the new TypeScript major? Do the Next.js lint plugins now support the new ESLint major? Is a newer Node version now the active LTS and supported by Payload and Next.js? If the reason has gone, upgrade in a dedicated pull request, run the full CI, and record it in `docs/DECISIONS.md`.
+
+**Node.js upgrades must change everything in one pull request:**
+
+- `.nvmrc` (used by CI and developers)
+- both `FROM node:…-alpine` lines in the `Dockerfile`
+- `@types/node` in `package.json` (to the same major)
+- the `engines.node` range in `package.json`, if it needs to change
+- `.github/workflows/ci.yml`, if anything there refers to a Node version
+
+Never upgrade only one of these; production, CI, and development must run the same Node major.
+
+Last review: `<date>` by `<name>`. Next review due: `<date + 3 months>`.

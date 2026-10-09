@@ -1,23 +1,51 @@
-# Weekly pull requests for dependency and GitHub Actions updates (NFR-SEC-11).
+# Dependency update pull requests (NFR-SEC-11).
+# Routine minor and patch updates arrive as one grouped pull request per ecosystem per week.
+# Major updates to deliberately pinned tools are ignored; upgrade them on purpose (docs/DECISIONS.md).
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+      day: monday
+    open-pull-requests-limit: 5
     groups:
-      # Payload packages must stay on the same version, so update them together.
+      # Payload packages must stay on the same version, so every Payload update is one PR.
       payload:
         patterns: ['payload', '@payloadcms/*']
+      # Everything else that is minor or patch: one weekly PR.
       minor-and-patch:
-        update-types: [minor, patch]
+        patterns: ['*']
         exclude-patterns: ['payload', '@payloadcms/*']
+        update-types: [minor, patch]
+    ignore:
+      # D-005: stay on TypeScript 5.x until Payload and Next.js support newer majors.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # D-004: stay on ESLint 9 until the Next.js lint plugins support ESLint 10.
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
+      # Node type definitions must match the Node major we run (.nvmrc).
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: monday
+    open-pull-requests-limit: 2
+    groups:
+      github-actions:
+        patterns: ['*']
+
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+      day: monday
+    open-pull-requests-limit: 2
+    ignore:
+      # The Node major is changed deliberately, together with .nvmrc and CI.
+      - dependency-name: node
+        update-types: [version-update:semver-major]
