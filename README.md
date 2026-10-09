@@ -24,9 +24,10 @@ Website and regulatory information portal for the Ogun State Electricity Regulat
 
 Requirements: Node.js 22 (see `.nvmrc`) and pnpm 10. Docker is optional (only for the portability check).
 
-1. Install dependencies:
+1. Install dependencies and the git hook that blocks direct pushes to `main`:
    ```sh
    pnpm install
+   pnpm hooks:install
    ```
 2. Create `.env` from the template and fill it in:
    ```sh
@@ -64,12 +65,13 @@ Requirements: Node.js 22 (see `.nvmrc`) and pnpm 10. Docker is optional (only fo
 | `pnpm migrate:status` | Show which migrations have run |
 | `pnpm generate:types` | Regenerate `src/payload-types.ts` after changing collections |
 | `pnpm generate:importmap` | Regenerate the admin panel's component import map |
+| `pnpm hooks:install` | Use the repository's git hooks (blocks direct pushes to `main`); run once per clone |
 
 The first time you run tests, install the browser: `pnpm exec playwright install chromium`.
 
 ## Contributing
 
-Work on a branch and open a pull request; `main` is protected. CI runs lint, typecheck, a dependency audit, the production build, Playwright + axe tests, and a Docker build. All must pass before merging. Fill in the pull request template, including the security checklist when a change touches auth, uploads, forms, or access control.
+Never push directly to `main`: work on a branch and open a pull request. CI runs lint, typecheck, a dependency audit, the production build, Playwright + axe tests, a secret scan, and a Docker build. **GitHub does not block merging when checks fail on this plan, so wait until every check is green before you merge.** See [RUNBOOK §2](docs/RUNBOOK.md#2-protecting-main-and-scanning-for-secrets). Fill in the pull request template, including the security checklist when a change touches auth, uploads, forms, or access control.
 
 ## Project structure
 

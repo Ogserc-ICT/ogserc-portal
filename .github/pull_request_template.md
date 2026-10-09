@@ -12,6 +12,7 @@
 - [ ] `pnpm typecheck`
 - [ ] `pnpm test:e2e` (Playwright + axe), with a test added or updated for any user-facing flow
 - [ ] Checked at 360px wide
+- [ ] All CI checks are green (GitHub does not block a merge with failing checks on this plan)
 
 ## Security checklist
 

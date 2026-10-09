@@ -376,7 +376,7 @@ Page, Document (with category), Draft Regulation, Licencee, Licence, Tariff (wit
 - **NFR-SEC-09** Errors shown to users never reveal stack traces, file paths, or configuration.
 
 **Secrets, code, and dependencies**
-- **NFR-SEC-10** Secrets live only in environment variables or the host's secret store; never in the repository, prompts, screenshots, or chat. Secret scanning is enabled on the repository and a leaked key is rotated immediately.
+- **NFR-SEC-10** Secrets live only in environment variables or the host's secret store; never in the repository, prompts, screenshots, or chat. Secret scanning is provided by the host where available, otherwise by a free scanner running in CI, and a leaked key is rotated immediately.
 - **NFR-SEC-11** Automated dependency updates and vulnerability scanning (Dependabot and `npm audit` in CI); critical vulnerabilities are patched promptly.
 - **NFR-SEC-12** All code touching authentication, authorisation, file uploads, and payments is reviewed by a developer experienced in application security before Phase 2 and Phase 3 go live.
 - **NFR-SEC-13** The database user used by the app has only the permissions it needs; the database is not open to the public internet except through the managed provider's secured connection.
@@ -396,7 +396,7 @@ Page, Document (with category), Draft Regulation, Licencee, Licence, Tariff (wit
 
 ### 12.2 Operations and delivery quality
 
-- **NFR-OPS-01** The source code is held in a private repository, which may live under the developer's own GitHub account, with a protected main branch and changes merged through pull requests.
+- **NFR-OPS-01** The source code is held in a private repository, which may live under the developer's own GitHub account. Changes are merged through pull requests. The main branch is protected where the hosting plan supports it, otherwise by a documented rule, a local pre-push hook, and CI checks that must be green before merging.
 - **NFR-OPS-02** Automated checks run on every push: lint, type check, end-to-end tests (Playwright), and an automated accessibility check (axe). A failing check blocks merging.
 - **NFR-OPS-03** A staging site mirrors production; every change is tested there first.
 - **NFR-OPS-04** A `docs/DECISIONS.md` records major technical choices and the reasons for them.

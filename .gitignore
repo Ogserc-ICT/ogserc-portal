@@ -27,3 +27,6 @@ Thumbs.db
 *.pem
 npm-debug.log*
 .vercel
+
+# Claude Code personal settings (shared settings are in .claude/settings.json)
+.claude/settings.local.json
