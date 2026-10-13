@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 
 const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
-// FR-WEB-02 order, after the hero (which holds the page's only h1).
+// FR-WEB-02 order, after the hero (which holds the page's only h1, and one h2 per slide).
 const SECTION_HEADINGS = [
   'Quick services',
   'Latest updates',
@@ -26,13 +26,21 @@ test.describe('Homepage', () => {
 
     const main = page.getByRole('main')
     await expect(main.getByRole('heading', { level: 1 })).toHaveCount(1)
-    await expect(main.getByRole('heading', { level: 2 })).toHaveText(SECTION_HEADINGS)
+    const sectionHeadings = main.locator('h2:not([aria-roledescription="carousel"] h2)')
+    await expect(sectionHeadings).toHaveText(SECTION_HEADINGS)
   })
 
-  test('hero has a tagline and exactly one primary action', async ({ page }) => {
-    const hero = page.locator('section[aria-labelledby="hero-heading"]')
+  test('hero has the h1, and the visible slide has a headline and exactly one primary action', async ({
+    page,
+  }) => {
+    const hero = page.getByRole('region', { name: 'Highlights' })
     await expect(hero.getByRole('heading', { level: 1 })).toBeVisible()
-    await expect(hero.getByRole('link')).toHaveCount(1)
+    const current = hero.locator('[aria-roledescription="slide"]:not([inert])')
+    await expect(current).toHaveCount(1)
+    await expect(current.getByRole('heading', { level: 2 })).toHaveText(
+      '[Sample tagline, OGSERC to supply]',
+    )
+    await expect(current.getByRole('link')).toHaveCount(1)
   })
 
   test('quick services list the five SRS services', async ({ page }) => {
