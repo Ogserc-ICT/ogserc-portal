@@ -231,3 +231,154 @@ At scaffold time:
 **Not affected:** Dependabot *security* updates (turned on in GitHub settings, RUNBOOK §2.5) are separate from these version-update rules and still open pull requests when a vulnerability fix exists. Majors of packages that are not pinned (for example `cross-env`, `dotenv`) still arrive as individual pull requests within the limit.
 
 **Checked:** the file parses as YAML and validates against the SchemaStore `dependabot-2.0` schema. A copy with a deliberately invalid value was rejected by the same check.
+
+## D-023 Design tokens live only in `globals.css`; default palette off; lint blocks hex colours (2026-10-10)
+
+**Decision:** The project uses Tailwind v4, which has no `tailwind.config` file. Its theme is the `@theme` block in `src/app/(frontend)/globals.css`, and that block is the one place colour values are defined. The theme starts with `--color-*: initial`, which removes Tailwind's default palette (red-500, blue-600 and so on), so only OGSERC colours exist as utilities. An ESLint `no-restricted-syntax` rule fails on any hex colour in a string, template or JSX text anywhere in `src/` (this also catches Tailwind arbitrary values such as `bg-[#fff]`).
+
+**Why:** CLAUDE.md requires the palette to be defined once and never hard-coded elsewhere. Removing the default palette makes an off-brand colour impossible rather than merely discouraged. The lint rule was tested with a probe file: `bg-[#1D9D62]` and a template string containing `#fff` both failed, and `#main` (an anchor) passed.
+
+## D-024 Palette roles and contrast checks; `ink` is a placeholder (2026-10-10)
+
+**Decision:** The five logo colours from SRS 2.4 are used as follows. Derived tints are added only where needed, each with a checked purpose.
+
+| Token | Value | Role |
+|---|---|---|
+| `green-900` | `#0D4126` | utility bar, hero, footer, focus ring on light backgrounds |
+| `green-700` | `#1D7248` | links, menu bar, secondary buttons |
+| `green-500` | `#1D9D62` | icons, borders, decoration |
+| `green-300` | `#A5D07D` | highlights, badge borders |
+| `gold-400` | `#FED009` | primary buttons, accents, underlines, focus ring on dark backgrounds |
+| `ink` | `#4A3F2A` | **placeholder** olive-brown: body text, text on gold |
+| `green-50`, `green-100` | `#EEF6EF`, `#DCEDDC` | section and hover backgrounds (derived) |
+| `gold-500` | `#E6BC00` | primary button hover (derived) |
+| `ink-muted` | `#5C5546` | secondary text (derived) |
+| `line`, `line-strong` | `#C9D8CC`, `#7A8C7E` | decorative borders; form control borders (derived) |
+| `danger` | `#B42318` | errors, revoked status (derived, not a brand colour) |
+
+**Contrast checked** with the WCAG 2.1 formula (a script run during step 2), and again on the rendered pages by axe in the Playwright suite:
+
+| Pair | Ratio | Result |
+|---|---|---|
+| ink on white / green-50 / gold | 10.3 / 9.4 / 7.0 | AA text |
+| ink on gold-500 (hover) / green-300 | 5.7 / 5.9 | AA text |
+| ink-muted on white / green-50 | 7.4 / 6.7 | AA text |
+| green-700 on white / green-50 | 5.9 / 5.4 | AA text |
+| green-900 on white; white on green-900 | 11.7 | AA text |
+| white on green-700 | 5.9 | AA text |
+| gold on green-900 | 7.9 | AA text |
+| green-100 / green-50 on green-900 (hero, footer text) | 9.5 / higher | AA text |
+| danger on white / green-50 | 6.6 / 6.0 | AA text |
+| line-strong on white (input borders) | 3.6 | non-text 3:1 |
+| green-500 on white | 3.5 | **large text and non-text only** |
+| white on green-500 / ink on green-500 | 3.5 / 3.0 | **never text on green-500** (axe caught ink on green-500 on the first draft of `/design-system`) |
+| gold or gold-500 on white | 1.5 / 1.8 | **never text, never a focus ring on white** |
+
+**Placeholder:** SRS 2.4 says to sample the dark olive-brown from the full logo lockup with the commission's name. Only the wordmark was supplied (`public/brand/ogserc-logo.png`), and `docs/reference/` holds only benchmark screenshots, so there is nothing to sample. `#4A3F2A` is a stand-in, labelled in `globals.css` and on `/design-system`. When the lockup arrives, replace the value and re-run the checks (RUNBOOK §11).
+
+## D-025 Typeface: Public Sans, self-hosted with `next/font` (2026-10-10)
+
+**Decision:** Public Sans (variable, SIL Open Font License) is loaded with `next/font/google`, using the `latin`, `latin-ext` and `vietnamese` subsets and `display: swap`.
+
+**Why:**
+
+- **Purpose:** Public Sans was designed as a neutral, highly legible face for government websites.
+- **Distinct from the benchmark:** it is a sans-serif, unlike the benchmark's serif, which keeps OGSERC's look its own.
+- **Light:** one variable file covers every weight.
+- **Private:** `next/font` downloads the font at build time and serves it from our own domain, so visitors' browsers never contact Google (no third-party requests; a simpler CSP in step 12).
+- **Yoruba:** the `vietnamese` subset carries the dot-below letters used in Yoruba place names (ẹ, ọ, ṣ). This was checked in Next's font data, and the letters render on `/design-system` (Abẹokuta, Ijẹbu-Ode, Ṣagamu, Ọta).
+
+**Trade-off:** the build needs internet access to fetch the font once. CI and Docker builds already have it. If an offline build is ever required, switch to `next/font/local` with the font files committed.
+
+## D-026 Main menu: WAI-ARIA disclosure pattern in one small client component (2026-10-10)
+
+**Decision:** `src/components/layout/MainNav.tsx` is the only client component in the layout. Each dropdown is a `<button aria-expanded aria-controls>` that shows or hides a list of ordinary links (the disclosure pattern), not an ARIA `menu`/`menuitem` widget.
+
+- **Desktop (1024px and up):**
+  - Enter, Space or a click toggles a dropdown, and only one is open at a time.
+  - Escape closes it and returns focus to its button.
+  - Tabbing out or clicking elsewhere closes it.
+  - The 11-item Regulatory Instruments list shows as two columns that read downwards.
+- **Below 1024px:**
+  - A "Menu" button in the green bar expands the seven items inline, and each section is its own disclosure.
+  - Escape closes the menu and returns focus to the Menu button.
+  - The panel pushes the page down rather than covering it, so no scroll locking is needed.
+  - The utility bar (Contact Us, Licences, FAQs, Search) stays visible at every width, because it fits at 360px.
+
+**Why:** WAI-ARIA guidance recommends the disclosure pattern for site navigation. The `menu` role promises application-style arrow-key behaviour that screen-reader users do not expect on a website. Keeping everything else as server components keeps client JavaScript small for low-bandwidth users.
+
+**Checked:** Playwright tests cover:
+
+- each dropdown's link count against SRS §4
+- opening with the keyboard, closing with Escape, and focus returning to the button
+- closing on a click outside
+- the mobile panel
+- no horizontal overflow at 1024px, the narrowest desktop width (the first version overflowed by 66px, so padding was reduced)
+- axe with menus open, at 360px and 1280px
+
+## D-027 Unbuilt pages link to one shared `/being-prepared` page; the menu structure stays in code (2026-10-10)
+
+**Decision:** `src/lib/navigation.ts` records every SRS §4 destination with its final, clean, lowercase URL (for example `/regulatory-instruments/rules-and-regulations`) and a `ready` flag. While `ready` is false, the link goes to `/being-prepared`, a single page that says "This section is being prepared" (with breadcrumbs, `noindex`). When a later build step creates a page, it sets `ready: true`. Search also links there until step 10; no search box is shown before search works.
+
+**Why:** The person reviewing never meets a broken link, and no fake pages are created. URLs are decided once, now. The menu labels and structure are fixed by the SRS rather than being editable content, so they are kept in code. If OGSERC wants staff to edit the menu, a Payload global can replace this file in step 4.
+
+## D-028 Homepage placeholder content in one file: a temporary exception (2026-10-10)
+
+**Decision:** All sample text for the homepage, footer and contact details is in `src/lib/placeholder-content.ts`. Every string reads "[Sample …, OGSERC to supply]". The types roughly match the collections that step 4 will add.
+
+**Why:** The design and homepage must be reviewed before collections exist (SRS 2.5, build order). This is a **temporary exception** to the rule that content is edited in the CMS and never hard-coded. Step 4 replaces the file with Payload queries and the seed script (FR-CMS-08), and the RUNBOOK §11 checklist confirms it is gone before launch. Nothing regulatory is invented. Notice categories are the SRS FR-NEWS-03 labels. The hero button wording ("How to make a complaint") is a proposal for OGSERC to confirm.
+
+## D-029 Logo trimmed; crest slot; no hero photo or map yet; default 404 kept (2026-10-10)
+
+**Decision:**
+
+- **Logo:** the supplied wordmark has wide transparent margins (1920×1038). It was trimmed once with `sharp` (already a dependency) to `public/brand/ogserc-wordmark.png` (640×144). The original file is unchanged. The header shows it beside the commission's full name as live text, which stays sharp and is read by screen readers.
+- **Crest:** a dashed, labelled placeholder slot (`CrestPlaceholder.tsx`) holds the crest's place until OGSERC supplies it.
+- **Hero:** a green gradient with a faint gold bolt, and no photograph. No suitable photo exists, and the benchmark's images must not be used.
+- **Contact map:** a labelled placeholder. Embedding Google Maps would add third-party scripts and cookies, affecting the cookie notice (FR-WEB-06) and the CSP (D-011). The map provider is decided with the Contact page in step 5.
+- **404 page:** an unmatched URL still shows Next.js's default 404 page, which reveals no internals. Because the app has two root layouts (public site and Payload admin), a branded page for unmatched URLs needs Next's `global-not-found`, which is still experimental. Revisit in step 11.
+
+## D-030 Latest Updates is a CSS scroll-snap row, not a carousel (2026-10-10)
+
+**Decision:** The FR-WEB-02 "Latest Updates carousel" is a horizontal list with CSS scroll snapping: about one card visible on phones, two on tablets and three on desktops. There are no arrow buttons, no autoplay, and no JavaScript. The scroll area is a labelled, focusable region, so keyboard users can scroll it with the arrow keys (axe rule `scrollable-region-focusable`). A "View all news" link follows the heading.
+
+**Why:** Project owner's instruction for step 2. It also avoids the known accessibility problems of carousels (moving content, hidden controls) and keeps the page light.
+
+## D-031 `/design-system` review page (2026-10-10)
+
+**Decision:** `/design-system` shows every colour (role and contrast), the type scale, buttons, focus states, badges (including document statuses), cards and form controls. It is not linked from the site, is marked `noindex, nofollow`, and is deleted before launch (RUNBOOK §11).
+
+**Why:** SRS 2.5 asks OGSERC to approve the design system itself (colours, typography, spacing, buttons, cards, forms), not only the homepage. A live page shows real rendering and keyboard focus, which a static document cannot.
+
+## D-032 Desktop menu labels wrap instead of overflowing; font fallback fix deferred to step 11 (2026-10-13)
+
+**Problem:** In CI (Linux), the test "the menu bar fits at 1024px" failed every time: the page was 15px wider than the viewport. It passed on Windows. Findings:
+
+- **The element:** the desktop main-menu list. Its seven items could not wrap (`whitespace-nowrap`), so the last item, "User Profile", was pushed past the right edge.
+- **No headroom:** at 1024px, the labels took 1002px of the 1008px available with Public Sans on Windows, about 6px spare. Linux lays the same text out a few pixels wider, which was enough to overflow.
+- **Hidden shrinking:** the chevrons could shrink as flex items, silently absorbing small overflows before the test noticed.
+- **Not a scrollbar:** Playwright runs headless Chromium with `--hide-scrollbars` on every OS, and nothing in `src/` uses `100vw` or a full-bleed trick.
+
+**Decision:** The bar no longer depends on exact font widths. In `MainNav.tsx`:
+
+- **Items can wrap:** each desktop item can shrink (`min-w-0`), and its label may wrap onto two centred lines (`text-center leading-tight`, no `whitespace-nowrap`). Two lines fit inside the existing 48px bar, so the bar never becomes wider than the screen.
+- **Chevrons:** a chevron cannot shrink. It now follows the last word of its label inline, so a wrapped label reads "Regulatory / Instruments ⌄" rather than leaving the arrow apart from the text.
+
+**Tests:**
+
+- **Existing test:** "fits at 1024px" keeps its assertion. On failure it now prints each element past the viewport edge (tag, classes, how far) and whether Public Sans was loaded.
+- **New test:** "fits at 1024px even with a wide fallback font" blocks the web font, forces a deliberately wide font (Verdana or DejaVu Sans with extra letter spacing), and asserts three things:
+  - no horizontal overflow
+  - at least one label wraps, which proves the stress took effect
+  - no label needs more than two lines
+- **Checked against the old behaviour:** with the old no-wrap CSS injected, the new test failed with 183px of overflow, naming "User Profile".
+
+**Trade-off:** near 1024px, or with a wide fallback font, the longer labels ("Regulatory Instruments", "Consumer Complaint") can show on two lines, so the bar can look slightly different from one device to another. It never breaks. Screenshots: `docs/design-review/header-1024.png` and `header-1024-wide-fallback.png`.
+
+**Alternatives considered:**
+
+- **Show the mobile menu up to 1280px:** this would hide the desktop menu from tablets in landscape and from common laptop widths (a 1366px laptop at 125% scaling is about 1093px), and it would still depend on font widths at 1280px.
+- **Smaller text or tighter padding:** this only moves the width at which the bar breaks.
+
+**Deferred to step 11: the font fallback.** next/font's metric-matched fallback for Public Sans is `src: local(Arial)`. Linux and Android do not have Arial, so on those devices text is drawn in the system sans-serif, which is much wider (about 14% on the menu), until Public Sans loads. Slow connections make that period longer, and if the font fails, it lasts the whole visit. The layout now copes. The remaining work is visual: less text reflow when the font swaps in, and a closer match on Linux and Android. Options include a fallback stack with metric-compatible fonts (for example Liberation Sans or Roboto) and `next/font`'s `fallback` and `adjustFontFallback` settings. Listed in CLAUDE.md, build step 11.
+
