@@ -36,31 +36,31 @@ const swatches = [
     bg: 'bg-green-500',
     role: 'Mid green: icons, borders, large text only',
     ratio:
-      'On white 3.5:1 (large text and non-text only). Never a background behind text: ink on it is 3.0:1',
+      'On white 3.5:1 (large text and non-text only). Never a background behind text: ink on it is 3.2:1',
   },
   {
     name: 'green-300',
     bg: 'bg-green-300',
     role: 'Light green: highlights and tints',
-    ratio: 'Ink text 5.9:1',
+    ratio: 'Ink text 6.3:1',
   },
   {
     name: 'green-50',
     bg: 'bg-green-50',
     role: 'Section background (derived)',
-    ratio: 'Ink text 9.4:1',
+    ratio: 'Ink text 10.1:1',
   },
   {
     name: 'gold-400',
     bg: 'bg-gold-400',
     role: 'Gold: buttons and accents. Never text on white',
-    ratio: 'Ink text 7.0:1; on white 1.5:1 (not allowed)',
+    ratio: 'Ink text 7.5:1; on white 1.5:1 (not allowed)',
   },
   {
-    name: 'ink (PLACEHOLDER)',
+    name: 'ink',
     bg: 'bg-ink',
-    role: 'Dark olive-brown: body text. To be sampled from the full logo lockup',
-    ratio: 'On white 10.3:1',
+    role: 'Dark olive-brown from the full logo lockup: body text, text on gold',
+    ratio: 'On white 11.1:1',
   },
   {
     name: 'ink-muted',

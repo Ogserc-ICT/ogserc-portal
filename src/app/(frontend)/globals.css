@@ -24,10 +24,10 @@
   --color-gold-500: #e6bc00; /* derived: primary button hover */
 
   /*
-   * PLACEHOLDER: dark olive-brown neutral. SRS 2.4 says to sample it from the full logo lockup
-   * with the commission name, which OGSERC has not supplied yet. Replace this value when it arrives.
+   * Dark olive-brown neutral, sampled from the commission name in the full logo lockup (SRS 2.4).
+   * Approximate: the source is a compressed image. Contrast checks in D-024 and D-033.
    */
-  --color-ink: #4a3f2a;
+  --color-ink: #483a16;
   --color-ink-muted: #5c5546; /* derived: secondary text */
 
   /* Derived functional colours. */
