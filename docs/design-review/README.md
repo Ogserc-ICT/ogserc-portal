@@ -11,6 +11,8 @@ Regenerate them with the site running: `node scripts/design-review-screenshots.m
 | `menu-open-1280.png` | Desktop menu with the "Regulatory Instruments" dropdown open |
 | `design-system-*.png` | Colours, type, buttons, badges, cards and form controls |
 | `being-prepared-*.png` | The page that every not-yet-built menu link opens |
+| `header-1024.png` | Header at 1024px, the narrowest width with the desktop menu |
+| `header-1024-wide-fallback.png` | The same header when Public Sans has not loaded and the device's fallback font is wide (Linux, Android): long labels wrap onto two lines instead of overflowing |
 
 ## Please check
 

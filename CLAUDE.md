@@ -118,6 +118,6 @@ The site must be movable to any host that runs Node.js or Docker (a VPS, Railway
 8. Licences: licencee register, profile pages, verification; Licensing & Registration page (categories, requirements, forms, how to apply)
 9. Media Center and Resources: news, tenders, events, galleries, reports, publications
 10. Site-wide search including PDF text
-11. SEO (sitemap, metadata), analytics, performance and accessibility pass
+11. SEO (sitemap, metadata), analytics, performance and accessibility pass; fix the font fallback: next/font's Public Sans fallback is `local(Arial)`, which Linux and Android lack, so text renders in a much wider system font while Public Sans loads (see docs/DECISIONS.md D-032)
 12. Playwright tests for critical flows, security checklist review, set up a strict Content Security Policy (see docs/DECISIONS.md D-011), README, RUNBOOK
 13. Staging deploy and launch checklist (backup restore test, monitoring, spend limits, email SPF/DKIM/DMARC, placeholder content removed)

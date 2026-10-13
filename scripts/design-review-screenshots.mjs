@@ -36,5 +36,19 @@ for (const width of widths) {
   await page.close()
 }
 
+// Header at 1024px, the narrowest desktop width: with Public Sans, and with the web font blocked
+// and a wide fallback forced (the worst case on Linux and Android, D-032), where labels wrap.
+const header = { x: 0, y: 0, width: 1024, height: 200 }
+const narrow = await browser.newPage({ viewport: { width: 1024, height: 800 } })
+await narrow.goto(baseURL, { waitUntil: 'networkidle' })
+await narrow.screenshot({ path: `${outDir}/header-1024.png`, clip: header })
+await narrow.route(/\.woff2?$/, (route) => route.abort())
+await narrow.goto(baseURL, { waitUntil: 'networkidle' })
+await narrow.addStyleTag({
+  content: `nav[aria-label="Main"] * { font-family: Verdana, 'DejaVu Sans', sans-serif !important; letter-spacing: 0.04em !important; }`,
+})
+await narrow.screenshot({ path: `${outDir}/header-1024-wide-fallback.png`, clip: header })
+await narrow.close()
+
 await browser.close()
 console.log(`Saved screenshots to ${outDir}/`)

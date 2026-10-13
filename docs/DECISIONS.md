@@ -349,3 +349,36 @@ At scaffold time:
 **Decision:** `/design-system` shows every colour (role and contrast), the type scale, buttons, focus states, badges (including document statuses), cards and form controls. It is not linked from the site, is marked `noindex, nofollow`, and is deleted before launch (RUNBOOK §11).
 
 **Why:** SRS 2.5 asks OGSERC to approve the design system itself (colours, typography, spacing, buttons, cards, forms), not only the homepage. A live page shows real rendering and keyboard focus, which a static document cannot.
+
+## D-032 Desktop menu labels wrap instead of overflowing; font fallback fix deferred to step 11 (2026-10-13)
+
+**Problem:** In CI (Linux), the test "the menu bar fits at 1024px" failed every time: the page was 15px wider than the viewport. It passed on Windows. Findings:
+
+- **The element:** the desktop main-menu list. Its seven items could not wrap (`whitespace-nowrap`), so the last item, "User Profile", was pushed past the right edge.
+- **No headroom:** at 1024px, the labels took 1002px of the 1008px available with Public Sans on Windows, about 6px spare. Linux lays the same text out a few pixels wider, which was enough to overflow.
+- **Hidden shrinking:** the chevrons could shrink as flex items, silently absorbing small overflows before the test noticed.
+- **Not a scrollbar:** Playwright runs headless Chromium with `--hide-scrollbars` on every OS, and nothing in `src/` uses `100vw` or a full-bleed trick.
+
+**Decision:** The bar no longer depends on exact font widths. In `MainNav.tsx`:
+
+- **Items can wrap:** each desktop item can shrink (`min-w-0`), and its label may wrap onto two centred lines (`text-center leading-tight`, no `whitespace-nowrap`). Two lines fit inside the existing 48px bar, so the bar never becomes wider than the screen.
+- **Chevrons:** a chevron cannot shrink. It now follows the last word of its label inline, so a wrapped label reads "Regulatory / Instruments ⌄" rather than leaving the arrow apart from the text.
+
+**Tests:**
+
+- **Existing test:** "fits at 1024px" keeps its assertion. On failure it now prints each element past the viewport edge (tag, classes, how far) and whether Public Sans was loaded.
+- **New test:** "fits at 1024px even with a wide fallback font" blocks the web font, forces a deliberately wide font (Verdana or DejaVu Sans with extra letter spacing), and asserts three things:
+  - no horizontal overflow
+  - at least one label wraps, which proves the stress took effect
+  - no label needs more than two lines
+- **Checked against the old behaviour:** with the old no-wrap CSS injected, the new test failed with 183px of overflow, naming "User Profile".
+
+**Trade-off:** near 1024px, or with a wide fallback font, the longer labels ("Regulatory Instruments", "Consumer Complaint") can show on two lines, so the bar can look slightly different from one device to another. It never breaks. Screenshots: `docs/design-review/header-1024.png` and `header-1024-wide-fallback.png`.
+
+**Alternatives considered:**
+
+- **Show the mobile menu up to 1280px:** this would hide the desktop menu from tablets in landscape and from common laptop widths (a 1366px laptop at 125% scaling is about 1093px), and it would still depend on font widths at 1280px.
+- **Smaller text or tighter padding:** this only moves the width at which the bar breaks.
+
+**Deferred to step 11: the font fallback.** next/font's metric-matched fallback for Public Sans is `src: local(Arial)`. Linux and Android do not have Arial, so on those devices text is drawn in the system sans-serif, which is much wider (about 14% on the menu), until Public Sans loads. Slow connections make that period longer, and if the font fails, it lasts the whole visit. The layout now copes. The remaining work is visual: less text reflow when the font swaps in, and a closer match on Linux and Android. Options include a fallback stack with metric-compatible fonts (for example Liberation Sans or Roboto) and `next/font`'s `fallback` and `adjustFontFallback` settings. Listed in CLAUDE.md, build step 11.
+

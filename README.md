@@ -77,7 +77,7 @@ Never push directly to `main`: work on a branch and open a pull request. CI runs
 
 Colours, fonts and other design tokens are defined once, in `src/app/(frontend)/globals.css` (Tailwind v4 `@theme`). Tailwind's default palette is switched off, and lint fails on any hex colour written elsewhere in `src/`. Shared components live in `src/components/ui/` (buttons, cards, badges, form controls) and `src/components/layout/` (header, menu, footer). The menu structure is in `src/lib/navigation.ts`.
 
-With the site running, `/design-system` shows every colour and component for review, and `node scripts/design-review-screenshots.mjs` saves screenshots to `docs/design-review/`. See docs/DECISIONS.md D-023 to D-031.
+With the site running, `/design-system` shows every colour and component for review, and `node scripts/design-review-screenshots.mjs` saves screenshots to `docs/design-review/`. See docs/DECISIONS.md D-023 to D-032.
 
 ## Project structure
 
