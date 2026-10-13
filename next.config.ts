@@ -25,6 +25,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {
     localPatterns: [{ pathname: '/api/media/file/**' }],
+    // AVIF first (smallest), WebP for browsers without AVIF (D-034).
+    formats: ['image/avif', 'image/webp'],
+    // 60 for hero photographs behind a dark overlay; 75 (Next's default) for everything else.
+    qualities: [60, 75],
   },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]
