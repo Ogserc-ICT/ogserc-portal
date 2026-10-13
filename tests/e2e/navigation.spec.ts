@@ -24,6 +24,91 @@ const DROPDOWNS: Record<string, number> = {
 const mainNav = (page: Page) => page.getByRole('navigation', { name: 'Main' })
 const isMobile = (projectName: string) => projectName === 'mobile'
 
+type OverflowReport = {
+  overflow: number
+  viewport: number
+  offenders: { tag: string; className: string; text: string; by: number }[]
+  font: { family: string; publicSansLoaded: boolean; status: string }
+}
+
+/**
+ * Runs in the browser. Measures how far the page is wider than the viewport and lists the
+ * elements whose right edge goes past it. Elements inside a clipping or scrolling ancestor are
+ * skipped, because they cannot widen the page. Also reports whether the web font is in use, since
+ * text width depends on it.
+ */
+function measureHorizontalOverflow(): OverflowReport {
+  const viewport = document.documentElement.clientWidth
+  const isClipped = (el: Element) => {
+    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+      if (getComputedStyle(p).overflowX !== 'visible') return true
+    }
+    return false
+  }
+
+  const offenders: OverflowReport['offenders'] = []
+  for (const el of document.body.querySelectorAll('*')) {
+    const rect = el.getBoundingClientRect()
+    const by = Math.round((rect.right + window.scrollX - viewport) * 10) / 10
+    if (rect.width > 0 && by > 0 && !isClipped(el)) {
+      offenders.push({
+        tag: el.tagName.toLowerCase(),
+        className: el.getAttribute('class') ?? '',
+        text: (el.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 40),
+        by,
+      })
+    }
+  }
+  offenders.sort((a, b) => b.by - a.by)
+
+  const menuItem = document.querySelector('nav[aria-label="Main"] > ul > li > *')
+  return {
+    overflow: document.documentElement.scrollWidth - viewport,
+    viewport,
+    offenders: offenders.slice(0, 20),
+    font: {
+      family: menuItem ? getComputedStyle(menuItem).fontFamily : '(menu item not found)',
+      publicSansLoaded: document.fonts.check('600 16px "Public Sans"'),
+      status: document.fonts.status,
+    },
+  }
+}
+
+// A deliberately wide stand-in for a system fallback font. Verdana (Windows) and DejaVu Sans
+// (Linux) are both much wider than Public Sans; the extra letter spacing keeps the test strict
+// even if neither is installed.
+const WIDE_FALLBACK_CSS = `nav[aria-label="Main"] * {
+  font-family: Verdana, 'DejaVu Sans', sans-serif !important;
+  letter-spacing: 0.04em !important;
+}`
+
+/** Runs in the browser: how many lines each menu label's text occupies. */
+function countLabelLines(items: Element[]): number[] {
+  return items.map((item) => {
+    const tops = new Set<number>()
+    const walker = document.createTreeWalker(item, NodeFilter.SHOW_TEXT)
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.textContent?.trim()) continue
+      const range = document.createRange()
+      range.selectNodeContents(node)
+      for (const rect of range.getClientRects()) tops.add(Math.round(rect.top))
+    }
+    return tops.size
+  })
+}
+
+function describeOverflow({ overflow, viewport, offenders, font }: OverflowReport): string {
+  const selector = (o: OverflowReport['offenders'][number]) =>
+    o.className ? `${o.tag}.${o.className.trim().split(/\s+/).join('.')}` : o.tag
+  const lines = offenders.map((o) => `  ${selector(o)} +${o.by}px  "${o.text}"`)
+  return [
+    `Page is ${overflow}px wider than the ${viewport}px viewport.`,
+    `Elements past the right edge (largest first):`,
+    ...(lines.length ? lines : ['  (none outside clipping containers)']),
+    `Menu font: ${font.family}; Public Sans loaded: ${font.publicSansLoaded}; document.fonts.status: ${font.status}`,
+  ].join('\n')
+}
+
 test.describe('Utility bar, footer, and placeholder pages', () => {
   test('utility bar has Contact Us, Licences, FAQs, Search', async ({ page }) => {
     await page.goto('/')
@@ -108,10 +193,29 @@ test.describe('Main menu on desktop', () => {
 
   test('the menu bar fits at 1024px, the narrowest desktop width', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 })
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    const report = await page.evaluate(measureHorizontalOverflow)
+    expect(report.overflow, describeOverflow(report)).toBeLessThanOrEqual(0)
+  })
+
+  test('the menu bar fits at 1024px even with a wide fallback font', async ({ page }) => {
+    // Worst case for real visitors: Public Sans has not loaded (slow connection, or blocked) and
+    // the system fallback is much wider than Arial, as on Linux and Android (D-032).
+    await page.route(/\.woff2?$/, (route) => route.abort())
+    await page.setViewportSize({ width: 1024, height: 768 })
+    await page.goto('/')
+    await page.addStyleTag({ content: WIDE_FALLBACK_CSS })
+
+    const report = await page.evaluate(measureHorizontalOverflow)
+    expect(report.font.publicSansLoaded, 'the web font should be blocked in this test').toBe(false)
+    expect(report.overflow, describeOverflow(report)).toBeLessThanOrEqual(0)
+
+    const lines = await mainNav(page)
+      .locator(':scope > ul > li > :first-child')
+      .evaluateAll(countLabelLines)
+    expect(Math.max(...lines), 'the wide font should make at least one label wrap').toBeGreaterThan(
+      1,
     )
-    expect(overflow).toBeLessThanOrEqual(0)
+    expect(Math.max(...lines), `label line counts: ${lines.join(', ')}`).toBeLessThanOrEqual(2)
   })
 
   test('dropdowns work with the keyboard and close with Escape', async ({ page }) => {

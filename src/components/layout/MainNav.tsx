@@ -21,7 +21,7 @@ export function MainNav({ entries }: { entries: MenuEntry[] }) {
 }
 
 const barItem =
-  'inline-flex min-h-12 items-center gap-1 px-2 font-semibold whitespace-nowrap hover:bg-green-900 xl:px-4'
+  'inline-flex min-h-12 items-center gap-1 px-2 text-center leading-tight font-semibold hover:bg-green-900 xl:px-4'
 
 function DesktopMenu({ entries }: { entries: MenuEntry[] }) {
   const [openId, setOpenId] = useState<string | null>(null)
@@ -44,7 +44,7 @@ function DesktopMenu({ entries }: { entries: MenuEntry[] }) {
     >
       {entries.map((entry, index) =>
         entry.kind === 'link' ? (
-          <li key={entry.id}>
+          <li key={entry.id} className="min-w-0">
             <Link href={entry.href} className={barItem}>
               {entry.label}
             </Link>
@@ -88,7 +88,7 @@ function DesktopGroup({ entry, alignRight, open, setOpen }: GroupProps) {
   }
 
   return (
-    <li className="relative" onKeyDown={onKeyDown} onBlur={onBlur}>
+    <li className="relative min-w-0" onKeyDown={onKeyDown} onBlur={onBlur}>
       <button
         ref={buttonRef}
         type="button"
@@ -97,11 +97,7 @@ function DesktopGroup({ entry, alignRight, open, setOpen }: GroupProps) {
         onClick={() => setOpen(!open)}
         className={`${barItem} ${open ? 'bg-green-900' : ''}`}
       >
-        {entry.label}
-        <Icon
-          name="chevronDown"
-          className={`size-4 transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
-        />
+        <LabelWithChevron label={entry.label} open={open} />
       </button>
       <ul
         id={panelId}
@@ -117,6 +113,27 @@ function DesktopGroup({ entry, alignRight, open, setOpen }: GroupProps) {
         ))}
       </ul>
     </li>
+  )
+}
+
+/**
+ * When a label wraps onto two lines (narrow desktop widths or a wide fallback font, D-032), the
+ * chevron follows the last word inline instead of sitting apart from the text.
+ */
+function LabelWithChevron({ label, open }: { label: string; open: boolean }) {
+  const words = label.split(' ')
+  const last = words.pop()
+  return (
+    <span>
+      {words.length ? `${words.join(' ')} ` : null}
+      <span className="whitespace-nowrap">
+        {last}
+        <Icon
+          name="chevronDown"
+          className={`ml-1 inline-block size-4 align-[-0.15em] transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
+        />
+      </span>
+    </span>
   )
 }
 
