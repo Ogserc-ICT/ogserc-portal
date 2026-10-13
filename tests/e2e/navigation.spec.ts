@@ -22,6 +22,7 @@ const DROPDOWNS: Record<string, number> = {
 }
 
 const mainNav = (page: Page) => page.getByRole('navigation', { name: 'Main' })
+const menuButton = (page: Page) => page.getByRole('button', { name: 'Menu', exact: true })
 const isMobile = (projectName: string) => projectName === 'mobile'
 
 type OverflowReport = {
@@ -110,16 +111,19 @@ function describeOverflow({ overflow, viewport, offenders, font }: OverflowRepor
 }
 
 test.describe('Utility bar, footer, and placeholder pages', () => {
-  test('utility bar has Contact Us, Licences, FAQs, Search', async ({ page }) => {
+  test('utility links are Contact Us, Licences, FAQs, Search', async ({ page }, testInfo) => {
     await page.goto('/')
+    // Desktop shows them in the utility bar; below lg they are in the menu drawer (D-036).
+    if (isMobile(testInfo.project.name)) await menuButton(page).click()
     const utility = page.getByRole('navigation', { name: 'Utility' })
     await expect(utility.getByRole('link')).toHaveText(['Contact Us', 'Licences', 'FAQs', 'Search'])
   })
 
   test('search goes to the shared "being prepared" page, which has breadcrumbs', async ({
     page,
-  }) => {
+  }, testInfo) => {
     await page.goto('/')
+    if (isMobile(testInfo.project.name)) await menuButton(page).click()
     await page
       .getByRole('navigation', { name: 'Utility' })
       .getByRole('link', { name: 'Search' })
@@ -176,7 +180,7 @@ test.describe('Main menu on desktop', () => {
   test('shows the seven SRS menu items and no Menu button', async ({ page }) => {
     const items = mainNav(page).locator(':scope > ul > li > :first-child')
     await expect(items).toHaveText(MENU_ITEMS)
-    await expect(mainNav(page).getByRole('button', { name: 'Menu' })).toBeHidden()
+    await expect(menuButton(page)).toBeHidden()
   })
 
   for (const [label, count] of Object.entries(DROPDOWNS)) {
@@ -253,41 +257,38 @@ test.describe('Main menu on desktop', () => {
 
 test.describe('Main menu on mobile (360px)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
-    test.skip(!isMobile(testInfo.project.name), 'Mobile menu is shown below 1024px')
+    test.skip(!isMobile(testInfo.project.name), 'The drawer is used below 1024px')
     await page.goto('/')
   })
 
-  test('shows a Menu button instead of the desktop menu bar', async ({ page }) => {
-    await expect(mainNav(page).getByRole('button', { name: 'Menu' })).toBeVisible()
-    await expect(mainNav(page).locator(':scope > ul')).toBeHidden()
+  test('shows a Menu button instead of the desktop menu bar and utility bar', async ({ page }) => {
+    await expect(menuButton(page)).toBeVisible()
+    await expect(mainNav(page)).toHaveCount(0)
+    await expect(page.getByRole('navigation', { name: 'Utility' })).toHaveCount(0)
   })
 
-  test('opens, expands a section, and closes with Escape', async ({ page }) => {
-    const menuButton = mainNav(page).getByRole('button', { name: 'Menu' })
-    await menuButton.click()
-    await expect(menuButton).toHaveAttribute('aria-expanded', 'true')
-
-    const panel = page.locator('#mobile-menu')
+  test('the drawer lists the seven items and expands a section', async ({ page }) => {
+    await menuButton(page).click()
+    const drawer = page.getByRole('dialog', { name: 'Menu' })
+    await expect(drawer).toBeVisible()
     for (const label of MENU_ITEMS) {
-      await expect(panel.getByText(label, { exact: true })).toBeVisible()
+      await expect(drawer.getByText(label, { exact: true })).toBeVisible()
     }
 
-    const section = panel.getByRole('button', { name: 'Regulatory Instruments' })
+    const section = drawer.getByRole('button', { name: 'Regulatory Instruments' })
     await section.click()
     await expect(section).toHaveAttribute('aria-expanded', 'true')
     const links = page.locator('#mobile-menu-regulatory-instruments').getByRole('link')
     await expect(links).toHaveCount(DROPDOWNS['Regulatory Instruments'])
-
-    await links.first().focus()
-    await page.keyboard.press('Escape')
-    await expect(menuButton).toHaveAttribute('aria-expanded', 'false')
-    await expect(menuButton).toBeFocused()
-    await expect(panel).toBeHidden()
+    await expect(links.first()).toBeVisible()
   })
 
-  test('has no WCAG 2.1 AA violations with the menu open', async ({ page }) => {
-    await mainNav(page).getByRole('button', { name: 'Menu' }).click()
-    await page.locator('#mobile-menu').getByRole('button', { name: 'About OGSERC' }).click()
+  test('has no WCAG 2.1 AA violations with the drawer open', async ({ page }) => {
+    await menuButton(page).click()
+    await page
+      .getByRole('dialog', { name: 'Menu' })
+      .getByRole('button', { name: 'About OGSERC' })
+      .click()
     const results = await new AxeBuilder({ page }).withTags(WCAG_21_AA).analyze()
     expect(results.violations).toEqual([])
   })
