@@ -32,7 +32,7 @@ function ContactRow({
 /** FR-WEB-02 contact: office, phone, email, map. The map is added once the address is confirmed. */
 export function ContactSection() {
   return (
-    <section aria-labelledby="contact-heading" className="bg-green-50 py-12 sm:py-16">
+    <section data-reveal aria-labelledby="contact-heading" className="bg-green-50 py-12 sm:py-16">
       <Container className="grid gap-8 lg:grid-cols-2 lg:gap-12">
         <div>
           <SectionHeading id="contact-heading" title="Contact us" />

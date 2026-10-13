@@ -4,7 +4,7 @@ import type { ComponentProps, ReactNode } from 'react'
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'outline-on-dark'
 
 const base =
-  'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-base font-semibold transition-colors'
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-base font-semibold transition duration-200 hover:shadow-md motion-safe:hover:-translate-y-px motion-safe:active:translate-y-0'
 
 // Gold is for buttons and accents only; text on gold is always the dark neutral (ink).
 const variants: Record<ButtonVariant, string> = {

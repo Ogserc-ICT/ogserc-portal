@@ -50,6 +50,15 @@
     html {
       scroll-behavior: auto;
     }
+
+    /* Safety net (D-039): nothing animates for users who ask for reduced motion. */
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   body {
@@ -68,5 +77,34 @@
 
   .on-light :focus-visible {
     outline-color: var(--color-green-900);
+  }
+}
+
+/*
+ * Scroll-reveal states, set by RevealOnScroll.tsx (D-039). Opacity and transform only: no layout
+ * shift. Kept here rather than in a component stylesheet: a page-level CSS import becomes a
+ * separate render-blocking file, which slowed first paint on mobile.
+ */
+@layer components {
+  .reveal-pending {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  .reveal-in {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 500ms ease-out,
+      transform 500ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-pending,
+    .reveal-in {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
   }
 }

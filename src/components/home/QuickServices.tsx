@@ -16,7 +16,7 @@ const services: { label: string; href: string; icon: IconName }[] = [
 
 export function QuickServices() {
   return (
-    <section aria-labelledby="quick-services-heading" className="py-12 sm:py-16">
+    <section data-reveal aria-labelledby="quick-services-heading" className="py-12 sm:py-16">
       <Container>
         <SectionHeading id="quick-services-heading" title="Quick services" />
         <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
@@ -24,7 +24,7 @@ export function QuickServices() {
             <li key={service.label}>
               <Link
                 href={service.href}
-                className="group flex h-full min-h-32 flex-col items-center justify-center gap-3 rounded-lg border border-line bg-white p-4 text-center font-semibold text-green-900 shadow-sm transition hover:border-green-500 hover:shadow-md"
+                className="group flex h-full min-h-32 flex-col items-center justify-center gap-3 rounded-lg border border-line bg-white p-4 text-center font-semibold text-green-900 shadow-sm transition duration-200 hover:border-green-500 hover:shadow-md motion-safe:hover:-translate-y-0.5"
               >
                 <span className="flex size-12 items-center justify-center rounded-full bg-green-50 text-green-700 transition-colors group-hover:bg-gold-400 group-hover:text-ink">
                   <Icon name={service.icon} className="size-6" />

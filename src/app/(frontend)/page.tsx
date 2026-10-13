@@ -5,6 +5,7 @@ import { LatestUpdates } from '@/components/home/LatestUpdates'
 import { PublicNotices } from '@/components/home/PublicNotices'
 import { QuickServices } from '@/components/home/QuickServices'
 import { Tenders } from '@/components/home/Tenders'
+import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
 import { Container } from '@/components/ui/Container'
 import { events, news, notices, tenders } from '@/lib/placeholder-content'
 
@@ -24,6 +25,7 @@ export default function HomePage() {
         </Container>
       </div>
       <ContactSection />
+      <RevealOnScroll />
     </>
   )
 }

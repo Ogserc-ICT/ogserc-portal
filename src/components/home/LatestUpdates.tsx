@@ -11,7 +11,11 @@ import type { NewsItem } from '@/lib/placeholder-content'
  */
 export function LatestUpdates({ items }: { items: NewsItem[] }) {
   return (
-    <section aria-labelledby="latest-updates-heading" className="bg-green-50 py-12 sm:py-16">
+    <section
+      data-reveal
+      aria-labelledby="latest-updates-heading"
+      className="bg-green-50 py-12 sm:py-16"
+    >
       <Container>
         <SectionHeading
           id="latest-updates-heading"

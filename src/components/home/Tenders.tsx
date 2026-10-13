@@ -6,7 +6,7 @@ import type { Tender } from '@/lib/placeholder-content'
 
 export function Tenders({ items }: { items: Tender[] }) {
   return (
-    <section aria-labelledby="tenders-heading">
+    <section data-reveal aria-labelledby="tenders-heading">
       <SectionHeading
         id="tenders-heading"
         title="Tenders"
