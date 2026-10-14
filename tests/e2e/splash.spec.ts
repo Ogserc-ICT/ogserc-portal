@@ -82,11 +82,12 @@ test.describe('Splash', () => {
     await expect(splash(page)).toBeHidden()
 
     const hero = page.getByRole('region', { name: 'Highlights' })
-    await hero.getByRole('button', { name: 'Next slide' }).click()
     await expect(hero.locator('[aria-roledescription="slide"]:not([inert])')).toHaveAttribute(
       'aria-label',
-      '2 of 3',
+      '1 of 3',
     )
+    await hero.getByRole('button', { name: 'Pause slideshow' }).click()
+    await expect(hero.getByRole('button', { name: 'Play slideshow' })).toBeVisible()
     expect(errors).toEqual([])
   })
 })

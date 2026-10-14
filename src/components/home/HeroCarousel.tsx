@@ -10,14 +10,17 @@ import type { HeroSlide } from '@/lib/placeholder-content'
 
 type Slide = HeroSlide & { image: StaticImageData }
 
-const AUTOPLAY_MS = 7000
+/** How long each slide shows before the next one fades in. Change it here only. */
+export const HERO_INTERVAL_MS = 5000
 
 /**
- * Homepage hero carousel (FR-WEB-08, D-037), following the WAI-ARIA carousel pattern.
+ * Homepage hero carousel (FR-WEB-08, D-037, D-042), following the WAI-ARIA carousel pattern.
  *
+ * - The only control is a small pause/play button in the corner (WCAG 2.2.2). There are no
+ *   previous/next arrows or slide dots, by the owner's choice (D-042).
  * - The server-rendered HTML shows slide 1 in full, so the page works without JavaScript.
  * - Only slide 1's photo loads with the page (preloaded, as the likely LCP image). The others are
- *   added after the page's load event, or as soon as the user moves to another slide.
+ *   added after the page's load event.
  * - Autoplay is off for users who prefer reduced motion. It pauses while the pointer is over the
  *   carousel, and stops when keyboard focus enters it, until the user presses Play.
  * - All slides share one grid cell, so the hero's height never changes between slides.
@@ -31,11 +34,6 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
   const hydrated = useHydrated()
   const reducedMotion = usePrefersReducedMotion()
   const playing = userPaused === null ? !reducedMotion : !userPaused
-
-  const go = (index: number) => {
-    setLoadAll(true)
-    setActive((index + slides.length) % slides.length)
-  }
 
   // Fetch the other photos once the page has finished loading, so they never compete with it.
   useEffect(() => {
@@ -53,7 +51,7 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
     const id = setInterval(() => {
       setLoadAll(true)
       setActive((i) => (i + 1) % slides.length)
-    }, AUTOPLAY_MS)
+    }, HERO_INTERVAL_MS)
     return () => clearInterval(id)
   }, [hydrated, playing, hovering, slides.length])
 
@@ -71,6 +69,11 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
       onPointerLeave={() => setHovering(false)}
       onFocus={onFocus}
     >
+      {/* First in the carousel's tab order, as the WAI-ARIA pattern recommends; drawn in a corner. */}
+      {hydrated ? (
+        <RotationButton playing={playing} onToggle={() => setUserPaused(playing)} />
+      ) : null}
+
       <div aria-hidden="true" className="absolute inset-0 -z-10">
         {slides.map((slide, i) =>
           i === 0 || loadAll ? (
@@ -95,7 +98,7 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
         <div className="absolute inset-0 bg-green-900/80 lg:bg-transparent lg:bg-linear-to-r lg:from-green-900/85 lg:via-green-900/80 lg:via-65% lg:to-green-900/40" />
       </div>
 
-      <Container className="py-12 sm:py-16 lg:py-24">
+      <Container className="pt-12 pb-16 sm:pt-16 sm:pb-20 lg:py-24">
         <h1 className="text-sm font-semibold tracking-wide text-green-50 uppercase">
           Ogun State Electricity Regulatory Commission
         </h1>
@@ -121,83 +124,29 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
             </div>
           ))}
         </div>
-
-        {/* Space is reserved before hydration so the controls never shift the layout. */}
-        <div className="mt-8 flex min-h-11 flex-wrap items-center gap-2">
-          {hydrated ? (
-            <Controls
-              count={slides.length}
-              active={active}
-              playing={playing}
-              onGo={go}
-              onTogglePlay={() => setUserPaused(playing)}
-            />
-          ) : null}
-        </div>
       </Container>
     </section>
   )
 }
 
-type ControlsProps = {
-  count: number
-  active: number
-  playing: boolean
-  onGo: (index: number) => void
-  onTogglePlay: () => void
-}
-
-const roundButton =
-  'inline-flex size-11 items-center justify-center rounded-full border-2 border-white/80 text-white hover:bg-white/15'
-
-function Controls({ count, active, playing, onGo, onTogglePlay }: ControlsProps) {
+/**
+ * The pause/play control (WCAG 2.2.2). The target is 44x44px; the visible disc is smaller so it
+ * stays unobtrusive. Its icon is at least 6.8:1 against the disc even over the lightest part of
+ * the overlay. The focus ring is gold with a dark green halo, so it stays visible over any photo.
+ */
+function RotationButton({ playing, onToggle }: { playing: boolean; onToggle: () => void }) {
   return (
-    <>
-      <button
-        type="button"
-        data-rotation-control
-        onClick={onTogglePlay}
-        className={roundButton}
-        aria-label={playing ? 'Pause slideshow' : 'Play slideshow'}
-      >
-        <Icon name={playing ? 'pause' : 'play'} className="size-5" />
-      </button>
-      <button
-        type="button"
-        onClick={() => onGo(active - 1)}
-        className={roundButton}
-        aria-label="Previous slide"
-      >
-        <Icon name="chevronLeft" className="size-5" />
-      </button>
-      <ul className="flex items-center">
-        {Array.from({ length: count }, (_, i) => (
-          <li key={i}>
-            <button
-              type="button"
-              onClick={() => onGo(i)}
-              aria-label={`Show slide ${i + 1} of ${count}`}
-              aria-current={i === active ? 'true' : undefined}
-              className="group inline-flex size-11 items-center justify-center"
-            >
-              <span
-                className={`block size-3 rounded-full border-2 border-white ${
-                  i === active ? 'bg-gold-400' : 'bg-transparent group-hover:bg-white/40'
-                }`}
-              />
-            </button>
-          </li>
-        ))}
-      </ul>
-      <button
-        type="button"
-        onClick={() => onGo(active + 1)}
-        className={roundButton}
-        aria-label="Next slide"
-      >
-        <Icon name="chevronRight" className="size-5" />
-      </button>
-    </>
+    <button
+      type="button"
+      data-rotation-control
+      onClick={onToggle}
+      aria-label={playing ? 'Pause slideshow' : 'Play slideshow'}
+      className="group absolute right-2 bottom-2 z-10 inline-flex size-11 items-center justify-center rounded-full focus-visible:shadow-[0_0_0_7px_var(--color-green-900)] sm:right-4 sm:bottom-4"
+    >
+      <span className="inline-flex size-8 items-center justify-center rounded-full bg-green-900/70 text-white transition-colors group-hover:bg-green-900">
+        <Icon name={playing ? 'pause' : 'play'} className="size-4" />
+      </span>
+    </button>
   )
 }
 

@@ -539,3 +539,28 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - **Noise:** this machine's run-to-run spread is about ±3 points and ±150ms TBT, so differences of that size are noise.
 
 **Revisit when:** the font fallback work in step 11 (D-032) and the CSP in step 12. The homepage LCP (about 3.2s on simulated slow 4G) was already above the 2.5s "good" threshold before this step. It is mostly script and font time, and is worth a dedicated look in step 11.
+
+## D-042 Hero carousel: a pause/play button only, and a 5-second interval (2026-10-14)
+
+**Decision:** This supersedes the "Controls" and "Autoplay" interval in D-037; the rest of D-037 stands.
+
+- **No arrows or dots:** the previous/next buttons and slide indicators were removed at the project owner's request, for a cleaner hero.
+- **Pause/play kept, for WCAG 2.2.2 (Pause, Stop, Hide):** content that moves automatically for more than five seconds needs a way to pause it. The control is:
+  - a small icon on a 70% green-900 disc in the hero's bottom-right corner
+  - named "Pause slideshow" or "Play slideshow", matching its state
+  - a 44×44px target, though the visible disc is 32px
+  - first in the carousel's tab order, as the WAI-ARIA carousel pattern recommends
+- **Pause/play contrast:**
+  - the icon is at least 6.8:1 against its disc, even over a pure-white pixel under the lightest part of the desktop overlay (40%)
+  - the focus outline is the site's gold ring with a 7px green-900 halo outside it, because gold alone would be 1.5:1 against a bright photo there
+- **Interval:** 5 seconds, held in one constant, `HERO_INTERVAL_MS` in `src/components/home/HeroCarousel.tsx`, so changing it is a one-line edit. The tests read the value from one place too (`INTERVAL` in `tests/e2e/hero-carousel.spec.ts`).
+- **Kept from D-037:** no autoplay for `prefers-reduced-motion` (the button then reads "Play slideshow"); a pause while the mouse is over the hero; keyboard focus entering a slide stops rotation until Play is pressed; once Pause is pressed it stays paused; the crossfade; stacked slides with no layout shift; slide 1 in full without JavaScript.
+- **Screen readers:** without arrows, screen-reader users cannot step through slides. They are not worse off:
+  - every slide is in the HTML and labelled ("1 of 3" and so on, with `aria-roledescription`)
+  - `aria-live` is "off" while playing, so automatic changes are never announced mid-sentence, and "polite" when paused
+  - hidden slides are `inert`
+  - moving focus into the hero stops rotation, so a keyboard or screen-reader user is never chasing a moving target
+
+  The slides' actions also appear elsewhere: the complaint route is in the menu and quick services, and Energy Caps and Regulatory Instruments are in the menu.
+- **Layout:** the controls row under the slide text is gone, and the button is absolutely positioned. The hero is 60px shorter on phones and tablets and 76px shorter on desktop (a little bottom padding was added so the button never touches the slide text). The text itself did not move, so the D-037 overlay contrast figures are unchanged (white text at least 6.4:1).
+- **Tests:** `tests/e2e/hero-carousel.spec.ts` uses `page.clock`. It pauses the fake clock and steps it 100ms at a time, asserting that the slides change exactly 5000ms apart (checked by temporarily setting 7000ms: the test failed). It also covers Pause and Play, the hover pause, the focus stop, reduced motion, `aria-live`, the 44px target, the focus outline, the single button, no JavaScript, and axe with and without reduced motion.
