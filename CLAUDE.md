@@ -65,6 +65,18 @@ Before saying a task is done, run lint, typecheck, and the relevant tests, and f
 - Write small, focused functions. Add comments only where intent is not obvious.
 - Before writing Next.js code, consult the version-matched docs in node_modules/next/dist/docs/ (see AGENTS.md). If AGENTS.md ever conflicts with this file or docs/SRS.md, CLAUDE.md and the SRS take precedence.
 
+## Motion and interactivity
+
+Rules for anything that moves or responds to the pointer (SRS FR-WEB-08 to FR-WEB-12; docs/DECISIONS.md D-035 to D-040).
+
+- Hover is never the only way to do anything. Menus that open on hover also open on click, Enter and Space, close on Escape and after a short delay once the pointer leaves, and follow WCAG 1.4.13 (dismissible, hoverable, persistent). Use hover only where `(hover: hover)` matches; touch devices tap.
+- Dialogs and drawers trap focus, close on Escape, on a backdrop click and with a close button, lock page scrolling while open, return focus to the control that opened them, and use correct ARIA. Animation is progressive: without `@starting-style` or `allow-discrete` they must still open and close, just instantly.
+- Carousels have previous and next controls, indicators and a visible pause/play button; they never autoplay for `prefers-reduced-motion`, stop when keyboard focus enters, and keep text over images at AA contrast (use an overlay, checked against a pure-white pixel). Only the first image loads eagerly; the others load after the page.
+- The splash shows at most once per session, never blocks content, the pointer or search engines, ends on page load with a CSS hard cap of about 800ms, and is skipped for reduced-motion users, without JavaScript, and when storage is unavailable (wrap every storage call in try/catch).
+- Motion uses CSS and, at most, a small IntersectionObserver. No animation library. Content is fully visible without JavaScript, motion causes no layout shift (opacity and transform only), and everything respects `prefers-reduced-motion`.
+- Decorative backgrounds (such as the footer pattern) are pure CSS or tiny inline SVG, `aria-hidden`, never above text or links, cause no overflow, and keep text at AA contrast against their lightest part.
+- Keep client JavaScript small: measure the homepage's JavaScript and mobile performance before and after any interactive change (D-041). Put CSS for page-level components in `globals.css`, not a component stylesheet, because a page-level CSS import becomes a separate render-blocking file.
+
 ## Security and data rules
 
 - Never commit secrets. Use environment variables; keep `.env.example` current with placeholder values only.
@@ -119,5 +131,5 @@ The site must be movable to any host that runs Node.js or Docker (a VPS, Railway
 9. Media Center and Resources: news, tenders, events, galleries, reports, publications
 10. Site-wide search including PDF text
 11. SEO (sitemap, metadata), analytics, performance and accessibility pass; fix the font fallback: next/font's Public Sans fallback is `local(Arial)`, which Linux and Android lack, so text renders in a much wider system font while Public Sans loads (see docs/DECISIONS.md D-032)
-12. Playwright tests for critical flows, security checklist review, set up a strict Content Security Policy (see docs/DECISIONS.md D-011), README, RUNBOOK
+12. Playwright tests for critical flows, security checklist review, set up a strict Content Security Policy (see docs/DECISIONS.md D-011; hash or externalise the inline splash script, D-038), README, RUNBOOK
 13. Staging deploy and launch checklist (backup restore test, monitoring, spend limits, email SPF/DKIM/DMARC, placeholder content removed)

@@ -235,9 +235,12 @@ Build step 2 added temporary placeholders so OGSERC could review the design befo
 
 - [ ] `src/lib/placeholder-content.ts` deleted; all homepage content comes from the CMS (replaced in step 4, D-028).
 - [ ] No text containing "OGSERC to supply" on any page (search the site and the database).
-- [ ] The `ink` colour in `src/app/(frontend)/globals.css` replaced with the olive-brown sampled from OGSERC's full logo lockup, and the contrast checks in D-024 re-run (`pnpm test:e2e` includes axe).
-- [ ] `src/components/layout/CrestPlaceholder.tsx` replaced with the Ogun State crest image (D-029).
-- [ ] Hero photograph supplied, or the gradient approved by OGSERC as final.
+- [x] The `ink` colour set to `#483A16`, sampled from OGSERC's full logo lockup (D-033). Re-run the checks if OGSERC supplies an exact brand value.
+- [x] Crest placeholder replaced with the Ogun State crest image (step 2b).
+- [x] Hero photographs supplied (step 2b, D-037).
+- [ ] `docs/ASSET-CREDITS.md` has no "TO CONFIRM" left: every image's source, licence and permission recorded (D-034).
+- [ ] Hero slide headlines and action wording supplied by OGSERC (`[Sample headline …]` gone).
+- [ ] The inline splash script is hashed in, or moved out of, the Content-Security-Policy (step 12, D-038).
 - [ ] Contact section map added (or removed) once the office address is confirmed.
 - [ ] `src/app/(frontend)/design-system/` (the review page) deleted (D-031).
 - [ ] No menu entry in `src/lib/navigation.ts` still has `ready: false`, and `/being-prepared` is removed or unused (D-027).
