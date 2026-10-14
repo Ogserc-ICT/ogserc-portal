@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
+import { waitForSettledPage } from './support/settle'
+
 // FR-WEB-13 / D-043: floating "Back to top" button, enhancing the footer's plain link.
 
 const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
@@ -178,8 +180,11 @@ test.describe('Back to top', () => {
     })
   }
 
+  // Runs at 360px (mobile project) and 1280px (desktop project), on a fully settled page.
   test('has no WCAG 2.1 AA violations while showing', async ({ page }) => {
     await scrollPastFirstScreen(page)
+    await waitForSettledPage(page)
+    await expect(button(page)).toBeVisible()
     const results = await new AxeBuilder({ page }).withTags(WCAG_21_AA).analyze()
     expect(results.violations).toEqual([])
   })

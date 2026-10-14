@@ -617,3 +617,10 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - the overlap checks at 360 and 1280px, and no horizontal overflow
 - axe with the button showing
 - the footer link with JavaScript disabled
+
+**axe on a settled page (added after a CI failure):**
+
+- **What failed:** CI's first run of the axe test with the button showing reported contrast failures in Public notices: `#7f9a8c`, which is green-900 at 53% opacity.
+- **Cause:** axe had started while the section was still fading in (D-039). The colours themselves pass.
+- **Fix, in the tests only:** axe scans that cover scroll-revealed sections first call `waitForSettledPage` (`tests/e2e/support/settle.ts`). It fades in every pending section, restores the scroll position, and waits until every finite animation and transition has finished.
+- **Where it is used:** the back-to-top, homepage and smoke axe tests. The homepage and smoke scans previously skipped below-the-fold sections, which sit at opacity 0 until revealed, so they now check more.
