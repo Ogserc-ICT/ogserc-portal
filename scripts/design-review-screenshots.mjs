@@ -48,6 +48,11 @@ for (const width of widths) {
     .screenshot({ path: `${outDir}/hero-${width}.png` })
   await page.locator('footer').screenshot({ path: `${outDir}/footer-${width}.png` })
 
+  // The floating "Back to top" button, viewport only, scrolled one and a half screens down (D-043).
+  await page.evaluate(() => window.scrollTo({ top: window.innerHeight * 1.5, behavior: 'instant' }))
+  await page.getByRole('button', { name: 'Back to top' }).waitFor()
+  await page.screenshot({ path: `${outDir}/back-to-top-${width}.png` })
+
   await page.close()
 }
 

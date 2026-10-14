@@ -10,7 +10,8 @@ Regenerate them with the site running: `node scripts/design-review-screenshots.m
 | `hero-360.png`, `hero-768.png`, `hero-1280.png` | The hero carousel: first slide, with the small pause/play button in the bottom-right corner |
 | `menu-open-360.png`, `menu-open-768.png` | The menu drawer on a phone and a tablet, with "Regulatory Instruments" expanded |
 | `menu-open-1280.png` | Desktop menu with the "Regulatory Instruments" dropdown opened by hovering |
-| `footer-360.png`, `footer-768.png`, `footer-1280.png` | The footer with its grid background pattern |
+| `footer-360.png`, `footer-768.png`, `footer-1280.png` | The footer with its grid background pattern, and the "Back to top" link in its bottom row |
+| `back-to-top-360.png`, `back-to-top-768.png`, `back-to-top-1280.png` | The page scrolled down, with the round "Back to top" button in the bottom-right corner |
 | `design-system-*.png` | Colours, type, buttons, badges, cards and form controls |
 | `being-prepared-*.png` | The page that every not-yet-built menu link opens |
 | `header-1024.png` | Header at 1024px, the narrowest width with the desktop menu |
