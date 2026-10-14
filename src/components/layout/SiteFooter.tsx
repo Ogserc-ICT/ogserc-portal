@@ -96,6 +96,14 @@ export function SiteFooter() {
               ))}
             </ul>
           </nav>
+          {/* Works without JavaScript: #top is the <body>. The floating button enhances it (D-043). */}
+          <a
+            href="#top"
+            className={`inline-flex min-h-10 items-center gap-2 self-start font-semibold lg:self-auto text-white print:hidden ${footerLink}`}
+          >
+            <Icon name="arrowUp" className="size-4 text-gold-400" />
+            Back to top
+          </a>
         </Container>
       </div>
     </footer>

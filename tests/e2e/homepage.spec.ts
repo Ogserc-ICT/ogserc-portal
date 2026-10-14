@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 
+import { waitForSettledPage } from './support/settle'
+
 const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
 // FR-WEB-02 order, after the hero (which holds the page's only h1, and one h2 per slide).
@@ -93,6 +95,10 @@ test.describe('Homepage', () => {
   })
 
   test('has no WCAG 2.1 AA violations', async ({ page }) => {
+    // The pause/play button renders after hydration; then every section is faded in and settled,
+    // so axe checks all of them at full opacity.
+    await expect(page.getByRole('button', { name: /slideshow/ })).toBeVisible()
+    await waitForSettledPage(page)
     const results = await new AxeBuilder({ page }).withTags(WCAG_21_AA).analyze()
     expect(results.violations).toEqual([])
   })

@@ -195,6 +195,16 @@ The developer shall complete a one-time audit of the live LASERC site against th
 - **FR-WEB-10 Motion.** Homepage sections may fade in subtly as they scroll into view, and cards and buttons may respond gently to hover, using CSS and a small IntersectionObserver (no animation library). All content shall be fully visible without JavaScript, motion shall cause no layout shift, and all motion shall respect `prefers-reduced-motion`.
 - **FR-WEB-11 Mobile header and menu drawer.** Below the desktop breakpoint (1024px), the header shall show only the logo, the Ogun State crest and a menu button, without horizontal overflow at 320px. The menu button shall open a drawer from the left, over a dimmed backdrop, containing the main menu (with expandable sections) and the utility links. The drawer shall trap focus, close on Escape, on a backdrop click and with a close button, lock page scrolling while open, return focus to the menu button when closed, use correct dialog semantics, and work (without animation) in browsers that do not support its transition features. On desktop, menu dropdowns shall open on click, Enter and Space, and also on hover on devices that support hover, following WCAG 1.4.13.
 - **FR-WEB-12 Footer pattern.** The footer may carry a subtle decorative background pattern (thin grid lines in brand-green tints with occasional gold accents), built in CSS with no images or JavaScript. It shall be hidden from assistive technology, shall never sit above footer text or links, shall cause no layout shift or horizontal overflow, and footer text shall keep WCAG AA contrast against the lightest part of the pattern.
+- **FR-WEB-13 Back to top.** Every page's footer shall have a plain "Back to top" link that works without JavaScript. As an enhancement, a floating "Back to top" button shall appear in the bottom-right corner once the visitor has scrolled about one screen down, and hide again near the top. It shall:
+  - scroll to the top smoothly, or instantly for users who prefer reduced motion, then move keyboard focus to the start of the page
+  - have the accessible name "Back to top" and a touch target of at least 44×44px
+  - keep a focus indicator that is visible on any background
+  - respect the phone's safe-area insets
+  - never cover the hero's pause/play button, footer links, contact details or legal links
+  - be hidden while the menu drawer or the splash is showing, and when printing
+  - fade in and out without animation for reduced-motion users
+  - cause no layout shift or horizontal overflow
+  - detect scrolling without a scroll event listener
 
 ### 6.2 Information centre: documents (FR-DOC)
 - **FR-DOC-01** Staff shall be able to publish documents in these categories (matching Regulatory Instruments): rules & regulations, energy caps, guidelines, forms, consultation, licences, orders & directives, codes, manuals, market documents, standards.

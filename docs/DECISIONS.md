@@ -564,3 +564,63 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
   The slides' actions also appear elsewhere: the complaint route is in the menu and quick services, and Energy Caps and Regulatory Instruments are in the menu.
 - **Layout:** the controls row under the slide text is gone, and the button is absolutely positioned. The hero is 60px shorter on phones and tablets and 76px shorter on desktop (a little bottom padding was added so the button never touches the slide text). The text itself did not move, so the D-037 overlay contrast figures are unchanged (white text at least 6.4:1).
 - **Tests:** `tests/e2e/hero-carousel.spec.ts` uses `page.clock`. It pauses the fake clock and steps it 100ms at a time, asserting that the slides change exactly 5000ms apart (checked by temporarily setting 7000ms: the test failed). It also covers Pause and Play, the hover pause, the focus stop, reduced motion, `aria-live`, the 44px target, the focus outline, the single button, no JavaScript, and axe with and without reduced motion.
+
+## D-043 Back to top: a footer link, enhanced by a floating button (2026-10-14)
+
+**Decision:** Every page gets a "Back to top" control (FR-WEB-13), in two layers.
+
+- **Baseline, no JavaScript:** a plain `<a href="#top">` in the footer's bottom bar. `#top` is the `<body>`. The CSS `scroll-behavior` makes the jump smooth, or instant for reduced motion. Afterwards the browser's focus starting point is the top of the page, so the next Tab goes to the skip link.
+- **Enhancement:** a floating round button in the bottom-right corner (`src/components/layout/BackToTop.tsx`).
+  - Green-700 with a white arrow (5.9:1). Against white the button is 5.9:1, and against green-50 it is 5.4:1 (non-text 3:1).
+  - A 44×44px target, named "Back to top"; the icon is `aria-hidden`.
+  - Positioned `calc(1rem + env(safe-area-inset-*))` from the corner. The insets are 0 until the site opts into `viewport-fit=cover`, and correct once it does.
+  - **Focus outline:** the same as the hero's pause button (D-042): the gold ring with a 7px green-900 halo, so it is visible over any background. Gold is 7.9:1 against the halo.
+  - **Hover:** turns green-900 and lifts 2px, only on devices with hover and only with motion allowed.
+
+**When it shows:** one IntersectionObserver, no scroll listener.
+
+- It watches an `aria-hidden`, 1px-wide, one-viewport-tall sentinel at the top of the page, and the `<footer>`.
+- The button shows when the sentinel is entirely above the viewport and the footer is not in view.
+- It fades with opacity and `visibility` (200ms, none for reduced motion). While hidden it is out of the tab order and the accessibility tree.
+- It is fixed and the sentinel is absolutely positioned, so there is no layout shift and no overflow.
+- If IntersectionObserver is missing, the button stays hidden and the footer link remains.
+
+**How overlap is ruled out:**
+
+- **Footer content:** the footer holds the quick links, contact details and legal links. The button is never visible while any of the footer is on screen, so it cannot cover them, at any width or scroll position. At the bottom of the page the footer's own link takes over.
+- **Hero pause button:** the button appears only after scrolling more than one viewport. That puts its top edge more than one viewport down the document, below the hero, so it can never meet the pause button in the hero's corner.
+- **Main content:** the button does float over main content mid-page, as any floating button does.
+- **Tests:** at 360 and 1280px, a test checks the first scroll position where the button appears (clear of the pause button and of every link and button) and the very bottom of the page.
+
+**Focus after scrolling: the skip link.** The skip link is the first focusable element. Moving focus there means the next Tab continues exactly as on a fresh page load: utility bar, logo, menu. The header logo was the other candidate. Focusing it would skip the desktop utility bar (Contact Us, Licences, FAQs, Search).
+
+- **The skip link's classes changed from `focus:` to `focus-visible:`.** After a mouse click or tap, focus moves there quietly, without the gold "Skip to main content" chip flashing up in the corner. When "Back to top" is pressed with Enter or Space, the chip appears, as it does on Tab.
+- **`preventScroll`:** focus uses `focus({ preventScroll: true })` so it does not cut the smooth scroll short.
+
+**Hidden when it should be:**
+
+- **Menu drawer:** an unlayered CSS rule (`html:has(#mobile-menu[open]) .back-to-top`) hides the button while the drawer is open, with no extra JavaScript.
+- **Splash:** it never shows near the top of the page, where the splash is. The splash (z-index 100) also sits above it (z-index 40).
+- **Print:** `print:hidden` on both the button and the footer link.
+
+**Keyboard:** the button comes right after `<main>` in the DOM, so while it shows, Tab from the end of the main content reaches it. Enter and Space both work: it is a native `<button>`.
+
+**JavaScript cost:** measured as in D-041, on the homepage at 360px, comparing production builds of `main` and this branch. The script count is unchanged (9). The bundle grows by 570 bytes compressed (152,593 to 153,163) and 1,552 bytes decoded (493,912 to 495,464).
+
+**Tests:** `tests/e2e/back-to-top.spec.ts` covers:
+- hidden at the top, shown after scrolling, and hidden again back at the top
+- a click returns to the top, with focus on the skip link, quietly
+- Tab, Enter and Space, with the skip link then visible
+- `scrollTo` behaviour `smooth`, or `instant` for reduced motion
+- hidden with the drawer open
+- hidden when printing
+- the overlap checks at 360 and 1280px, and no horizontal overflow
+- axe with the button showing
+- the footer link with JavaScript disabled
+
+**axe on a settled page (added after a CI failure):**
+
+- **What failed:** CI's first run of the axe test with the button showing reported contrast failures in Public notices: `#7f9a8c`, which is green-900 at 53% opacity.
+- **Cause:** axe had started while the section was still fading in (D-039). The colours themselves pass.
+- **Fix, in the tests only:** axe scans that cover scroll-revealed sections first call `waitForSettledPage` (`tests/e2e/support/settle.ts`). It fades in every pending section, restores the scroll position, and waits until every finite animation and transition has finished.
+- **Where it is used:** the back-to-top, homepage and smoke axe tests. The homepage and smoke scans previously skipped below-the-fold sections, which sit at opacity 0 until revealed, so they now check more.

@@ -108,3 +108,11 @@
     }
   }
 }
+
+/*
+ * The floating "Back to top" button (BackToTop.tsx, D-043) is hidden while the menu drawer is open.
+ * Unlayered, so it beats the button's `inline-flex` utility.
+ */
+html:has(#mobile-menu[open]) .back-to-top {
+  display: none;
+}
