@@ -1,0 +1,45 @@
+/* Logo splash (Splash.tsx, D-038). Hidden unless the head script adds `splash` to <html>. */
+
+.splash-screen {
+  display: none;
+}
+
+/*
+ * The hard cap is CSS, not a script timer: the fade starts at 600ms and ends at 800ms even if the
+ * main thread is busy (an opacity animation runs on the compositor). The script only ends the
+ * splash earlier, on the load event, by adding `splash-done`.
+ */
+html.splash .splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-white);
+  pointer-events: none;
+  animation: splash-fade-out 200ms ease-out 600ms forwards;
+}
+
+html.splash.splash-done .splash-screen {
+  animation: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 200ms ease-out,
+    visibility 0s linear 200ms;
+}
+
+@keyframes splash-fade-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* The script never adds `splash` for reduced-motion users; this is a second guard. */
+@media (prefers-reduced-motion: reduce) {
+  html.splash .splash-screen {
+    display: none;
+  }
+}

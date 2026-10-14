@@ -8,7 +8,7 @@ import type { EventItem } from '@/lib/placeholder-content'
 
 export function Events({ items }: { items: EventItem[] }) {
   return (
-    <section aria-labelledby="events-heading">
+    <section data-reveal aria-labelledby="events-heading">
       <SectionHeading
         id="events-heading"
         title="Events"
@@ -20,7 +20,7 @@ export function Events({ items }: { items: EventItem[] }) {
           return (
             <li
               key={event.id}
-              className="relative flex gap-4 rounded-lg border border-line bg-white p-4 shadow-sm hover:shadow-md sm:p-5"
+              className="relative flex gap-4 rounded-lg border border-line bg-white p-4 shadow-sm transition duration-200 hover:shadow-md motion-safe:hover:-translate-y-0.5 sm:p-5"
             >
               <div
                 aria-hidden="true"

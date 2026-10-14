@@ -167,7 +167,7 @@ One account gives access to all of: licence application, consumer complaints, pe
 | Resources | Resources | 1 |
 | User Profile / portal | User Profile | 2 |
 | Utility bar: Contact Us, Licences, FAQs, Search | Same | 1 |
-| Home: hero banner, Latest Updates carousel | Homepage (Section 6.1) | 1 |
+| Home: hero banner (OGSERC: hero carousel), Latest Updates carousel | Homepage (Section 6.1) | 1 |
 | Footer with quick links, contact, social links, policy pages | Same | 1 |
 
 The developer shall complete a one-time audit of the live LASERC site against this table and record any features found that are not listed.
@@ -184,12 +184,17 @@ The developer shall complete a one-time audit of the live LASERC site against th
 
 ### 6.1 Public website (FR-WEB)
 - **FR-WEB-01** The site shall provide the navigation and pages described in Section 4.
-- **FR-WEB-02** The homepage shall contain, in order: header and main navigation; hero banner with a tagline and one primary action; quick services (Consumer Complaint, Licences, Regulatory Instruments, Energy Caps, FAQs); Latest Updates carousel of news cards; public notices; tenders; events; contact (office, phone, email, map); footer. The header shows the utility bar and the seven-item main menu from Section 4.
+- **FR-WEB-02** The homepage shall contain, in order: header and main navigation; hero carousel (FR-WEB-08), with the tagline and introduction on the first slide and one primary action on each slide; quick services (Consumer Complaint, Licences, Regulatory Instruments, Energy Caps, FAQs); Latest Updates carousel of news cards; public notices; tenders; events; contact (office, phone, email, map); footer. On desktop the header shows the utility bar and the seven-item main menu from Section 4; on smaller screens both are in the menu drawer (FR-WEB-11).
 - **FR-WEB-03** Every page shall have breadcrumbs, a consistent footer, and a link to search.
 - **FR-WEB-04** Public notices shall be visible from the homepage and sortable by date.
 - **FR-WEB-05** Pages shall be fully responsive, with mobile as the primary design target.
 - **FR-WEB-06** The footer shall link to a Privacy Policy, Terms of Service, Cookie Notice, Accessibility Statement, and Sitemap. OGSERC (with its legal advisers) supplies the text; the site shall show a cookie notice if any non-essential cookies are used.
 - **FR-WEB-07** Privacy-friendly site analytics (for example Plausible or Umami, no personal profiling) shall be active from launch to show which pages are used.
+- **FR-WEB-08 Hero carousel.** The homepage hero shall be a carousel of slides built from photographs OGSERC has the right to publish (listed in `docs/ASSET-CREDITS.md`), each slide with a headline and one primary action. Slides advance automatically at one configurable interval (5 seconds). The only control shall be a small, visible pause/play button (required by WCAG 2.2.2), with an accessible name that changes between "Pause slideshow" and "Play slideshow", a visible focus indicator and a touch target of at least 44×44px; there are no previous/next arrows or slide indicators. The carousel shall not autoplay for users who prefer reduced motion, shall pause while hovered, and shall stop rotating when keyboard focus enters it until the user presses Play. Screen-reader users shall not be interrupted: the slides are announced politely only while paused, and hidden slides are inert. Text over photographs shall meet WCAG AA contrast against the lightest possible pixel (using an overlay). Only the first photograph shall load with the page; the others load afterwards. Without JavaScript the first slide shall show in full.
+- **FR-WEB-09 Splash screen.** A short logo splash may show once per browser session. It shall never block content, the pointer or search engines (the page content is in the HTML), shall end when the page has loaded and in any case within about 800ms, shall not show for reduced-motion users, when JavaScript is off, or when browser storage is unavailable, and shall not lower the mobile performance score.
+- **FR-WEB-10 Motion.** Homepage sections may fade in subtly as they scroll into view, and cards and buttons may respond gently to hover, using CSS and a small IntersectionObserver (no animation library). All content shall be fully visible without JavaScript, motion shall cause no layout shift, and all motion shall respect `prefers-reduced-motion`.
+- **FR-WEB-11 Mobile header and menu drawer.** Below the desktop breakpoint (1024px), the header shall show only the logo, the Ogun State crest and a menu button, without horizontal overflow at 320px. The menu button shall open a drawer from the left, over a dimmed backdrop, containing the main menu (with expandable sections) and the utility links. The drawer shall trap focus, close on Escape, on a backdrop click and with a close button, lock page scrolling while open, return focus to the menu button when closed, use correct dialog semantics, and work (without animation) in browsers that do not support its transition features. On desktop, menu dropdowns shall open on click, Enter and Space, and also on hover on devices that support hover, following WCAG 1.4.13.
+- **FR-WEB-12 Footer pattern.** The footer may carry a subtle decorative background pattern (thin grid lines in brand-green tints with occasional gold accents), built in CSS with no images or JavaScript. It shall be hidden from assistive technology, shall never sit above footer text or links, shall cause no layout shift or horizontal overflow, and footer text shall keep WCAG AA contrast against the lightest part of the pattern.
 
 ### 6.2 Information centre: documents (FR-DOC)
 - **FR-DOC-01** Staff shall be able to publish documents in these categories (matching Regulatory Instruments): rules & regulations, energy caps, guidelines, forms, consultation, licences, orders & directives, codes, manuals, market documents, standards.
@@ -475,7 +480,7 @@ Phases 2 and 3 will have acceptance criteria written before they begin.
 11. Data retention and privacy policy approval.
 12. Who maintains the site after launch.
 13. Approved monthly hosting budget (Section 13.1) and any government hosting requirements.
-14. A vector (SVG) version of the OGSERC logo and a high-resolution Ogun State crest (a transparent PNG of the logo has been supplied), and OGSERC's confirmation of the brand colour values in Section 2.4 (the design must not copy the benchmark's look).
+14. Vector (SVG) versions of the OGSERC logo and the Ogun State crest (a transparent PNG of the logo and a 540×576 PNG of the crest have been supplied), and OGSERC's confirmation of the brand colour values in Section 2.4, including the ink colour `#483A16` sampled from the full logo lockup (the design must not copy the benchmark's look).
 15. Whistleblowing policy: anonymity rules, who receives reports, and how they are handled.
 16. Rules for publishing tenders (what is published, retention, who approves).
 17. Text for the Privacy Policy, Terms of Service, Cookie Notice, and Accessibility Statement, supplied by OGSERC's legal advisers.
@@ -483,6 +488,7 @@ Phases 2 and 3 will have acceptance criteria written before they begin.
 19. Written approval of the SRS, sitemap, and brand (Section 2.5).
 20. Whether PDF contents should be searchable (FR-SRCH-04) and whether scanned PDFs should be OCR-processed.
 21. Who holds the roles of security contact and incident decision-maker (NFR-SEC-17).
+22. The source, licence and permission for every image on the site (hero photographs, Ogun State crest, logo), as listed in `docs/ASSET-CREDITS.md`; permission to show the Nigeria coat of arms if it is wanted; and the headline and action wording for each hero slide.
 
 ---
 

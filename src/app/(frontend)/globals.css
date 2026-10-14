@@ -24,10 +24,10 @@
   --color-gold-500: #e6bc00; /* derived: primary button hover */
 
   /*
-   * PLACEHOLDER: dark olive-brown neutral. SRS 2.4 says to sample it from the full logo lockup
-   * with the commission name, which OGSERC has not supplied yet. Replace this value when it arrives.
+   * Dark olive-brown neutral, sampled from the commission name in the full logo lockup (SRS 2.4).
+   * Approximate: the source is a compressed image. Contrast checks in D-024 and D-033.
    */
-  --color-ink: #4a3f2a;
+  --color-ink: #483a16;
   --color-ink-muted: #5c5546; /* derived: secondary text */
 
   /* Derived functional colours. */
@@ -50,6 +50,15 @@
     html {
       scroll-behavior: auto;
     }
+
+    /* Safety net (D-039): nothing animates for users who ask for reduced motion. */
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   body {
@@ -68,5 +77,34 @@
 
   .on-light :focus-visible {
     outline-color: var(--color-green-900);
+  }
+}
+
+/*
+ * Scroll-reveal states, set by RevealOnScroll.tsx (D-039). Opacity and transform only: no layout
+ * shift. Kept here rather than in a component stylesheet: a page-level CSS import becomes a
+ * separate render-blocking file, which slowed first paint on mobile.
+ */
+@layer components {
+  .reveal-pending {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  .reveal-in {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 500ms ease-out,
+      transform 500ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-pending,
+    .reveal-in {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
   }
 }

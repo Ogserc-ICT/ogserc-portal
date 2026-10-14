@@ -79,6 +79,8 @@ Colours, fonts and other design tokens are defined once, in `src/app/(frontend)/
 
 With the site running, `/design-system` shows every colour and component for review, and `node scripts/design-review-screenshots.mjs` saves screenshots to `docs/design-review/`. See docs/DECISIONS.md D-023 to D-032.
 
+Photographs and emblems are prepared with `node scripts/optimise-images.mjs <folder with the originals>`, which resizes them and strips all metadata (including GPS location). Full-size originals are not committed. Record every image's source and licence in `docs/ASSET-CREDITS.md`.
+
 ## Project structure
 
 ```

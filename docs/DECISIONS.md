@@ -382,3 +382,185 @@ At scaffold time:
 
 **Deferred to step 11: the font fallback.** next/font's metric-matched fallback for Public Sans is `src: local(Arial)`. Linux and Android do not have Arial, so on those devices text is drawn in the system sans-serif, which is much wider (about 14% on the menu), until Public Sans loads. Slow connections make that period longer, and if the font fails, it lasts the whole visit. The layout now copes. The remaining work is visual: less text reflow when the font swaps in, and a closer match on Linux and Android. Options include a fallback stack with metric-compatible fonts (for example Liberation Sans or Roboto) and `next/font`'s `fallback` and `adjustFontFallback` settings. Listed in CLAUDE.md, build step 11.
 
+## D-033 Ink colour `#483A16`, sampled from the full logo lockup (2026-10-13)
+
+**Decision:** `--color-ink` is `#483A16`, sampled from the commission name in the full OGSERC logo lockup. It replaces the placeholder `#4A3F2A` in D-024 (that table's `ink` row is superseded; the other rows stand). The value is approximate, because the source is a compressed image; if OGSERC supplies an exact brand value, use it and re-run the checks.
+
+**Contrast** (WCAG 2.1 formula, plus axe on the rendered pages in the Playwright suite):
+
+| Pair | Ratio | Result |
+|---|---|---|
+| ink on white | 11.1 | AA text |
+| ink on green-50 / green-100 | 10.1 / 9.1 | AA text |
+| ink on gold-400 / gold-500 (buttons, hover) | 7.5 / 6.1 | AA text |
+| ink on green-300 | 6.3 | AA text |
+| ink on green-500 | 3.2 | **still never text on green-500** |
+
+`ink-muted` (`#5C5546`, 7.4:1 on white) is unchanged.
+
+## D-034 Image pipeline: optimised masters, metadata stripped, originals not committed (2026-10-13)
+
+**Decision:**
+
+- **Script:** `scripts/optimise-images.mjs` (using `sharp`, already a dependency) prepares supplied images:
+  - hero photographs become 2048px-wide JPEG masters (quality 80, mozjpeg) in `src/assets/hero/`, which sits outside `public/`, so a master is never served at full size
+  - the crest's white margin is trimmed, and its unused alpha channel is dropped, into `public/brand/ogun-state-crest.png`
+- **Metadata:** `sharp` writes no metadata unless asked to keep it, so EXIF, GPS, XMP, IPTC and ICC are all dropped. Images are converted to sRGB first so colours do not shift. The script then re-reads every output and fails if any metadata remains. The supplied files had no EXIF or GPS, only an ICC profile, but the step is kept for future photos (phones embed GPS by default). Next's image optimiser re-encodes again on top of this.
+- **Serving:** `next/image` serves AVIF, then WebP (`images.formats`). `images.qualities` is `[60, 75]`: 60 for hero photos under a dark overlay, 75 for everything else. A phone downloads the first hero at 640px wide as a roughly 6 KB AVIF.
+- **Originals:** the full-size originals (1.8 to 2.0 MB, up to 5637px wide) were removed from `public/`, where anyone could download them, and are not committed again. They remain in git history (commits 5326dd3, 6402bd5, b1c7b78); history was not rewritten. `electricity1.jpg` was not chosen, and the Nigeria coat of arms is held back until OGSERC confirms permission (step 2b).
+- **Credits:** every image's source and licence is tracked in `docs/ASSET-CREDITS.md`. Entries marked TO CONFIRM must be resolved before launch.
+
+**Why:** keeps pages light on mobile data (SRS §12 Performance), keeps the repository small, and never publishes location data hidden in photographs.
+
+**Gotcha found:** Windows file names are case-insensitive, so writing `ogun-state-crest.png` overwrote `Ogun-State-Crest.png` on disk. Keep source and output folders separate when re-running the script.
+
+## D-035 Desktop dropdowns open on hover as well as click and keyboard (2026-10-13)
+
+**Decision:** This extends D-026. The disclosure pattern and keyboard behaviour stay the same, and dropdowns now also open on mouse hover:
+
+- **Hover only where possible:** a dropdown opens on `pointerenter` only when the pointer is a mouse and `matchMedia('(hover: hover)')` matches. Touch devices open it with a tap (a click). Hovering is never the only way: click, Enter and Space still toggle.
+- **Closing:** a dropdown opened by hover closes 300ms after the pointer leaves, and moving back in cancels the close. A click on it "pins" it open, so it stays until a second click, a click outside, Escape or focus leaving.
+- **WCAG 1.4.13 (content on hover):**
+  - *hoverable:* the panel sits inside the item with no gap
+  - *persistent:* there is no timeout while the pointer is over it
+  - *dismissible:* Escape closes it from anywhere on the page, even when focus is elsewhere, and hover does not reopen it until the pointer has left
+- **Tests:** `tests/e2e/menu-hover.spec.ts`.
+
+## D-036 Mobile header and menu drawer (native `<dialog>`) (2026-10-13)
+
+**Decision:** This supersedes the mobile parts of D-026 (the inline panel, and the utility bar at every width).
+
+- **Header below 1024px:** one row with the wordmark, the crest (40px) and a Menu button. The commission name and the utility bar show from 1024px only. Below that, the utility links (Contact Us, Licences, FAQs, Search) are in the drawer. The logo link's accessible name always includes the full name. The header fits at 320px.
+- **Drawer:** a native modal `<dialog>` (`showModal()`), sliding in from the left over a dimmed backdrop. The browser provides the top layer, makes the page behind inert, and handles Escape (the `cancel` event). The component adds the rest:
+  - Tab and Shift+Tab wrap inside the drawer
+  - a click on the backdrop closes it
+  - page scrolling is locked while it is open (`overflow: hidden` on `<html>`, set from JavaScript so it also works in browsers without `:has()`)
+  - focus returns to the Menu button on every close
+  - the drawer closes if the window grows past 1024px, so an invisible modal never leaves the page inert
+- **Animation without support:** the slide and fade use `@starting-style` and `transition-behavior: allow-discrete`. Without them, the drawer still opens and closes, instantly:
+  - the open state uses only long-supported CSS
+  - the off-screen transform applies only while the dialog is closed (`display: none`)
+  - a browser that does not know `allow-discrete` drops the whole `transition` declaration, so nothing is left half-animated
+
+  **How this was checked:** a Playwright test removes the drawer's transitions (`transition: none !important`), which is what such a browser computes. It then confirms that the drawer is fully on-screen as soon as it opens (x = 0, full width, focus on the close button) and fully gone as soon as Escape is pressed. This was a reading of the cascade plus that test. Older browsers were not run.
+- **Styles:** the drawer's CSS lives in `src/components/layout/drawer.css`, using theme tokens only.
+- **Tests:** `tests/e2e/mobile-drawer.spec.ts` (open, focus trap, Escape, backdrop, close button, scroll lock, links, no-animation fallback, header at 320 and 360px) and `navigation.spec.ts` (contents, axe with the drawer open).
+
+## D-037 Hero carousel (2026-10-13)
+
+**Decision:** The FR-WEB-02 hero becomes a carousel (FR-WEB-08), superseding D-029's "gradient, no photograph". It uses the three photographs OGSERC supplied, in the order agreed for step 2b (`electricity4`, `3`, `2`).
+
+- **Structure:** WAI-ARIA carousel pattern. The `<section>` has `aria-roledescription="carousel"` and the label "Highlights". Each slide is a group labelled "N of 3". Inactive slides are `inert`. A fixed h1 (the commission's name) sits above the slides, and each slide headline is an h2, so the page keeps one visible h1 whichever slide shows.
+- **Content:** slide 1 carries the tagline and introduction placeholders, and slides 2 and 3 have headline placeholders. Each slide has one primary action. The labels "View energy caps" and "Browse regulatory instruments" are proposals for OGSERC to confirm, like "How to make a complaint".
+- **Controls:** Pause/Play (always visible), previous, next and indicator buttons (`aria-current` on the active one). `aria-live` is "polite" only while paused.
+- **Autoplay:** every 7 seconds, and never by default for `prefers-reduced-motion`. It pauses while the mouse is over the carousel, and stops when keyboard focus enters it (except on the Pause/Play button) until Play is pressed. This follows the WAI-ARIA auto-rotating carousel example.
+- **Images:**
+  - only slide 1's photo is in the HTML, with `preload` (Next 16's replacement for `priority`)
+  - slides 2 and 3 mount after the `load` event, or on the first navigation
+  - plain `loading="lazy"` would not defer them, because stacked slides sit inside the viewport
+- **Alt text:** the photos have empty alt text (decorative). They are generic scenes, not Ogun-specific information, and the headline carries the meaning. If OGSERC supplies photos of specific sites or events, give them descriptive alt text.
+- **Overlay contrast:** checked against a pure-white pixel, the worst case whatever the photo:
+  - phones: green-900 at 80% over the whole image gives white text 6.4:1 and green-50 text about 5.9:1
+  - desktop: a left-to-right gradient, 85% to 80% up to 65% of the width (the text column ends before that at 1024px and wider), fading to 40% where there is no text
+- **Layout:** slides share one grid cell, so the hero's height never changes. Space for the controls is reserved before hydration, so there is no layout shift.
+- **Without JavaScript:** slide 1 shows in full and no controls are rendered.
+- **Tests:** `tests/e2e/hero-carousel.spec.ts` (controls, autoplay and pause via `page.clock`, focus stop, reduced motion, no JavaScript, one preloaded image in the HTML, served AVIF/WebP with no metadata and under 200 KB, axe).
+
+## D-038 Logo splash and its inline script (2026-10-13)
+
+**Decision:** A short logo splash shows on the first page of a browser session (FR-WEB-09).
+
+- **Inline script:** a small script in `<head>` (`SPLASH_SCRIPT` in `Splash.tsx`) runs before first paint. It adds `splash` to `<html>` only when reduced motion is not requested and `sessionStorage` has no flag. Every `sessionStorage` call is inside `try/catch`. If storage is blocked, the splash is skipped rather than shown on every page. The hero and the rest of the page do not use storage.
+- **Never blocking:**
+  - without the class, the overlay is `display: none`, so there is no splash without JavaScript
+  - the overlay has `pointer-events: none`
+  - the page's content is always in the HTML underneath, so search engines and screen readers get it
+  - the overlay is `aria-hidden`
+- **Ending:** the splash ends on the `load` event. The hard cap is a CSS animation that fades it from 600ms to 800ms. A first version used a 600ms `setTimeout`, but tests showed the timer firing over a second late while the main thread was busy. An opacity animation runs on the compositor, so the cap holds.
+- **Priority gotcha:** the splash shows the same logo image as the header, and React keeps only the first `<link rel="preload">` for a URL. The splash comes first in the page, so it must carry the same `fetchPriority="high"`, or the header logo loses its high priority. A test checks this.
+- **CSP (step 12):** the inline splash script **must be hashed** (a `sha256-…` source in `script-src`) **or moved to an external file** when the strict Content-Security-Policy is added in build step 12 (D-011). Any edit to the script changes its hash. `suppressHydrationWarning` on `<html>` is needed because the script changes its classes before React hydrates. The script uses `dangerouslySetInnerHTML` with a fixed string and no user input.
+- **Tests:** `tests/e2e/splash.spec.ts`.
+
+**Performance:** measured with Lighthouse (D-041). Running the branch with and without `--force-prefers-reduced-motion` (which turns off the splash, autoplay and reveal) showed no difference in FCP or LCP.
+
+## D-039 Motion: CSS and one IntersectionObserver, no animation library (2026-10-13)
+
+**Decision:**
+
+- **Scroll-reveal:** homepage sections carry `data-reveal`. `RevealOnScroll.tsx` (one small client component, rendered on the homepage) adds `reveal-pending` only to elements that start below the viewport, so nothing on screen flashes. It fades each one in once, using opacity and a 12px transform, so there is no layout shift (a test measures CLS under 0.01 while scrolling the whole page). Without JavaScript, before hydration, for reduced-motion users, or without IntersectionObserver, nothing is hidden.
+- **Hover:** cards, quick-service tiles, event cards and buttons lift slightly on hover (`motion-safe:` utilities only).
+- **Safety net:** a global `prefers-reduced-motion` rule in `globals.css` cuts every animation and transition to near zero.
+- **Where the CSS lives:** the reveal styles are in `globals.css`, not a component stylesheet. A CSS file imported by a page-level component is shipped as a separate render-blocking `<link>`. That cost an extra round trip and about 130ms of FCP on simulated mobile, which a test now guards against. Component CSS imported from the layout (drawer, splash, footer pattern) is merged into the main stylesheet, so it is unaffected.
+
+## D-040 Footer grid pattern (2026-10-13)
+
+**Decision:** The footer has a decorative grid-of-boxes background (FR-WEB-12), in `src/components/layout/footer-grid.css`.
+
+- **Drawing:** pure CSS. Two `repeating-linear-gradient`s draw 1px lines on a 32px grid in green-500 at 15% (`color-mix` with theme tokens, no hex values), and a mask fades the grid in from the top. Four cells are tinted gold at 18%: two on phones, four from 1024px.
+- **Static:** no images, no JavaScript, no animation.
+- **Decorative only:** `aria-hidden`, `pointer-events: none`, `z-index: -1` inside an `isolate`d footer with `overflow: hidden`, so it never covers text and cannot cause horizontal scrolling.
+- **Contrast**, against the lightest part of the pattern (a gold cell, gold-400 at 18% over green-900):
+
+  | Footer element | Ratio | Result |
+  |---|---|---|
+  | green-50 text | 7.1 | AA |
+  | white headings | 7.8 | AA |
+  | gold icons | 5.3 | non-text 3:1 |
+
+  Over the plain grid lines the ratios are 8.8 and 9.6. axe cannot measure text over a background image: it reports such text as "incomplete" rather than passing, so these ratios are calculated (the same formula as D-024). The Playwright tests run axe on the footer, check that every footer link is the element hit at its centre, and check for no overflow at 360 and 1280px.
+
+## D-041 Performance and JavaScript, before and after step 2b (2026-10-14)
+
+**Method:**
+
+- **Tool:** Lighthouse 13.5.0 via `npx` (not added to `package.json`), with its default mobile preset (simulated slow 4G, 4x CPU slowdown) and Playwright's Chromium.
+- **Servers:** production builds of `main` and of this branch, served side by side on the same machine.
+- **Runs:** 6 rounds, alternating main and branch, medians reported.
+- **JavaScript:** summed from the homepage's script resources in a 360px Chromium page.
+
+**JavaScript shipped by the homepage:**
+
+| | Scripts | Transferred (compressed) | Decoded |
+|---|---|---|---|
+| main | 7 | 145.2 KB | 474.6 KB |
+| step 2b | 9 | 149.2 KB | 483.2 KB |
+
+The increase is about 4 KB compressed, for the carousel, the drawer, hover menus and the reveal observer.
+
+**Lighthouse mobile, medians of 6 alternating runs:**
+
+| | Score | FCP | LCP | TBT | CLS | Speed Index | Page weight |
+|---|---|---|---|---|---|---|---|
+| main | 82 | 0.93 s | 3.19 s | 447 ms | 0 | 2.51 s | 235 KB |
+| step 2b | 83 | 0.93 s | 3.26 s | 427 ms | 0 | 2.29 s | 286 KB |
+
+- **Page weight:** the extra 51 KB is mostly the hero photos, which load after the page's `load` event.
+- **First measurement:** step 2b initially measured 3 points lower (FCP +130ms). Two causes were found and fixed: the page-level reveal stylesheet (D-039), and the splash dropping the header logo's preload priority (D-038).
+- **Noise:** this machine's run-to-run spread is about ±3 points and ±150ms TBT, so differences of that size are noise.
+
+**Revisit when:** the font fallback work in step 11 (D-032) and the CSP in step 12. The homepage LCP (about 3.2s on simulated slow 4G) was already above the 2.5s "good" threshold before this step. It is mostly script and font time, and is worth a dedicated look in step 11.
+
+## D-042 Hero carousel: a pause/play button only, and a 5-second interval (2026-10-14)
+
+**Decision:** This supersedes the "Controls" and "Autoplay" interval in D-037; the rest of D-037 stands.
+
+- **No arrows or dots:** the previous/next buttons and slide indicators were removed at the project owner's request, for a cleaner hero.
+- **Pause/play kept, for WCAG 2.2.2 (Pause, Stop, Hide):** content that moves automatically for more than five seconds needs a way to pause it. The control is:
+  - a small icon on a 70% green-900 disc in the hero's bottom-right corner
+  - named "Pause slideshow" or "Play slideshow", matching its state
+  - a 44×44px target, though the visible disc is 32px
+  - first in the carousel's tab order, as the WAI-ARIA carousel pattern recommends
+- **Pause/play contrast:**
+  - the icon is at least 6.8:1 against its disc, even over a pure-white pixel under the lightest part of the desktop overlay (40%)
+  - the focus outline is the site's gold ring with a 7px green-900 halo outside it, because gold alone would be 1.5:1 against a bright photo there
+- **Interval:** 5 seconds, held in one constant, `HERO_INTERVAL_MS` in `src/components/home/HeroCarousel.tsx`, so changing it is a one-line edit. The tests read the value from one place too (`INTERVAL` in `tests/e2e/hero-carousel.spec.ts`).
+- **Kept from D-037:** no autoplay for `prefers-reduced-motion` (the button then reads "Play slideshow"); a pause while the mouse is over the hero; keyboard focus entering a slide stops rotation until Play is pressed; once Pause is pressed it stays paused; the crossfade; stacked slides with no layout shift; slide 1 in full without JavaScript.
+- **Screen readers:** without arrows, screen-reader users cannot step through slides. They are not worse off:
+  - every slide is in the HTML and labelled ("1 of 3" and so on, with `aria-roledescription`)
+  - `aria-live` is "off" while playing, so automatic changes are never announced mid-sentence, and "polite" when paused
+  - hidden slides are `inert`
+  - moving focus into the hero stops rotation, so a keyboard or screen-reader user is never chasing a moving target
+
+  The slides' actions also appear elsewhere: the complaint route is in the menu and quick services, and Energy Caps and Regulatory Instruments are in the menu.
+- **Layout:** the controls row under the slide text is gone, and the button is absolutely positioned. The hero is 60px shorter on phones and tablets and 76px shorter on desktop (a little bottom padding was added so the button never touches the slide text). The text itself did not move, so the D-037 overlay contrast figures are unchanged (white text at least 6.4:1).
+- **Tests:** `tests/e2e/hero-carousel.spec.ts` uses `page.clock`. It pauses the fake clock and steps it 100ms at a time, asserting that the slides change exactly 5000ms apart (checked by temporarily setting 7000ms: the test failed). It also covers Pause and Play, the hover pause, the focus stop, reduced motion, `aria-live`, the 44px target, the focus outline, the single button, no JavaScript, and axe with and without reduced motion.

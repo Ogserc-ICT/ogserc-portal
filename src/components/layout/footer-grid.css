@@ -1,0 +1,43 @@
+/*
+ * Decorative grid-of-boxes pattern behind the footer (FR-WEB-12, D-040). Pure CSS, static, no
+ * images and no JavaScript. Colours are theme tokens mixed with transparency.
+ *
+ * Contrast is checked against the lightest part, a gold square (gold-400 at 18% over green-900):
+ * green-50 text 7.1:1, white 7.8:1, gold icons 5.3:1. Over plain grid lines: 8.8:1 and 9.6:1.
+ */
+
+.footer-grid {
+  --cell: 32px;
+  --grid-line: color-mix(in srgb, var(--color-green-500) 15%, transparent);
+
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(to right, var(--grid-line) 0 1px, transparent 1px var(--cell)),
+    repeating-linear-gradient(to bottom, var(--grid-line) 0 1px, transparent 1px var(--cell));
+  /* Fade in from the top edge so the pattern stays quiet behind the headings. */
+  mask-image: linear-gradient(to bottom, transparent, var(--color-black) 45%);
+}
+
+/* A gold-tinted square filling one grid cell, inside its lines. */
+.footer-grid-accent {
+  position: absolute;
+  left: calc(var(--cell) * var(--col) + 1px);
+  top: calc(var(--cell) * var(--row) + 1px);
+  width: calc(var(--cell) - 1px);
+  height: calc(var(--cell) - 1px);
+  background: color-mix(in srgb, var(--color-gold-400) 18%, transparent);
+}
+
+/* Two accents on phones; four from 1024px, where the footer is wide enough to keep them apart. */
+.footer-grid-accent[data-wide] {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .footer-grid-accent[data-wide] {
+    display: block;
+  }
+}

@@ -1,0 +1,71 @@
+/*
+ * Mobile menu drawer (MobileMenu.tsx, D-036). Colours come from the theme tokens in globals.css.
+ *
+ * Progressive enhancement: the slide-in and fade use @starting-style and
+ * `transition-behavior: allow-discrete`. A browser without them still opens and closes the drawer
+ * correctly, just without animation:
+ *  - the open state (`[open]`, transform: none) uses only long-supported CSS;
+ *  - the off-screen transform applies only while the dialog is closed, when it is display: none;
+ *  - a browser that does not understand `allow-discrete` drops the whole `transition` declaration,
+ *    so nothing animates and nothing is left half-way.
+ */
+
+.drawer {
+  /* Reset the browser's centred-dialog styles. */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  max-width: none;
+  max-height: none;
+  inset-block: 0;
+  inset-inline: 0 auto;
+  width: min(22rem, 88vw);
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--color-white);
+  color: var(--color-ink);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--color-black) 25%, transparent);
+
+  transform: translateX(-100%);
+  transition:
+    transform 250ms ease-out,
+    overlay 250ms allow-discrete,
+    display 250ms allow-discrete;
+}
+
+.drawer[open] {
+  transform: none;
+}
+
+@starting-style {
+  .drawer[open] {
+    transform: translateX(-100%);
+  }
+}
+
+.drawer::backdrop {
+  background-color: color-mix(in srgb, var(--color-green-900) 0%, transparent);
+  transition:
+    background-color 250ms ease-out,
+    overlay 250ms allow-discrete,
+    display 250ms allow-discrete;
+}
+
+.drawer[open]::backdrop {
+  background-color: color-mix(in srgb, var(--color-green-900) 60%, transparent);
+}
+
+@starting-style {
+  .drawer[open]::backdrop {
+    background-color: color-mix(in srgb, var(--color-green-900) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer,
+  .drawer::backdrop {
+    transition: none;
+  }
+}

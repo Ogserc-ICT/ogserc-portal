@@ -29,7 +29,7 @@ export function Card({
 }: CardProps) {
   return (
     <article
-      className={`relative flex h-full flex-col overflow-hidden rounded-lg border border-line bg-white shadow-sm transition-shadow focus-within:shadow-md hover:shadow-md ${className}`}
+      className={`relative flex h-full flex-col overflow-hidden rounded-lg border border-line bg-white shadow-sm transition duration-200 focus-within:shadow-md hover:shadow-md motion-safe:hover:-translate-y-0.5 ${className}`}
     >
       {media}
       <div className="flex flex-1 flex-col gap-2 p-5">

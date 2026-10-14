@@ -10,7 +10,7 @@ import type { Notice } from '@/lib/placeholder-content'
 /** FR-WEB-04: notices on the homepage, newest first. The full sortable list arrives in step 9. */
 export function PublicNotices({ items }: { items: Notice[] }) {
   return (
-    <section aria-labelledby="public-notices-heading" className="py-12 sm:py-16">
+    <section data-reveal aria-labelledby="public-notices-heading" className="py-12 sm:py-16">
       <Container>
         <SectionHeading
           id="public-notices-heading"

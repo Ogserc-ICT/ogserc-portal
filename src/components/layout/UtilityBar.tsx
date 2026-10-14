@@ -4,10 +4,13 @@ import { Container } from '@/components/ui/Container'
 import { Icon } from '@/components/ui/Icon'
 import { utilityLinks } from '@/lib/navigation'
 
-/** SRS Section 4 utility bar: Contact Us | Licences | FAQs | Search. Shown at every width. */
+/**
+ * SRS Section 4 utility bar: Contact Us | Licences | FAQs | Search. Desktop only (lg and up);
+ * on smaller screens the same links are in the menu drawer (D-036).
+ */
 export function UtilityBar() {
   return (
-    <div className="on-dark bg-green-900 text-white">
+    <div className="on-dark hidden bg-green-900 text-white lg:block">
       <Container>
         <nav aria-label="Utility">
           <ul className="flex flex-wrap items-center justify-end gap-x-1 text-sm">

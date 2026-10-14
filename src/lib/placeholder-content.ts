@@ -8,7 +8,7 @@
  * script (FR-CMS-08). It must not exist at launch (docs/RUNBOOK.md launch checklist).
  */
 
-import { PENDING_PATH } from '@/lib/navigation'
+import { PENDING_PATH, hrefFor, routes } from '@/lib/navigation'
 
 /** Categories from SRS FR-NEWS-03. */
 export type NoticeCategory =
@@ -37,6 +37,36 @@ export const hero = {
   // Proposed wording for the one primary action. OGSERC to confirm.
   actionLabel: 'How to make a complaint',
 }
+
+export type HeroSlide = {
+  id: string
+  headline: string
+  text?: string
+  action: { label: string; href: string }
+}
+
+/**
+ * Hero carousel slides, in the order of the photographs in src/assets/hero/. Slide 1 carries the
+ * tagline and introduction. The action wording on slides 2 and 3 is proposed; OGSERC to confirm.
+ */
+export const heroSlides: HeroSlide[] = [
+  {
+    id: 'welcome',
+    headline: hero.tagline,
+    text: hero.introduction,
+    action: { label: hero.actionLabel, href: hrefFor(routes.consumerComplaint) },
+  },
+  {
+    id: 'slide-2',
+    headline: '[Sample headline for slide 2, OGSERC to supply]',
+    action: { label: 'View energy caps', href: hrefFor(routes.energyCaps) },
+  },
+  {
+    id: 'slide-3',
+    headline: '[Sample headline for slide 3, OGSERC to supply]',
+    action: { label: 'Browse regulatory instruments', href: hrefFor(routes.regulatoryInstruments) },
+  },
+]
 
 export const news: NewsItem[] = [1, 2, 3, 4, 5, 6].map((n) => ({
   id: `news-${n}`,
