@@ -31,15 +31,22 @@ const CAPABILITIES = {
 
 export type Capability = keyof typeof CAPABILITIES
 
-/** Anything with a roles list: the logged-in user, or a user document. */
-type WithRoles = { roles?: readonly string[] | null } | null | undefined
+/**
+ * The user's roles, or an empty list for anything malformed (no user, no roles, or a value that
+ * is not an array, such as a bare string). Unknown role names simply grant nothing.
+ */
+function rolesOf(user: unknown): readonly unknown[] {
+  if (typeof user !== 'object' || user === null) return []
+  const roles = (user as { roles?: unknown }).roles
+  return Array.isArray(roles) ? roles : []
+}
 
-export function hasRole(user: WithRoles, role: Role): boolean {
-  return Boolean(user?.roles?.includes(role))
+export function hasRole(user: unknown, role: Role): boolean {
+  return rolesOf(user).includes(role)
 }
 
 /** True if any of the user's roles grants the capability. */
-export function hasCapability(user: WithRoles, capability: Capability): boolean {
-  const allowed: readonly Role[] = CAPABILITIES[capability]
-  return Boolean(user?.roles?.some((role) => allowed.includes(role as Role)))
+export function hasCapability(user: unknown, capability: Capability): boolean {
+  const allowed: readonly unknown[] = CAPABILITIES[capability]
+  return rolesOf(user).some((role) => allowed.includes(role))
 }

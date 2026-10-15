@@ -8,10 +8,13 @@ import { fileURLToPath } from 'url'
 import { denyByDefault } from './access/deny-by-default'
 import { Media } from './collections/Media'
 import { Users } from './collections/Users'
+import { assertServerEnv } from './lib/env'
 import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
+
+assertServerEnv(process.env)
 
 function requireEnv(name: string): string {
   const value = process.env[name]

@@ -24,6 +24,10 @@ export function userCan(user: RequestUser, capability: Capability): boolean {
 // Boolean-only (not `Access`) so they also fit Payload's `admin` and `unlock` access slots.
 export const denyAll = (): boolean => false
 
+/**
+ * Only for reads that are intentionally public, such as published images. Never use it for
+ * create, update or delete, or for anything that can hold drafts (use publishedOnly).
+ */
 export const allowAll = (): boolean => true
 
 /** Access function for any capability, e.g. `read: can('audit:read')`. */

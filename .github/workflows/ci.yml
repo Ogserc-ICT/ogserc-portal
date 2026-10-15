@@ -14,12 +14,12 @@ concurrency:
 
 jobs:
   quality:
-    name: Lint, typecheck, audit
+    name: Lint, typecheck, unit tests, audit
     runs-on: ubuntu-latest
     env:
       # Placeholders so the Payload config loads; these jobs never touch a database.
       DATABASE_URL: postgres://ci:ci@localhost:5432/ci
-      PAYLOAD_SECRET: ci-placeholder-not-a-secret
+      PAYLOAD_SECRET: ci-placeholder-not-a-secret-at-least-32-chars
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -30,6 +30,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      # Unit tests and the access audit of the assembled Payload config (no browser, no database).
+      - run: pnpm test:unit
       # Fails only on high or critical vulnerabilities; lower ones are handled by Dependabot.
       - run: pnpm audit --audit-level high
 

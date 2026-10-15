@@ -26,7 +26,13 @@ export const Users: CollectionConfig = {
     useAsTitle: 'email',
     defaultColumns: ['email', 'name', 'roles'],
   },
-  auth: true,
+  auth: {
+    cookies: {
+      // From NODE_ENV, not SITE_URL, so a production server never sends the session cookie
+      // without Secure. Browsers accept Secure cookies on http://localhost, which CI uses.
+      secure: process.env.NODE_ENV === 'production',
+    },
+  },
   access: {
     admin: isStaff,
     create: isAdmin,
