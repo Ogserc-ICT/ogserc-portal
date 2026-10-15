@@ -7,12 +7,15 @@
 //    database in PROTECTED_DATABASE_URL, which the harness sets to your normal DATABASE_URL).
 // 2. DATABASE_URL, which Payload connects with, must name the same host and database as
 //    TEST_DATABASE_URL.
-// 3. On the live connection, current_database() and the pool's host must match TEST_DATABASE_URL.
+// 3. On the live connection, current_database() and the pool's host must match TEST_DATABASE_URL
+//    (reset-steps.ts).
 // The reset only drops and recreates the `public` schema inside that one database. It never runs
-// DROP DATABASE and never connects to any other database.
+// DROP DATABASE and never connects to any other database. Afterwards it checks that every table in
+// the current schema and every migration record exists, and exits non-zero if not.
 
 import { rm } from 'node:fs/promises'
 
+import { resetAndVerify } from './reset-steps'
 import { assertWipeableTestDatabase, databaseIdentity, describeDatabase, sameDatabase } from './test-db'
 
 function fail(message: string): never {
@@ -36,24 +39,35 @@ async function main(): Promise<void> {
     fail(`DATABASE_URL (${describeDatabase(connectingTo)}) is not the test database (${describeDatabase(target)}).`)
   }
 
-  const [{ getPayload }, { default: config }, { sql }, { connectedDatabase }] = await Promise.all([
+  const [{ getPayload }, { default: config }, { sql }, { connectedDatabase }, { migrations }] = await Promise.all([
     import('payload'),
     import('../../src/payload.config'),
     import('@payloadcms/db-postgres'),
     import('../../src/lib/startup'),
+    import('../../src/migrations'),
   ])
   const payload = await getPayload({ config })
+  const db = payload.db as unknown as import('@payloadcms/db-postgres').PostgresAdapter
+  const rows = async (query: ReturnType<typeof sql>): Promise<string[]> =>
+    (await db.drizzle.execute(query)).rows.map((row) => String((row as { name: unknown }).name))
 
-  const live = await connectedDatabase(payload)
-  if (!sameDatabase(live, target)) {
-    fail(`The live connection is ${describeDatabase(live)}, not ${describeDatabase(target)}. Nothing was changed.`)
-  }
-
-  console.log(`[reset-test-db] Resetting schema public in ${describeDatabase(live)}`)
-  await payload.db.drizzle.execute(sql`drop schema public cascade`)
-  await payload.db.drizzle.execute(sql`create schema public`)
-  await payload.db.migrate()
-  console.log('[reset-test-db] Done: empty database with all migrations applied.')
+  await resetAndVerify(
+    target,
+    {
+      liveDatabase: () => connectedDatabase(payload),
+      resetSchema: async () => {
+        await db.drizzle.execute(sql`drop schema public cascade`)
+        await db.drizzle.execute(sql`create schema public`)
+      },
+      migrate: () => payload.db.migrate(),
+      existingTables: () =>
+        rows(sql`select table_name as name from information_schema.tables where table_schema = 'public'`),
+      appliedMigrations: () => rows(sql`select name from payload_migrations`),
+    },
+    // Every table Payload's current config defines, and every migration in src/migrations.
+    { tables: Object.keys(db.tables), migrations: migrations.map((migration) => migration.name) },
+    (message) => console.log(`[reset-test-db] ${message}`),
+  )
   process.exit(0)
 }
 
