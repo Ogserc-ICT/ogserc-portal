@@ -18,6 +18,7 @@ Every setting comes from environment variables. The full list, with explanations
 | `S3_*` | From step 4 | S3-compatible file storage for uploads. |
 | `SMTP_*`, `EMAIL_FROM`, `CONTACT_FORM_TO` | From step 5 | Email for the contact form. |
 | `TURNSTILE_*` | From step 5 | Bot protection on forms. |
+| `TEST_DATABASE_URL` | Tests only | Database that `pnpm test:e2e:db` empties and uses (Section 3.1). Never set it on a deployed server. |
 
 ## 2. Protecting `main` and scanning for secrets
 
@@ -94,9 +95,34 @@ Review the generated file, then commit it with the code change.
 
 **Before any production migration:** take a database backup (Section 6).
 
+### 3.1 Test database (`pnpm test:e2e:db`)
+
+Tests that sign in, change roles or upload files use their own database, which is **emptied at the start of every run** (D-044).
+
+**Set up once:** create a separate database, for example a Neon branch with a database named `ogserc_e2e`, and put its connection string in `.env` as `TEST_DATABASE_URL`. The name must contain `e2e` or `test`.
+
+**Check before the first run (touches no database):**
+
+```sh
+node --experimental-strip-types tests/support/test-db.ts
+```
+
+It prints only the host and database name. Make sure it is not your development database.
+
+**What a run does:**
+1. Refuses to start if `NODE_ENV` is production, the name lacks `e2e`/`test`, or the host and database equal those in `DATABASE_URL`.
+2. Connects to `TEST_DATABASE_URL` only, checks `current_database()` and the host on the live connection, then drops and recreates the `public` schema in that database and applies every migration. It never runs `DROP DATABASE` and never connects to another database.
+3. Starts its own server on port 3100 (never an existing one) with `DATABASE_URL` set to the test database. Locally it is a dev server building into `.next-e2e/`, so it does not clash with a dev server already running.
+4. Before any test, checks which database that server is actually connected to, prints it, and aborts if it is not the test database.
+
+**In CI:** the e2e job creates `ogserc_e2e` in its throwaway Postgres container and runs the same checks, with no exemptions.
+
 ## 4. First admin account
 
 On a brand-new, empty database, `/admin` shows a "create first user" screen that **anyone who reaches the site can use**. On every new database (staging or production), create the first administrator account yourself **before the site is reachable by anyone else**. Do this before pointing DNS at it or sharing the address.
+
+- While there are no accounts, a production server logs an error at startup beginning `SECURITY: there are no user accounts`. Treat it as urgent.
+- The first account always becomes an administrator. Only one can be created this way, even if two people submit the screen at the same moment.
 
 ## 5. Deploying *(to be completed in step 13)*
 

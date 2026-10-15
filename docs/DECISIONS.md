@@ -624,3 +624,32 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - **Cause:** axe had started while the section was still fading in (D-039). The colours themselves pass.
 - **Fix, in the tests only:** axe scans that cover scroll-revealed sections first call `waitForSettledPage` (`tests/e2e/support/settle.ts`). It fades in every pending section, restores the scroll position, and waits until every finite animation and transition has finished.
 - **Where it is used:** the back-to-top, homepage and smoke axe tests. The homepage and smoke scans previously skipped below-the-fold sections, which sit at opacity 0 until revealed, so they now check more.
+
+## D-044 Test database isolation, and only one first administrator (2026-10-15)
+
+**Decision:**
+- Tests that need a database run with `pnpm test:e2e:db` (`playwright.db.config.ts`), against `TEST_DATABASE_URL`, never the development database.
+- **Before anything starts**, the guard (`tests/support/test-db.ts`) refuses if:
+  - `NODE_ENV` is production;
+  - the database name does not contain `e2e` or `test`;
+  - the host and database name equal those in `DATABASE_URL`.
+
+  It prints only the host and database name, and has no bypass flag.
+- **The reset** (`tests/support/reset-test-db.ts`, run before the server starts):
+  - checks the guard again;
+  - checks that `DATABASE_URL` names the test database;
+  - checks `current_database()` and the pool's host on the live connection;
+  - drops and recreates the `public` schema in that one database and runs the migrations.
+
+  It never runs `DROP DATABASE` and never connects elsewhere.
+- **The server:** the run starts its own server on port 3100 and never reuses one. It runs on the test database, with a separate `.next-e2e` build folder locally (`NEXT_DIST_DIR`). Global setup reads the database the running server reports (`E2E_DB_IDENTITY_FILE`, written in `onInit`), prints it, and aborts on any mismatch.
+- **First user:** the hook that makes the first user an administrator takes a transaction-scoped Postgres advisory lock (`src/lib/transaction-lock.ts`), recounts, and refuses a first-register request that lost the race.
+- **Empty production database:** a production server with no accounts logs a `SECURITY:` error at startup.
+
+**Why:**
+- A test that empties the wrong database would destroy development or production content, so every layer checks independently.
+- Running the test without the lock showed the race is real: two simultaneous first-register requests both returned 200 and created two administrators. Payload checks "no users" and creates the user in one read-committed transaction without a lock. With the lock: 403 and 200, and one user, in two separate runs.
+
+**Trade-off:**
+- Each `pnpm test:e2e:db` run starts a fresh server (about 1 minute locally).
+- The host comes from the pool's connection string. Postgres reports the database name but not the hostname, so a DNS-level redirect would not be detected.

@@ -8,6 +8,7 @@ node_modules/
 
 # Next.js build output
 .next/
+.next-e2e/
 out/
 next-env.d.ts
 *.tsbuildinfo
@@ -18,6 +19,7 @@ next-env.d.ts
 # Playwright
 /test-results/
 /playwright-report/
+/playwright-report-db/
 /blob-report/
 /playwright/.cache/
 

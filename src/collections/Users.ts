@@ -1,7 +1,8 @@
-import type { CollectionBeforeValidateHook, CollectionConfig, FieldAccess } from 'payload'
+import { type CollectionBeforeValidateHook, type CollectionConfig, type FieldAccess, Forbidden } from 'payload'
 
 import { isAdmin, isAdminOrSelf, isStaff, userCan } from '../access'
 import { ROLES } from '../access/roles'
+import { lockForTransaction } from '../lib/transaction-lock'
 
 /** Only administrators may set roles, and never on their own account. */
 const canSetRoles: FieldAccess = ({ req, id }) => {
@@ -12,11 +13,21 @@ const canSetRoles: FieldAccess = ({ req, id }) => {
 /**
  * The first account on an empty database (Payload's "create first user" screen) becomes an
  * administrator; that screen runs without a signed-in user, so it cannot pick a role itself.
+ *
+ * Payload checks "no users yet" before this hook, without a lock, so two simultaneous requests
+ * could both pass. The lock makes the second wait until the first has committed; it then sees one
+ * user and is refused.
  */
 const firstUserIsAdministrator: CollectionBeforeValidateHook = async ({ data, operation, req }) => {
-  if (operation !== 'create' || !data) return data
+  if (operation !== 'create' || !data || req.user) return data
+  await lockForTransaction(req, 'users:first-user')
   const { totalDocs } = await req.payload.count({ collection: 'users', req })
-  if (totalDocs === 0) data.roles = ['administrator']
+  if (totalDocs === 0) {
+    data.roles = ['administrator']
+  } else if (req.payloadAPI !== 'local') {
+    // Only first-register creates users over HTTP without a signed-in user.
+    throw new Forbidden(req.t)
+  }
   return data
 }
 

@@ -11,6 +11,7 @@ import { Media } from './collections/Media'
 import { Users } from './collections/Users'
 import { assertServerEnv } from './lib/env'
 import { queryLimits } from './lib/query-limits'
+import { onPayloadInit } from './lib/startup'
 import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
@@ -54,6 +55,7 @@ export default buildConfig({
   }),
   sharp,
   telemetry: false,
+  onInit: onPayloadInit,
   // denyByDefault runs after every other plugin (its `order` is the highest), so it also covers
   // collections that plugins add. Keep it last here too, for readers.
   plugins: [queryLimits, denyByDefault],

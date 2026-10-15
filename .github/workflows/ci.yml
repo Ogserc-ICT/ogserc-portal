@@ -54,6 +54,9 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgres://ogserc:ogserc@localhost:5432/ogserc
+      # Separate database in the same throwaway container for pnpm test:e2e:db, which empties it.
+      # It passes the same guard as a developer's (name contains "e2e", not DATABASE_URL).
+      TEST_DATABASE_URL: postgres://ogserc:ogserc@localhost:5432/ogserc_e2e
       SITE_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v7
@@ -67,14 +70,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Apply database migrations
         run: pnpm migrate
+      - name: Create the end-to-end test database
+        run: PGPASSWORD=ogserc psql -h localhost -U ogserc -d ogserc -c 'CREATE DATABASE ogserc_e2e'
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+      # Sign-in, roles and uploads, on ogserc_e2e with its own server (docs/RUNBOOK.md 3.1).
+      - run: pnpm test:e2e:db
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
-          path: playwright-report/
+          path: |
+            playwright-report/
+            playwright-report-db/
           retention-days: 7
 
   secret-scan:

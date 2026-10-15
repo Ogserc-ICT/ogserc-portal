@@ -22,6 +22,9 @@ const nextConfig: NextConfig = {
   // The Dockerfile sets NEXT_OUTPUT=standalone to get a self-contained server bundle.
   // Elsewhere `next start` is used, which does not support standalone output.
   output: process.env.NEXT_OUTPUT === 'standalone' ? 'standalone' : undefined,
+  // The database-backed end-to-end tests run a second dev server with its own build folder
+  // (playwright.db.config.ts), so it never clashes with a dev server already running.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   poweredByHeader: false,
   images: {
     localPatterns: [{ pathname: '/api/media/file/**' }],

@@ -59,6 +59,8 @@ Requirements: Node.js 22 (see `.nvmrc`) and pnpm 10. Docker is optional (only fo
 | `pnpm lint` | Check code with ESLint |
 | `pnpm typecheck` | Check TypeScript types |
 | `pnpm test:e2e` | Run Playwright browser and accessibility tests (starts the dev server if one isn't running) |
+| `pnpm test:e2e:db` | Run database-backed tests (sign-in, roles, uploads). **Empties `TEST_DATABASE_URL`** first; see `docs/RUNBOOK.md` Section 3.1 |
+| `pnpm test:unit` | Unit tests and the access audit of the Payload config (no browser, no database) |
 | `pnpm format` | Format code with Prettier |
 | `pnpm migrate` | Apply pending database migrations |
 | `pnpm migrate:create <name>` | Create a migration after changing collections |
