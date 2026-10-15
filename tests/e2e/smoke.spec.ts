@@ -34,6 +34,21 @@ test.describe('Smoke', () => {
     expect(headers['x-powered-by']).toBeUndefined()
   })
 
+})
+
+test.describe('Smoke: admin', () => {
+  // Warm-up: a dev server compiles each route and client chunk on first use. Cold, the admin
+  // page took about 40s, the /api/users/me call it makes about 11s more, and the login view a
+  // further lazy chunk. One browser visit first compiles all of it, so the test and its
+  // assertions keep their normal timeouts. Against a production build the visit is quick.
+  test.beforeAll(async ({ browser, baseURL }) => {
+    test.setTimeout(180_000)
+    const page = await browser.newPage({ baseURL })
+    await page.goto('/admin')
+    await page.waitForURL(/\/admin\/(login|create-first-user)/, { timeout: 170_000 })
+    await page.close()
+  })
+
   test('admin panel responds', async ({ page }) => {
     const response = await page.goto('/admin')
     expect(response?.ok()).toBe(true)
