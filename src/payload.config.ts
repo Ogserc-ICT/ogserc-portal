@@ -6,9 +6,11 @@ import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
 import { denyByDefault } from './access/deny-by-default'
+import { hardenPayloadInternals } from './access/payload-internals'
 import { Media } from './collections/Media'
 import { Users } from './collections/Users'
 import { assertServerEnv } from './lib/env'
+import { queryLimits } from './lib/query-limits'
 import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
@@ -22,6 +24,7 @@ function requireEnv(name: string): string {
   return value
 }
 
+// hardenPayloadInternals runs on the finished config, after Payload adds its own collections.
 export default buildConfig({
   serverURL: process.env.SITE_URL,
   admin: {
@@ -51,6 +54,7 @@ export default buildConfig({
   }),
   sharp,
   telemetry: false,
-  // Must stay last: it fills in every access rule the plugins and collections above leave out.
-  plugins: [denyByDefault],
-})
+  // denyByDefault runs after every other plugin (its `order` is the highest), so it also covers
+  // collections that plugins add. Keep it last here too, for readers.
+  plugins: [queryLimits, denyByDefault],
+}).then(hardenPayloadInternals)

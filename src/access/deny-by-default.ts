@@ -28,8 +28,12 @@ function withDeniedGlobalDefaults(global: GlobalConfig): GlobalConfig {
   return { ...global, access }
 }
 
-export const denyByDefault: Plugin = (config: Config): Config => ({
+const denyMissingAccess: Plugin = (config: Config): Config => ({
   ...config,
   collections: config.collections?.map(withDeniedCollectionDefaults),
   globals: config.globals?.map(withDeniedGlobalDefaults),
 })
+
+// Payload sorts plugins by `order` before running them, so the highest order (not array
+// position alone) is what makes this run after every plugin that adds collections.
+export const denyByDefault: Plugin = Object.assign(denyMissingAccess, { order: Number.MAX_SAFE_INTEGER })
