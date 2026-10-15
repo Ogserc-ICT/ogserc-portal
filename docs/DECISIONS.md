@@ -642,7 +642,7 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
   - drops and recreates the `public` schema in that one database and runs the migrations.
 
   It never runs `DROP DATABASE` and never connects elsewhere.
-- **The server:** the run starts its own server on port 3100 and never reuses one. It runs on the test database, with a separate `.next-e2e` build folder locally (`NEXT_DIST_DIR`). Global setup reads the database the running server reports (`E2E_DB_IDENTITY_FILE`, written in `onInit`), prints it, and aborts on any mismatch.
+- **The server:** the run starts its own server on port 3100 and never reuses one. It runs on the test database, with a separate `.next-e2e` build folder locally (only when `E2E_TEST_SERVER=true` and `NODE_ENV` is not production; production builds always use `.next`). Global setup reads the database the running server reports (`E2E_DB_IDENTITY_FILE`, written in `onInit`), prints it, and aborts on any mismatch.
 - **First user:** the hook that makes the first user an administrator takes a transaction-scoped Postgres advisory lock (`src/lib/transaction-lock.ts`), recounts, and refuses a first-register request that lost the race.
 - **Empty production database:** a production server with no accounts logs a `SECURITY:` error at startup.
 

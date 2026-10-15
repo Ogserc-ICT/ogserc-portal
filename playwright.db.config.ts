@@ -53,7 +53,8 @@ export default defineConfig({
       E2E_DB_IDENTITY_FILE: process.env.E2E_DB_IDENTITY_FILE,
       PORT: String(port),
       SITE_URL: baseURL,
-      ...(isCI ? {} : { NEXT_DIST_DIR: '.next-e2e' }),
+      // Local dev server only: build into .next-e2e (next.config.ts). CI uses the production build.
+      ...(isCI ? {} : { E2E_TEST_SERVER: 'true' }),
     },
   },
 })

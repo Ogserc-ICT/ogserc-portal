@@ -23,8 +23,9 @@ const nextConfig: NextConfig = {
   // Elsewhere `next start` is used, which does not support standalone output.
   output: process.env.NEXT_OUTPUT === 'standalone' ? 'standalone' : undefined,
   // The database-backed end-to-end tests run a second dev server with its own build folder
-  // (playwright.db.config.ts), so it never clashes with a dev server already running.
-  distDir: process.env.NEXT_DIST_DIR || '.next',
+  // (playwright.db.config.ts), so it never clashes with a dev server already running. Only for
+  // that test server: production builds and `next start` always use the default `.next`.
+  distDir: process.env.E2E_TEST_SERVER === 'true' && process.env.NODE_ENV !== 'production' ? '.next-e2e' : '.next',
   poweredByHeader: false,
   images: {
     localPatterns: [{ pathname: '/api/media/file/**' }],
