@@ -5,6 +5,7 @@ import { buildConfig } from 'payload'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
+import { denyByDefault } from './access/deny-by-default'
 import { Media } from './collections/Media'
 import { Users } from './collections/Users'
 import { migrations } from './migrations'
@@ -47,4 +48,6 @@ export default buildConfig({
   }),
   sharp,
   telemetry: false,
+  // Must stay last: it fills in every access rule the plugins and collections above leave out.
+  plugins: [denyByDefault],
 })

@@ -1,9 +1,14 @@
 import type { CollectionConfig } from 'payload'
 
+import { allowAll, isEditorOrAbove, isPublisherOrAbove } from '../access'
+
 export const Media: CollectionConfig = {
   slug: 'media',
   access: {
-    read: () => true,
+    read: allowAll,
+    create: isEditorOrAbove,
+    update: isEditorOrAbove,
+    delete: isPublisherOrAbove,
   },
   fields: [
     {
