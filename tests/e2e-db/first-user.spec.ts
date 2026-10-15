@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { asUser, newAccount } from './support/auth'
+import { asUser, newAccount, saveAdminAccount } from './support/auth'
 
 // Runs on the empty test database (playwright.db.config.ts resets it before the server starts).
 // Payload's "create first user" screen posts to /api/users/first-register without signing in, so
@@ -36,6 +36,9 @@ test('two simultaneous first-register requests create exactly one administrator'
   expect(succeeded, report).toHaveLength(1)
   expect(totalDocs, report).toBe(1)
   expect(docs[0]?.roles).toEqual(['administrator'])
+
+  // The run's administrator, for the projects that depend on this one.
+  await saveAdminAccount(accounts[responses.indexOf(created!)]!)
 })
 
 test('first-register is refused once a user exists', async ({ request }) => {

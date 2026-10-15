@@ -12,6 +12,7 @@ import { Users } from './collections/Users'
 import { assertServerEnv } from './lib/env'
 import { queryLimits } from './lib/query-limits'
 import { onPayloadInit } from './lib/startup'
+import { MAX_UPLOAD_BYTES } from './lib/uploads/limits'
 import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
@@ -54,6 +55,10 @@ export default buildConfig({
     prodMigrations: migrations,
   }),
   sharp,
+  // Ceiling for any uploaded file; collections set lower limits (Media: 5 MB images).
+  upload: {
+    limits: { fileSize: MAX_UPLOAD_BYTES },
+  },
   telemetry: false,
   onInit: onPayloadInit,
   // denyByDefault runs after every other plugin (its `order` is the highest), so it also covers

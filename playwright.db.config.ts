@@ -15,8 +15,9 @@ const isCI = !!process.env.CI
 const testDatabase = assertWipeableTestDatabase(process.env)
 if (!process.env.E2E_DB_IDENTITY_FILE) {
   console.log(`[e2e-db] Test database: ${describeDatabase(testDatabase)}`)
-  // Set once in the runner; worker processes inherit it.
+  // Set once in the runner; worker processes inherit them.
   process.env.E2E_DB_IDENTITY_FILE = path.join(os.tmpdir(), `ogserc-e2e-db-${process.pid}.json`)
+  process.env.E2E_ADMIN_FILE = path.join(os.tmpdir(), `ogserc-e2e-admin-${process.pid}.json`)
 }
 
 const port = Number(process.env.E2E_DB_PORT ?? 3100)
@@ -36,8 +37,9 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    // Must run first, on the empty database.
+    // Must run first, on the empty database. It creates the administrator the others sign in with.
     { name: 'first-user', testMatch: 'first-user.spec.ts', use: { ...devices['Desktop Chrome'] } },
+    { name: 'media', testMatch: 'media.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
     // CI tests the production build; locally a dev server with its own build folder, so it never

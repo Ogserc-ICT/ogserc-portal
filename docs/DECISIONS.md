@@ -653,3 +653,26 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Trade-off:**
 - Each `pnpm test:e2e:db` run starts a fresh server (about 1 minute locally).
 - The host comes from the pool's connection string. Postgres reports the database name but not the hostname, so a DNS-level redirect would not be detected.
+
+## D-045 Media uploads: real images only, 5 MB, publishers replace (2026-10-15)
+
+**Decision:**
+- **Types:** Media accepts exactly `image/jpeg`, `image/png`, `image/webp` and `image/avif` (`upload.mimeTypes`). There is no wildcard and no SVG, because SVG can carry script.
+- **Content check:** a `beforeOperation` hook (`src/lib/uploads/image-signature.ts`) reads each uploaded file's first bytes. It rejects the file with a 400 unless the bytes are one of those four formats and the declared type and extension agree with them. No new dependency.
+- **Sizes** (`src/lib/uploads/limits.ts`):
+  - 5 MB per image, checked in the same hook.
+  - 25 MB global ceiling (`upload.limits.fileSize`), enforced while the request is read (413). It replaces Payload's default of 20 MB so Step 4 PDFs are not cut off.
+- **Access:** editors and above upload; only publishers and administrators replace, edit or delete, because a change to a published image shows everywhere it is used. Read stays public (`allowAll`, the only use; see D-046).
+
+**Why:**
+- NFR-SEC-08 requires uploads to be limited by type and size and checked by content.
+- **Tested without the hook,** Payload's own check rejected HTML, SVG and HTML renamed `.png`. It **accepted a JPEG declared and named as a PNG (201)**, and it has no per-collection size limit.
+- With the hook, `tests/e2e-db/media.spec.ts` rejects all of these, plus a valid 5.9 MB PNG (400) and a 27 MB file (413).
+
+**Open questions:**
+- **For Step 4 (draft files):** a file is public at `/api/media/file/...` as soon as it is uploaded, before any document that uses it is published. Options: keep media public and treat uploads as publishable; add a `published` flag checked by Media `read`; or keep draft documents' files in a separate access-controlled collection. Decide before building Documents.
+- **For OGSERC:** the size limit for PDFs and other documents (Step 4). Until then only the 25 MB ceiling applies.
+
+**Watch:**
+- If a Next.js `proxy.ts` (middleware) is added, for example for the CSP nonce in step 12, Next caps request bodies at 10 MB by default (`proxyClientMaxBodySize`). Raise it to the upload ceiling, or uploads between 10 and 25 MB will fail.
+- **Test note:** after a 413 the server stops reading the request, so the client's keep-alive connection cannot be reused. The ceiling test therefore uses its own connection.
