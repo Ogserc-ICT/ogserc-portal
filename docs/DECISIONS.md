@@ -662,7 +662,7 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - **Sizes** (`src/lib/uploads/limits.ts`):
   - 5 MB per image, checked in the same hook.
   - 25 MB global ceiling (`upload.limits.fileSize`), enforced while the request is read (413). It replaces Payload's default of 20 MB so Step 4 PDFs are not cut off.
-- **Access:** editors and above upload; only publishers and administrators replace, edit or delete, because a change to a published image shows everywhere it is used. Read stays public (`allowAll`, the only use; see D-046).
+- **Access:** editors and above upload; only publishers and administrators replace, edit or delete, because a change to a published image shows everywhere it is used. Read stays public (`allowAll`, the only use; see D-047).
 
 **Why:**
 - NFR-SEC-08 requires uploads to be limited by type and size and checked by content.
@@ -676,3 +676,23 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Watch:**
 - If a Next.js `proxy.ts` (middleware) is added, for example for the CSP nonce in step 12, Next caps request bodies at 10 MB by default (`proxyClientMaxBodySize`). Raise it to the upload ceiling, or uploads between 10 and 25 MB will fail.
 - **Test note:** after a 413 the server stops reading the request, so the client's keep-alive connection cannot be reused. The ceiling test therefore uses its own connection.
+
+## D-046 Test files and Playwright configs stay out of the Docker build context (2026-10-16)
+
+**Decision:**
+- `.dockerignore` excludes `playwright*.config.ts` as well as `tests/`.
+- It also excludes local-only folders that are gitignored but not yet in `.dockerignore`: `.next-e2e`, `media`, `.claude`, `*.tsbuildinfo` and `playwright-report-db`.
+- The type check is unchanged. There is no `ignoreBuildErrors`, no `skipLibCheck` change, and no build-only tsconfig.
+
+**Why:**
+- The Docker job failed in `pnpm build` with `playwright.db.config.ts(6,62): error TS2307: Cannot find module './tests/support/test-db'`.
+- `next build` type-checks every file `tsconfig.json` includes (`**/*.ts`). `tests/` was excluded from the image, but `playwright.db.config.ts` was copied in and imports from `tests/support/`. The failure was reproduced in a copy of the exact Docker context, built from the tracked files and the old `.dockerignore`.
+- `playwright.db.config.ts` is the only root code file that imports from an excluded folder. The other Playwright configs import only `@playwright/test` and are not needed in the image either.
+- Excluding the configs is enough. With the new rules, the simulated context passes `pnpm typecheck` and `pnpm build`, with no test file, database-reset script or Playwright config in it.
+- The local-only folders matter for `docker build` on a developer machine. CI's checkout never has them. `.next-e2e/types` is included by `tsconfig.json`, so stale route types from the test server could break or change the build. `media` holds development uploads that must never reach an image.
+
+**Watch:**
+- Any new root-level or `src/` TypeScript file that imports from `tests/` or `docs/` will break the Docker build in the same way.
+- `scripts/*.mjs` are in the context but are not type-checked (`allowJs` without `checkJs`).
+
+**Runtime stage:** the `runner` stage starts `FROM node:22-alpine`, not from `builder`, so it does not inherit the builder's placeholder `DATABASE_URL` and `PAYLOAD_SECRET`. The simulated build's `.next/standalone`, `.next/static` and `public` folders (what `runner` copies) contain neither value.
