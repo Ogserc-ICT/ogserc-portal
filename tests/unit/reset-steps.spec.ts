@@ -14,6 +14,7 @@ function mockConnection(overrides: Partial<ResetOperations> = {}) {
     migrate: async () => void calls.push('migrate'),
     existingTables: async () => [...EXPECTED.tables, 'users_roles'],
     appliedMigrations: async () => [...EXPECTED.migrations],
+    userCount: async () => 0,
     ...overrides,
   }
   return { calls, operations }
@@ -55,6 +56,13 @@ test.describe('test database reset', () => {
     const { operations } = mockConnection({ appliedMigrations: async () => [] })
     await expect(resetAndVerify(TARGET, operations, EXPECTED, quiet)).rejects.toThrow(
       /Migrations not recorded: 20261008_211615_initial/,
+    )
+  })
+
+  test('fails loudly when the users table is not empty after the reset', async () => {
+    const { operations } = mockConnection({ userCount: async () => 1 })
+    await expect(resetAndVerify(TARGET, operations, EXPECTED, quiet)).rejects.toThrow(
+      /users table has 1 row\(s\) straight after the reset; it must be empty/,
     )
   })
 

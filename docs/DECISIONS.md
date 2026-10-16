@@ -664,7 +664,7 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
   - 10 MB per image, checked in the same hook (raised from 5 MB on 2026-10-16 at the owner's request). **OGSERC may change this**; it is one constant, `MAX_IMAGE_BYTES`, and must stay at or below the ceiling.
   - 25 MB global ceiling (`upload.limits.fileSize`), enforced while the request is read (413). It replaces Payload's default of 20 MB so Step 4 PDFs are not cut off.
 - **Messages (2026-10-16):** staff who may make the upload are told which rule failed: the image's size and the limit; that the content is not one of the four formats; the declared type against the real one; or the file name's extension and the ones that fit. The declared type is repeated only if it looks like a media type. Anyone else (signed out, or an editor replacing a file) is not inspected by the hook. They get the access check's generic 403, which Payload runs after the hook and before it reads the file (checked in Payload 3.90.2's `create`, `updateByID` and `update` operations). Trusted server code using `overrideAccess` is still checked.
-- **Access:** editors and above upload; only publishers and administrators replace, edit or delete, because a change to a published image shows everywhere it is used. Read stays public (`allowAll`, the only use; see D-047).
+- **Access:** editors and above upload; only publishers and administrators replace, edit or delete, because a change to a published image shows everywhere it is used. Read stays public (`allowAll`, the only use; see D-048).
 
 **Why:**
 - NFR-SEC-08 requires uploads to be limited by type and size and checked by content.
@@ -699,3 +699,28 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - `scripts/*.mjs` are in the context but are not type-checked (`allowJs` without `checkJs`).
 
 **Runtime stage:** the `runner` stage starts `FROM node:22-alpine`, not from `builder`, so it does not inherit the builder's placeholder `DATABASE_URL` and `PAYLOAD_SECRET`. The simulated build's `.next/standalone`, `.next/static` and `public` folders (what `runner` copies) contain neither value.
+
+## D-047 Test database runs: the reset must confirm itself; earlier servers must be stopped (2026-10-16)
+
+**What happened:** twice (2026-10-16 at 13:05, and again during this fix), a `pnpm test:e2e:db` run started on a test database that still held the previous run's accounts. The saved server log of the second case shows why. `pnpm payload run tests/support/reset-test-db.ts` printed only pnpm's banner, never loaded Payload or connected to the database, and **exited with code 0** about 6 seconds later. The harness trusted that exit code and started the server.
+
+**Cause, as far as it can be established:** Payload's CLI (`payload/bin.js`) loads TypeScript through tsx's asynchronous loader worker. It disables Node's synchronous hooks on purpose, and calls `void start()` with nothing awaiting it at the top level. If that loader stalls before the script runs, Node finds nothing left to do and exits with code 0, without an error or an "unsettled top-level await" warning. The behaviour is certain; the stall inside tsx could not be reproduced on demand.
+
+**Decision:**
+- **The reset confirms itself.** After verifying the schema, the migrations and an empty `users` table, `reset-test-db.ts` writes a confirmation file (host, database, users: 0).
+  - The wrapper (`tests/support/test-server.ts`) deletes that file before each attempt and starts the server only if a fresh one exists.
+  - Without it, the wrapper retries once (the reset is idempotent and repeats every guard), then fails loudly.
+- **The users table must be empty:** checked by the reset in the database (`reset-steps.ts`), and again in global setup through the running server before the first test (`/api/users/init` must report `initialized: false`).
+- **No earlier server:** before anything else, the config (and the wrapper again, before the reset) refuses if something accepts connections on the test port (IPv4 or IPv6 localhost, 1-second timeout), or if the process recorded by the previous run is still alive.
+  - This runs before Playwright's own check because that check is an HTTP request with no timeout: a hung earlier server that accepts connections but never answers makes Playwright wait for ever.
+- **Server log:** everything the reset and the server print is also written to `test-results/e2e-db-server.log` (git-ignored, uploaded with the CI report on failure). Secrets are removed first:
+  - the exact values of secret-named environment variables (`*DATABASE_URL`, `*SECRET*`, `*PASSWORD*`, `*TOKEN*`, `*_KEY`, `*_KEY_ID`);
+  - connection strings, JWTs, reset links, tokens in URLs and password fields in JSON.
+
+  Unit tests cover each, and a scan of real runs' logs found no secret value, database URL or token.
+
+**Ruled out:**
+- A leftover server or connection from an earlier run was not the cause in the observed case. Port 3100 was free, no earlier test-server process existed, and the log shows the reset never ran.
+- Such a server could still write after a reset. That is why the port and process checks exist.
+
+**Watch:** other `payload run` and `payload migrate` commands may be affected the same way, including `pnpm migrate` in CI. Treat a silent, quick exit of a Payload CLI command as "did not run".

@@ -5,6 +5,7 @@ import path from 'node:path'
 
 import { assertWipeableTestDatabase, describeDatabase } from './tests/support/test-db'
 import { emptyTestMediaDir, testMediaDir } from './tests/support/test-media-dir'
+import { previousServerProblem } from './tests/support/test-server'
 
 // Tests that need a database (sign-in, roles, uploads). They run against their own server, started
 // here with DATABASE_URL set to TEST_DATABASE_URL, on its own port, and never an existing server.
@@ -14,8 +15,15 @@ const isCI = !!process.env.CI
 
 // Refuses before anything starts if TEST_DATABASE_URL could be the normal database.
 const testDatabase = assertWipeableTestDatabase(process.env)
+const port = Number(process.env.E2E_DB_PORT ?? 3100)
+const baseURL = `http://localhost:${port}`
+
 if (!process.env.E2E_DB_IDENTITY_FILE) {
   console.log(`[e2e-db] Test database: ${describeDatabase(testDatabase)}`)
+  // Before Playwright's own check, which waits forever on a hung server: an earlier test server
+  // still running could write to the database after the reset.
+  const problem = await previousServerProblem(port)
+  if (problem) throw new Error(`[e2e-db] ${problem}`)
   // Set once in the runner; worker processes inherit them.
   process.env.E2E_DB_IDENTITY_FILE = path.join(os.tmpdir(), `ogserc-e2e-db-${process.pid}.json`)
   process.env.E2E_ADMIN_FILE = path.join(os.tmpdir(), `ogserc-e2e-admin-${process.pid}.json`)
@@ -25,9 +33,6 @@ if (!process.env.E2E_DB_IDENTITY_FILE) {
   emptyTestMediaDir(process.env.E2E_MEDIA_DIR)
   console.log(`[e2e-db] Test uploads folder: ${process.env.E2E_MEDIA_DIR}`)
 }
-
-const port = Number(process.env.E2E_DB_PORT ?? 3100)
-const baseURL = `http://localhost:${port}`
 
 export default defineConfig({
   testDir: './tests/e2e-db',
@@ -50,8 +55,10 @@ export default defineConfig({
   ],
   webServer: {
     // CI tests the production build; locally a dev server with its own build folder, so it never
-    // clashes with a dev server you already have running.
-    command: `pnpm payload run tests/support/reset-test-db.ts && ${isCI ? 'pnpm start' : 'pnpm dev'}`,
+    // clashes with a dev server you already have running. The wrapper refuses if an earlier test
+    // server is still running, resets the database, starts the server, and writes its output
+    // (secrets removed) to test-results/e2e-db-server.log.
+    command: `node --experimental-strip-types tests/support/test-server.ts ${isCI ? 'start' : 'dev'}`,
     url: baseURL,
     reuseExistingServer: false,
     timeout: 300_000,

@@ -14,6 +14,8 @@ export type ResetOperations = {
   existingTables: () => Promise<string[]>
   /** Names recorded in payload_migrations. */
   appliedMigrations: () => Promise<string[]>
+  /** Rows in the users table. */
+  userCount: () => Promise<number>
 }
 
 /** What a successful reset must leave behind. */
@@ -51,5 +53,14 @@ export async function resetAndVerify(
 
   const problems = checkResetResult(expected, await operations.existingTables(), await operations.appliedMigrations())
   if (problems.length > 0) throw new Error(`The reset did not produce the expected database:\n- ${problems.join('\n- ')}`)
-  log(`Verified: ${expected.tables.length} tables and ${expected.migrations.length} migrations present.`)
+
+  // Tests rely on starting with no accounts (the first-user test creates the administrator).
+  const users = await operations.userCount()
+  if (users !== 0) {
+    throw new Error(
+      `The users table has ${users} row(s) straight after the reset; it must be empty. Something wrote ` +
+        'to the test database during the reset, for example an earlier test server that is still running.',
+    )
+  }
+  log(`Verified: ${expected.tables.length} tables and ${expected.migrations.length} migrations present; no users.`)
 }

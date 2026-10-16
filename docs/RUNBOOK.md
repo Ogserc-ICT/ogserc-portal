@@ -112,10 +112,12 @@ It prints only the host and database name. Make sure it is not your development 
 
 **What a run does:**
 1. Refuses to start if `NODE_ENV` is production, the name lacks `e2e`/`test`, or the host and database equal those in `DATABASE_URL`.
-2. Connects to `TEST_DATABASE_URL` only, checks `current_database()` and the host on the live connection, then drops and recreates the `public` schema in that database and applies every migration. It never runs `DROP DATABASE` and never connects to another database.
-3. Starts its own server on port 3100 (never an existing one) with `DATABASE_URL` set to the test database. Locally it is a dev server building into `.next-e2e/`, so it does not clash with a dev server already running.
-4. Before any test, checks which database that server is actually connected to, prints it, and aborts if it is not the test database.
-5. Stores test uploads in `ogserc-e2e-media` in the OS temp folder (`MEDIA_DIR`), never in the development `media/` folder, and prints its path. That folder is emptied before the server starts and again after the run. The run refuses to empty any folder outside the OS temp folder, without `e2e` in its name, or that is or contains the project's `media/` folder.
+2. Refuses to start if anything is listening on port 3100, or if the previous run's test server process is still alive. The message says how to find and stop it. Nothing is reset in that case.
+3. Connects to `TEST_DATABASE_URL` only, checks `current_database()` and the host on the live connection, then drops and recreates the `public` schema in that database and applies every migration. It never runs `DROP DATABASE` and never connects to another database. It then checks every table, every migration record and that `users` is empty, and writes a confirmation. The server starts only if that confirmation exists: `payload run` can exit "successfully" without running the reset (D-047). Without it the reset is retried once, then the run fails.
+4. Starts its own server on port 3100 (never an existing one) with `DATABASE_URL` set to the test database. Locally it is a dev server building into `.next-e2e/`, so it does not clash with a dev server already running.
+5. Before any test, checks which database that server is actually connected to, prints it, and aborts if it is not the test database. It also aborts if the database already has a user account.
+6. Writes everything the reset and the server print to `test-results/e2e-db-server.log`, with secrets and database URLs removed. Look there first when a run fails.
+7. Stores test uploads in `ogserc-e2e-media` in the OS temp folder (`MEDIA_DIR`), never in the development `media/` folder, and prints its path. That folder is emptied before the server starts and again after the run. The run refuses to empty any folder outside the OS temp folder, without `e2e` in its name, or that is or contains the project's `media/` folder.
 
 **In CI:** the e2e job creates `ogserc_e2e` in its throwaway Postgres container and runs the same checks, with no exemptions.
 

@@ -11,9 +11,10 @@
 //    (reset-steps.ts).
 // The reset only drops and recreates the `public` schema inside that one database. It never runs
 // DROP DATABASE and never connects to any other database. Afterwards it checks that every table in
-// the current schema and every migration record exists, and exits non-zero if not.
+// the current schema and every migration record exists and that there are no users, and exits
+// non-zero if not.
 
-import { rm } from 'node:fs/promises'
+import { rm, writeFile } from 'node:fs/promises'
 
 import { resetAndVerify } from './reset-steps'
 import { assertWipeableTestDatabase, databaseIdentity, describeDatabase, sameDatabase } from './test-db'
@@ -28,6 +29,7 @@ async function main(): Promise<void> {
   // Any earlier copy is removed so the harness only ever sees what the new server reports.
   if (process.env.E2E_DB_IDENTITY_FILE) await rm(process.env.E2E_DB_IDENTITY_FILE, { force: true })
   delete process.env.E2E_DB_IDENTITY_FILE
+  console.log('[reset-test-db] Started.')
 
   if (!process.env.PROTECTED_DATABASE_URL) {
     fail('PROTECTED_DATABASE_URL is not set, so the guard cannot rule out your normal database.')
@@ -63,11 +65,18 @@ async function main(): Promise<void> {
       existingTables: () =>
         rows(sql`select table_name as name from information_schema.tables where table_schema = 'public'`),
       appliedMigrations: () => rows(sql`select name from payload_migrations`),
+      userCount: async () => Number((await rows(sql`select count(*)::text as name from users`))[0]),
     },
     // Every table Payload's current config defines, and every migration in src/migrations.
     { tables: Object.keys(db.tables), migrations: migrations.map((migration) => migration.name) },
     (message) => console.log(`[reset-test-db] ${message}`),
   )
+  // `payload run` can exit with code 0 without having run this script at all (seen on Windows:
+  // its TypeScript loader stalls and Node exits as if finished). So success is confirmed in a
+  // file the harness checks, never by the exit code alone (test-server.ts, D-047).
+  if (process.env.E2E_RESET_CONFIRM_FILE) {
+    await writeFile(process.env.E2E_RESET_CONFIRM_FILE, JSON.stringify({ ...target, users: 0, at: new Date().toISOString() }))
+  }
   process.exit(0)
 }
 

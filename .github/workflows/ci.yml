@@ -84,6 +84,7 @@ jobs:
           path: |
             playwright-report/
             playwright-report-db/
+            test-results/e2e-db-server.log
           retention-days: 7
 
   secret-scan:

@@ -39,4 +39,17 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   if (!sameDatabase(actual, expected)) {
     throw new Error(`[e2e-db] Expected ${describeDatabase(expected)}. Aborting before any test runs.`)
   }
+
+  // The reset verified there were no users; check again now the server is up, so anything that
+  // wrote to the database in between (an earlier server still running, say) stops the run here.
+  const init = await fetch(`${baseURL}/api/users/init`)
+  const { initialized } = (await init.json()) as { initialized?: unknown }
+  if (initialized !== false) {
+    throw new Error(
+      '[e2e-db] The test database already has a user account before any test ran, although the reset ' +
+        'left it empty. Something wrote to it in between. Check test-results/e2e-db-server.log and ' +
+        'whether an earlier test server is still running. Aborting.',
+    )
+  }
+  console.log('[e2e-db] Confirmed: no user accounts before the first test.')
 }
