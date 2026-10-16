@@ -52,6 +52,7 @@ export default defineConfig({
     // Must run first, on the empty database. It creates the administrator the others sign in with.
     { name: 'first-user', testMatch: 'first-user.spec.ts', use: { ...devices['Desktop Chrome'] } },
     { name: 'media', testMatch: 'media.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
+    { name: 'users', testMatch: 'users.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
     // CI tests the production build; locally a dev server with its own build folder, so it never

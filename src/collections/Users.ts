@@ -1,6 +1,6 @@
 import { type CollectionBeforeValidateHook, type CollectionConfig, type FieldAccess, Forbidden } from 'payload'
 
-import { isAdmin, isAdminOrSelf, isStaff, userCan } from '../access'
+import { fieldCan, isAdmin, isAdminOrSelf, isStaff, userCan } from '../access'
 import { ROLES } from '../access/roles'
 import { lockForTransaction } from '../lib/transaction-lock'
 
@@ -56,6 +56,18 @@ export const Users: CollectionConfig = {
     beforeValidate: [firstUserIsAdministrator],
   },
   fields: [
+    // Overrides only the access of Payload's built-in email field; it is deep-merged with the
+    // original, which keeps its validation, uniqueness and lower-casing. An email is a sign-in
+    // name, so only administrators may change it. Create stays open, or the first-register screen
+    // (no signed-in user) could not set it; creating accounts is administrators-only anyway.
+    // Denied in the admin panel too: the account section shows it read-only.
+    {
+      name: 'email',
+      type: 'email',
+      access: {
+        update: fieldCan('users:manage'),
+      },
+    },
     {
       name: 'name',
       type: 'text',
@@ -68,7 +80,8 @@ export const Users: CollectionConfig = {
       required: true,
       options: [...ROLES],
       defaultValue: ['editor'],
-      saveToJWT: true,
+      // Not saved to the session token: Payload reloads the user from the database on every
+      // request, so access always uses the current roles, and the token does not reveal them.
       access: {
         create: canSetRoles,
         update: canSetRoles,

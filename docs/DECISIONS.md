@@ -664,7 +664,7 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
   - 10 MB per image, checked in the same hook (raised from 5 MB on 2026-10-16 at the owner's request). **OGSERC may change this**; it is one constant, `MAX_IMAGE_BYTES`, and must stay at or below the ceiling.
   - 25 MB global ceiling (`upload.limits.fileSize`), enforced while the request is read (413). It replaces Payload's default of 20 MB so Step 4 PDFs are not cut off.
 - **Messages (2026-10-16):** staff who may make the upload are told which rule failed: the image's size and the limit; that the content is not one of the four formats; the declared type against the real one; or the file name's extension and the ones that fit. The declared type is repeated only if it looks like a media type. Anyone else (signed out, or an editor replacing a file) is not inspected by the hook. They get the access check's generic 403, which Payload runs after the hook and before it reads the file (checked in Payload 3.90.2's `create`, `updateByID` and `update` operations). Trusted server code using `overrideAccess` is still checked.
-- **Access:** editors and above upload; only publishers and administrators replace, edit or delete, because a change to a published image shows everywhere it is used. Read stays public (`allowAll`, the only use; see D-048).
+- **Access:** editors and above upload; only publishers and administrators replace, edit or delete, because a change to a published image shows everywhere it is used. Read stays public (`allowAll`, the only use; see D-049).
 
 **Why:**
 - NFR-SEC-08 requires uploads to be limited by type and size and checked by content.
@@ -724,3 +724,33 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - Such a server could still write after a reset. That is why the port and process checks exist.
 
 **Watch:** other `payload run` and `payload migrate` commands may be affected the same way, including `pnpm migrate` in CI. Treat a silent, quick exit of a Payload CLI command as "did not run".
+
+## D-048 Staff accounts: email changes by administrators only; roles kept out of the session token (2026-10-16)
+
+**Decision:**
+- **Email:** only administrators can change an account's email address. It is the sign-in name, so a change by anyone else would be a way to take over or disguise an account.
+  - Done by overriding only the `access.update` of Payload's built-in `email` field. Payload deep-merges it with the original (`fields/mergeBaseFields.js`), which keeps the built-in validation, uniqueness and lower-casing.
+  - The admin panel then shows the field read-only for everyone else (`EmailAndUsername`: `readOnly: !permissions.email.update`).
+  - Create access is left open, because the first-register screen has no signed-in user; creating accounts is administrators-only anyway.
+- **Roles not in the token:** `saveToJWT` is removed from `roles`.
+  - Payload's JWT strategy reloads the user from the database on every request (`auth/strategies/jwt.js`, `findByID`), so the token's copy of the roles was never used for decisions. It only disclosed them to anyone holding the token.
+- **No migration:** neither change alters the schema. `pnpm migrate:create --skip-empty` generated no statements.
+
+**Tests** (`tests/e2e-db/users.spec.ts`). Run first against the unchanged code; two failed, which led to the two changes above:
+- An editor cannot set roles on their own account or anyone else's, or create accounts. Field access drops the value silently, so the stored record is checked.
+- A second administrator cannot change their own roles, alone or in a bulk update that also (successfully) changes another account. Payload passes each document's id to field access in bulk updates, so `canSetRoles` sees the administrator's own id.
+- Unknown roles (`superuser`, a mix with a valid role, `''`) and an empty list are rejected with 400 by Payload's select validation. No extra `validate` is needed.
+- A demotion takes effect on the next request made with the same token.
+- The token's claims contain no `roles`. *(Failed before the change.)*
+- An account with no roles is refused: no user list, no upload, no admin panel. It can still read public media.
+  - Its roles are removed directly in the test database by `tests/support/strip-roles.ts`, because the API requires at least one role. That script runs under the same guards as the reset and confirms its own result (D-047).
+- A non-administrator's attempt to set `hash`, `salt`, `loginAttempts`, `lockUntil`, `resetPasswordToken`, `resetPasswordExpiration`, `_verified`, `apiKey` or `enableAPIKey` changes nothing. Payload already denies the first six through field access, and the last three do not exist (verification and API keys are off). Checked from outside:
+  - the original password still works;
+  - one wrong password does not lock the account (it would have, had `loginAttempts` become 4);
+  - the planted reset token cannot reset the password;
+  - none of these keys appear in the stored record.
+- Only an administrator can change an email address, and the admin panel's permissions show the field read-only for a publisher and editable for an administrator. *(Failed before the change: the publisher changed their own email.)*
+
+**Watch:**
+- Payload's `sessions` field has `update: () => false` but no `create` rule. Only administrators can create accounts, and a planted session id is useless without a token signed with `PAYLOAD_SECRET`. Revisit if account creation is ever opened up.
+- The last-administrator rules, sign-in limits, cookie settings and password policy are the next commits of the Step 3 plan, not this one.

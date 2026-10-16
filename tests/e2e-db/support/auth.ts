@@ -23,18 +23,35 @@ export function asUser(token: string): Record<string, string> {
   return { Authorization: `JWT ${token}` }
 }
 
+/** One login attempt; returns the status and, on success, the session token. */
+export async function attemptLogin(
+  baseURL: string,
+  email: string,
+  password: string,
+): Promise<{ status: number; token?: string }> {
+  const anonymous = await request.newContext({ baseURL })
+  try {
+    const response = await anonymous.post('/api/users/login', { data: { email, password } })
+    const token = response.ok() ? ((await response.json()) as { token?: string }).token : undefined
+    return { status: response.status(), token }
+  } finally {
+    await anonymous.dispose()
+  }
+}
+
+/** Signs in and returns the session token, failing the test if sign-in is refused. */
+export async function signInToken(baseURL: string, account: TestAccount): Promise<string> {
+  const { status, token } = await attemptLogin(baseURL, account.email, account.password)
+  expect(token, `sign-in failed for ${account.email} (${status})`).toBeTruthy()
+  return token!
+}
+
 /**
  * Signs in and returns a request context that acts as that user and nobody else. Each context
  * has its own cookie jar, so tests can hold several users at once without mixing them up.
  */
 export async function signIn(baseURL: string, account: TestAccount): Promise<APIRequestContext> {
-  const anonymous = await request.newContext({ baseURL })
-  const response = await anonymous.post('/api/users/login', {
-    data: { email: account.email, password: account.password },
-  })
-  expect(response.ok(), `sign-in failed for ${account.email} (${response.status()})`).toBe(true)
-  const { token } = (await response.json()) as { token: string }
-  await anonymous.dispose()
+  const token = await signInToken(baseURL, account)
   return request.newContext({ baseURL, extraHTTPHeaders: asUser(token) })
 }
 
