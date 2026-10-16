@@ -1,4 +1,6 @@
 import { randomBytes } from 'node:crypto'
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 
 import { type APIRequestContext, expect, test } from '@playwright/test'
 import sharp from 'sharp'
@@ -51,10 +53,16 @@ test.afterAll(async () => {
   await Promise.all([admin, editor, publisher].map((context) => context?.dispose()))
 })
 
-test('an editor can upload a real PNG', async () => {
-  const response = await upload(editor, 'sample.png', 'image/png', await image('png'))
+test('an editor can upload a real PNG, stored in the test uploads folder only', async () => {
+  // A unique name, so the check below cannot be confused by an older file of the same name.
+  const name = `sample-${randomBytes(4).toString('hex')}.png`
+  const response = await upload(editor, name, 'image/png', await image('png'))
   expect(response.status()).toBe(201)
-  uploadedId = ((await response.json()) as { doc: { id: string | number } }).doc.id
+  const { doc } = (await response.json()) as { doc: { id: string | number; filename: string } }
+  uploadedId = doc.id
+  expect(doc.filename).toBe(name)
+  expect(existsSync(path.join(process.env.E2E_MEDIA_DIR!, name))).toBe(true)
+  expect(existsSync(path.resolve('media', name))).toBe(false)
 })
 
 test('an HTML file is rejected', async () => {

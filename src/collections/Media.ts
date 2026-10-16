@@ -38,6 +38,10 @@ export const Media: CollectionConfig = {
     },
   ],
   upload: {
+    // Local folder for uploaded files (Payload's default is `media`, relative to the working
+    // directory). The database-backed tests point it at a throwaway folder. S3 storage replaces
+    // local files in Step 4 (D-013).
+    staticDir: process.env.MEDIA_DIR || 'media',
     // Exact types only: no wildcard, no SVG. Payload also checks these against the content.
     mimeTypes: [...IMAGE_MIME_TYPES],
   },

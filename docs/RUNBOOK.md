@@ -15,6 +15,7 @@ Every setting comes from environment variables. The full list, with explanations
 | `DATABASE_URL` | Yes | PostgreSQL connection string. Use `sslmode=verify-full` for hosted databases. |
 | `PAYLOAD_SECRET` | Yes | Long random string that signs login sessions. Different in every environment. Changing it logs everyone out. |
 | `SITE_URL` | Yes | Public address of the site, e.g. `https://example.gov.ng`, without a trailing slash. |
+| `MEDIA_DIR` | No | Local folder for uploaded images until S3 storage arrives in step 4. Default `media`. |
 | `S3_*` | From step 4 | S3-compatible file storage for uploads. |
 | `SMTP_*`, `EMAIL_FROM`, `CONTACT_FORM_TO` | From step 5 | Email for the contact form. |
 | `TURNSTILE_*` | From step 5 | Bot protection on forms. |
@@ -114,6 +115,7 @@ It prints only the host and database name. Make sure it is not your development 
 2. Connects to `TEST_DATABASE_URL` only, checks `current_database()` and the host on the live connection, then drops and recreates the `public` schema in that database and applies every migration. It never runs `DROP DATABASE` and never connects to another database.
 3. Starts its own server on port 3100 (never an existing one) with `DATABASE_URL` set to the test database. Locally it is a dev server building into `.next-e2e/`, so it does not clash with a dev server already running.
 4. Before any test, checks which database that server is actually connected to, prints it, and aborts if it is not the test database.
+5. Stores test uploads in `ogserc-e2e-media` in the OS temp folder (`MEDIA_DIR`), never in the development `media/` folder, and prints its path. That folder is emptied before the server starts and again after the run. The run refuses to empty any folder outside the OS temp folder, without `e2e` in its name, or that is or contains the project's `media/` folder.
 
 **In CI:** the e2e job creates `ogserc_e2e` in its throwaway Postgres container and runs the same checks, with no exemptions.
 

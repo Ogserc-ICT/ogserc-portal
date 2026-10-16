@@ -676,6 +676,7 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Watch:**
 - If a Next.js `proxy.ts` (middleware) is added, for example for the CSP nonce in step 12, Next caps request bodies at 10 MB by default (`proxyClientMaxBodySize`). Raise it to the upload ceiling, or uploads between 10 and 25 MB will fail.
 - **Test note:** after a 413 the server stops reading the request, so the client's keep-alive connection cannot be reused. The ceiling test therefore uses its own connection.
+- **Test uploads (2026-10-16):** the test server stores uploads in a throwaway `ogserc-e2e-media` folder in the OS temp folder (`MEDIA_DIR`), which is emptied before and after each run. Earlier runs wrote test files into the development `media/` folder.
 
 ## D-046 Test files and Playwright configs stay out of the Docker build context (2026-10-16)
 

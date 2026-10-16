@@ -4,6 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { assertWipeableTestDatabase, describeDatabase } from './tests/support/test-db'
+import { emptyTestMediaDir, testMediaDir } from './tests/support/test-media-dir'
 
 // Tests that need a database (sign-in, roles, uploads). They run against their own server, started
 // here with DATABASE_URL set to TEST_DATABASE_URL, on its own port, and never an existing server.
@@ -18,6 +19,11 @@ if (!process.env.E2E_DB_IDENTITY_FILE) {
   // Set once in the runner; worker processes inherit them.
   process.env.E2E_DB_IDENTITY_FILE = path.join(os.tmpdir(), `ogserc-e2e-db-${process.pid}.json`)
   process.env.E2E_ADMIN_FILE = path.join(os.tmpdir(), `ogserc-e2e-admin-${process.pid}.json`)
+  // Test uploads go to a throwaway folder, never the development media/ folder. Emptied here,
+  // before the server starts, and again in global teardown.
+  process.env.E2E_MEDIA_DIR = testMediaDir()
+  emptyTestMediaDir(process.env.E2E_MEDIA_DIR)
+  console.log(`[e2e-db] Test uploads folder: ${process.env.E2E_MEDIA_DIR}`)
 }
 
 const port = Number(process.env.E2E_DB_PORT ?? 3100)
@@ -32,6 +38,7 @@ export default defineConfig({
   retries: 0,
   reporter: isCI ? [['list'], ['html', { open: 'never', outputFolder: 'playwright-report-db' }]] : 'list',
   globalSetup: './tests/e2e-db/global-setup.ts',
+  globalTeardown: './tests/e2e-db/global-teardown.ts',
   use: {
     baseURL,
     trace: 'retain-on-failure',
@@ -53,6 +60,7 @@ export default defineConfig({
       DATABASE_URL: process.env.TEST_DATABASE_URL ?? '',
       PROTECTED_DATABASE_URL: process.env.DATABASE_URL ?? '',
       E2E_DB_IDENTITY_FILE: process.env.E2E_DB_IDENTITY_FILE,
+      MEDIA_DIR: process.env.E2E_MEDIA_DIR ?? testMediaDir(),
       PORT: String(port),
       SITE_URL: baseURL,
       // Local dev server only: build into .next-e2e (next.config.ts). CI uses the production build.
