@@ -5,12 +5,17 @@ import { detectImageType, imageUploadProblem } from '../../src/lib/uploads/image
 const bytes = (...parts: (number[] | string)[]) =>
   new Uint8Array(parts.flatMap((part) => (typeof part === 'string' ? [...part].map((c) => c.charCodeAt(0)) : part)))
 
+/** An ISO-BMFF `ftyp` box: size, "ftyp", major brand, minor version 0, compatible brands. */
+const ftyp = (major: string, ...compatible: string[]) =>
+  bytes([0, 0, 0, 16 + 4 * compatible.length], 'ftyp', major, [0, 0, 0, 0], ...compatible)
+
 const JPEG = bytes([0xff, 0xd8, 0xff, 0xe0, 0, 0x10], 'JFIF')
 const PNG = bytes([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d], 'IHDR')
 const WEBP = bytes('RIFF', [0x24, 0, 0, 0], 'WEBPVP8 ')
-const AVIF = bytes([0, 0, 0, 0x1c], 'ftyp', 'avif', [0, 0, 0, 0], 'avif', 'mif1', 'miaf')
-const AVIF_COMPATIBLE = bytes([0, 0, 0, 0x18], 'ftyp', 'mif1', [0, 0, 0, 0], 'mif1', 'avif')
-const HEIC = bytes([0, 0, 0, 0x18], 'ftyp', 'heic', [0, 0, 0, 0], 'mif1', 'heic')
+// What sharp's AVIF encoder writes (checked against a real file in tests/e2e-db/media.spec.ts).
+const AVIF = ftyp('avif', 'mif1', 'avif', 'miaf')
+const AVIF_COMPATIBLE = ftyp('mif1', 'mif1', 'avif')
+const HEIC = ftyp('heic', 'mif1', 'heic')
 const HTML = bytes('<!doctype html><html><script>alert(1)</script></html>')
 const SVG = bytes('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>')
 
@@ -30,6 +35,33 @@ test.describe('detectImageType', () => {
     for (const other of [HTML, SVG, HEIC, bytes('RIFF', [0, 0, 0, 0], 'WAVE'), bytes([0xff, 0xd8]), new Uint8Array()]) {
       expect(detectImageType(other)).toBeNull()
     }
+  })
+})
+
+test.describe('AVIF brands', () => {
+  test('accepts major brand avif, avis or mif1 when avif is a compatible brand', () => {
+    expect(detectImageType(ftyp('avif', 'avif'))).toBe('image/avif')
+    expect(detectImageType(ftyp('avis', 'avis', 'avif', 'msf1'))).toBe('image/avif')
+    expect(detectImageType(ftyp('mif1', 'mif1', 'avif', 'miaf'))).toBe('image/avif')
+  })
+
+  test('rejects a file without avif among the compatible brands', () => {
+    expect(detectImageType(ftyp('avif', 'mif1', 'miaf'))).toBeNull()
+    expect(detectImageType(ftyp('mif1', 'mif1', 'miaf'))).toBeNull()
+    expect(detectImageType(ftyp('avis', 'avis', 'msf1'))).toBeNull()
+  })
+
+  test('rejects HEIC and HEIF, even when they also list avif', () => {
+    expect(detectImageType(HEIC)).toBeNull()
+    expect(detectImageType(ftyp('mif1', 'mif1', 'heic'))).toBeNull() // HEIF
+    expect(detectImageType(ftyp('heix', 'mif1', 'heix'))).toBeNull()
+    expect(detectImageType(ftyp('msf1', 'msf1', 'hevc'))).toBeNull() // HEIF sequence
+    expect(detectImageType(ftyp('heic', 'mif1', 'heic', 'avif'))).toBeNull()
+  })
+
+  test('reads compatible brands only inside the ftyp box', () => {
+    // Box size says no compatible brands; an "avif" just after the box must not count.
+    expect(detectImageType(bytes([0, 0, 0, 16], 'ftyp', 'mif1', [0, 0, 0, 0], 'avif'))).toBeNull()
   })
 })
 

@@ -14,9 +14,21 @@ test.describe.configure({ mode: 'serial' })
 const HTML = Buffer.from('<!doctype html><html><body><script>alert(document.cookie)</script></body></html>')
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>')
 
-/** A small valid image. */
-const image = (format: 'png' | 'jpeg') =>
+type Format = 'jpeg' | 'png' | 'webp' | 'avif'
+
+/** A small real image, written by sharp's own encoder for the format. */
+const image = (format: Format) =>
   sharp({ create: { width: 8, height: 8, channels: 3, background: '#1D7248' } })[format]().toBuffer()
+
+/** An ISO-BMFF `ftyp` header. sharp cannot encode HEVC, so HEIC and HEIF files are built by hand. */
+const ftyp = (major: string, ...compatible: string[]) => {
+  const header = Buffer.alloc(16 + 4 * compatible.length)
+  header.writeUInt32BE(header.length, 0)
+  header.write(`ftyp${major}\0\0\0\0${compatible.join('')}`, 4, 'latin1')
+  return Buffer.concat([header, Buffer.from([0, 0, 0, 8]), Buffer.from('mdat', 'latin1')])
+}
+const HEIC = ftyp('heic', 'mif1', 'heic')
+const HEIF = ftyp('mif1', 'mif1', 'heic')
 
 /** A valid PNG of random pixels, stored uncompressed, so its size is about width × height × 3 bytes. */
 const largePng = (side: number) =>
@@ -65,6 +77,31 @@ test('an editor can upload a real PNG, stored in the test uploads folder only', 
   expect(existsSync(path.resolve('media', name))).toBe(false)
 })
 
+const REAL_FILES: [Format, string, string][] = [
+  ['jpeg', 'photo.jpg', 'image/jpeg'],
+  ['webp', 'photo.webp', 'image/webp'],
+  ['avif', 'photo.avif', 'image/avif'],
+]
+
+for (const [format, name, mimeType] of REAL_FILES) {
+  test(`an editor can upload a real ${format.toUpperCase()} file`, async () => {
+    const buffer = await image(format)
+    if (format === 'avif') {
+      // Guards the fixture: a real AVIF file starts with an ftyp box naming the avif brand.
+      expect(buffer.toString('latin1', 4, 8)).toBe('ftyp')
+      expect(buffer.subarray(0, buffer.readUInt32BE(0)).toString('latin1')).toContain('avif')
+    }
+    expect((await upload(editor, name, mimeType, buffer)).status()).toBe(201)
+  })
+}
+
+test('HEIC and HEIF files are rejected, as themselves or disguised as AVIF', async () => {
+  await expectRejected(await upload(editor, 'photo.heic', 'image/heic', HEIC))
+  await expectRejected(await upload(editor, 'photo.heif', 'image/heif', HEIF))
+  await expectRejected(await upload(editor, 'photo.avif', 'image/avif', HEIC))
+  await expectRejected(await upload(editor, 'photo.avif', 'image/avif', HEIF))
+})
+
 test('an HTML file is rejected', async () => {
   await expectRejected(await upload(editor, 'page.html', 'text/html', HTML))
 })
@@ -102,7 +139,8 @@ test('a file over the 25 MB upload ceiling is refused while it is read', async (
 
 test('rejected uploads leave nothing behind', async () => {
   const response = await admin.get('/api/media')
-  expect(((await response.json()) as { totalDocs: number }).totalDocs).toBe(1)
+  // The PNG plus the three real files above; none of the rejected ones.
+  expect(((await response.json()) as { totalDocs: number }).totalDocs).toBe(1 + REAL_FILES.length)
 })
 
 test('an editor cannot replace or edit an image; a publisher can', async () => {

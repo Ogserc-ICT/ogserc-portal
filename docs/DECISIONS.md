@@ -659,6 +659,7 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Decision:**
 - **Types:** Media accepts exactly `image/jpeg`, `image/png`, `image/webp` and `image/avif` (`upload.mimeTypes`). There is no wildcard and no SVG, because SVG can carry script.
 - **Content check:** a `beforeOperation` hook (`src/lib/uploads/image-signature.ts`) reads each uploaded file's first bytes. It rejects the file with a 400 unless the bytes are one of those four formats and the declared type and extension agree with them. No new dependency.
+- **AVIF (2026-10-16):** a file counts as AVIF only if its `ftyp` major brand is `avif`, `avis` or `mif1` **and** `avif` is among its compatible brands. HEIC and HEIF (iPhone photos) share the `mif1` brand but are rejected; staff convert them to JPEG first. Tested with real JPEG, PNG, WebP and AVIF files from sharp's encoders, and with hand-built HEIC/HEIF headers (sharp cannot encode HEVC).
 - **Sizes** (`src/lib/uploads/limits.ts`):
   - 5 MB per image, checked in the same hook.
   - 25 MB global ceiling (`upload.limits.fileSize`), enforced while the request is read (413). It replaces Payload's default of 20 MB so Step 4 PDFs are not cut off.

@@ -15,7 +15,11 @@ export type ImageType = keyof typeof IMAGE_TYPES
 export const IMAGE_MIME_TYPES = Object.keys(IMAGE_TYPES) as ImageType[]
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
-const AVIF_BRANDS = ['avif', 'avis']
+// AVIF still images use major brand `avif`, image sequences `avis`, and some encoders write the
+// generic HEIF brand `mif1`. HEIC (HEVC-coded HEIF) also uses `mif1`, so `avif` must be listed among
+// the compatible brands as well: that is what makes the file AVIF rather than HEIC.
+const AVIF_MAJOR_BRANDS = ['avif', 'avis', 'mif1']
+const AVIF_COMPATIBLE_BRAND = 'avif'
 
 function startsWith(bytes: Uint8Array, signature: number[], offset = 0): boolean {
   return signature.every((byte, i) => bytes[offset + i] === byte)
@@ -25,15 +29,19 @@ function ascii(bytes: Uint8Array, start: number, end: number): string {
   return String.fromCharCode(...bytes.subarray(start, end))
 }
 
-/** AVIF is an ISO-BMFF file whose `ftyp` box names an AVIF brand (major or compatible). */
+/**
+ * AVIF is an ISO-BMFF file whose `ftyp` box has major brand `avif`, `avis` or `mif1` and lists
+ * `avif` among its compatible brands. HEIC and plain HEIF files fail one test or the other.
+ */
 function isAvif(bytes: Uint8Array): boolean {
   if (bytes.length < 16 || ascii(bytes, 4, 8) !== 'ftyp') return false
   const boxSize = ((bytes[0]! << 24) | (bytes[1]! << 16) | (bytes[2]! << 8) | bytes[3]!) >>> 0
   const end = Math.min(boxSize, bytes.length)
-  const brands = [ascii(bytes, 8, 12)]
+  const major = ascii(bytes, 8, 12)
+  const compatible: string[] = []
   // Bytes 12-16 are the minor version; compatible brands follow, four bytes each.
-  for (let offset = 16; offset + 4 <= end; offset += 4) brands.push(ascii(bytes, offset, offset + 4))
-  return brands.some((brand) => AVIF_BRANDS.includes(brand))
+  for (let offset = 16; offset + 4 <= end; offset += 4) compatible.push(ascii(bytes, offset, offset + 4))
+  return AVIF_MAJOR_BRANDS.includes(major) && compatible.includes(AVIF_COMPATIBLE_BRAND)
 }
 
 /** The image type the bytes actually contain, or null if they are not one of the accepted types. */
