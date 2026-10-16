@@ -185,7 +185,7 @@ Added 2026-10-15 at the owner's request, after commit 1 (2a65ad9). Each group is
 - `upload.mimeTypes`: exactly `image/jpeg`, `image/png`, `image/webp`, `image/avif`. No wildcard, no SVG.
 - Content check (`src/lib/uploads/image-signature.ts`, no new dependency): magic bytes must match one of the four
   formats, and the declared type and extension must agree with them. Generic 400.
-- Size: 5 MB per image on Media; global upload ceiling 25 MB so Step 4 PDFs are not cut off.
+- Size: 5 MB per image on Media (raised to 10 MB on 2026-10-16, D-045); global upload ceiling 25 MB so Step 4 PDFs are not cut off.
 - `update: isPublisherOrAbove` (create stays editor and above).
 - DECISIONS: Media rules; Step 4 open question on files referenced by drafts (an uploaded file is public at its URL
   before its document is published); PDF size limit is an open question for OGSERC.

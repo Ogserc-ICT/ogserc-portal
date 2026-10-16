@@ -2,13 +2,14 @@ import { randomBytes } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 
-import { type APIRequestContext, expect, test } from '@playwright/test'
+import { type APIRequestContext, expect, request, test } from '@playwright/test'
 import sharp from 'sharp'
 
 import { createStaff, loadAdminAccount, signIn, type TestAccount } from './support/auth'
 
-// Media accepts only real JPEG, PNG, WebP and AVIF images of 5 MB or less, checked by content
+// Media accepts only real JPEG, PNG, WebP and AVIF images of 10 MB or less, checked by content
 // (NFR-SEC-08, D-045). Editors upload; only publishers and administrators replace or delete.
+// Staff are told which rule failed; anyone else gets only the generic access error.
 test.describe.configure({ mode: 'serial' })
 
 const HTML = Buffer.from('<!doctype html><html><body><script>alert(document.cookie)</script></body></html>')
@@ -48,10 +49,23 @@ function upload(as: APIRequestContext, name: string, mimeType: string, buffer: B
   })
 }
 
-async function expectRejected(response: Awaited<ReturnType<typeof upload>>, status = 400) {
+const NOT_AN_IMAGE = 'Only JPEG, PNG, WebP and AVIF images are accepted, and this file is none of them.'
+
+/** Parts of the staff-only messages; none may ever reach someone who cannot upload. */
+const RULE_DETAILS = /Only JPEG|sent as|its content is|images must be|Rename it/
+
+async function expectRejected(response: Awaited<ReturnType<typeof upload>>, status = 400, message?: string) {
   expect(response.status()).toBe(status)
   const body = await response.text()
   expect(body).not.toMatch(/\bat\s+\S+\s+\(|node_modules/) // no stack trace
+  if (message) expect(body).toContain(message)
+}
+
+async function expectGenericDenial(response: Awaited<ReturnType<typeof upload>>) {
+  expect(response.status()).toBe(403)
+  const body = await response.text()
+  expect(body).not.toMatch(RULE_DETAILS)
+  expect(body).not.toMatch(/\bat\s+\S+\s+\(|node_modules/)
 }
 
 test.beforeAll(async ({ baseURL }) => {
@@ -96,32 +110,74 @@ for (const [format, name, mimeType] of REAL_FILES) {
 }
 
 test('HEIC and HEIF files are rejected, as themselves or disguised as AVIF', async () => {
-  await expectRejected(await upload(editor, 'photo.heic', 'image/heic', HEIC))
-  await expectRejected(await upload(editor, 'photo.heif', 'image/heif', HEIF))
-  await expectRejected(await upload(editor, 'photo.avif', 'image/avif', HEIC))
-  await expectRejected(await upload(editor, 'photo.avif', 'image/avif', HEIF))
+  await expectRejected(await upload(editor, 'photo.heic', 'image/heic', HEIC), 400, NOT_AN_IMAGE)
+  await expectRejected(await upload(editor, 'photo.heif', 'image/heif', HEIF), 400, NOT_AN_IMAGE)
+  await expectRejected(await upload(editor, 'photo.avif', 'image/avif', HEIC), 400, NOT_AN_IMAGE)
+  await expectRejected(await upload(editor, 'photo.avif', 'image/avif', HEIF), 400, NOT_AN_IMAGE)
 })
 
 test('an HTML file is rejected', async () => {
-  await expectRejected(await upload(editor, 'page.html', 'text/html', HTML))
+  await expectRejected(await upload(editor, 'page.html', 'text/html', HTML), 400, NOT_AN_IMAGE)
 })
 
 test('an SVG file is rejected', async () => {
-  await expectRejected(await upload(editor, 'logo.svg', 'image/svg+xml', SVG))
+  await expectRejected(await upload(editor, 'logo.svg', 'image/svg+xml', SVG), 400, NOT_AN_IMAGE)
 })
 
 test('an HTML file renamed .png and declared image/png is rejected', async () => {
-  await expectRejected(await upload(editor, 'innocent.png', 'image/png', HTML))
+  await expectRejected(await upload(editor, 'innocent.png', 'image/png', HTML), 400, NOT_AN_IMAGE)
 })
 
-test('a JPEG declared and named as a PNG is rejected', async () => {
-  await expectRejected(await upload(editor, 'photo.png', 'image/png', await image('jpeg')))
+test('a JPEG declared as a PNG is rejected, saying so', async () => {
+  await expectRejected(
+    await upload(editor, 'photo.png', 'image/png', await image('jpeg')),
+    400,
+    'The file was sent as image/png, but its content is a JPEG image.',
+  )
 })
 
-test('a real image over 5 MB is rejected', async () => {
-  const buffer = await largePng(1400)
-  expect(buffer.length).toBeGreaterThan(5 * 1024 * 1024)
-  await expectRejected(await upload(editor, 'large.png', 'image/png', buffer))
+test('a JPEG named .png is rejected, saying which names fit', async () => {
+  await expectRejected(
+    await upload(editor, 'photo.png', 'image/jpeg', await image('jpeg')),
+    400,
+    'The file name ends in .png, but its content is a JPEG image. Rename it to end in .jpg or .jpeg.',
+  )
+})
+
+test('a real image just under 10 MB is accepted', async () => {
+  const buffer = await largePng(1800)
+  expect(buffer.length).toBeGreaterThan(9 * 1024 * 1024)
+  expect(buffer.length).toBeLessThan(10 * 1024 * 1024)
+  expect((await upload(editor, 'nearly-10mb.png', 'image/png', buffer)).status()).toBe(201)
+})
+
+test('a real image over 10 MB is rejected, saying how large it is', async () => {
+  const buffer = await largePng(1900)
+  expect(buffer.length).toBeGreaterThan(10 * 1024 * 1024)
+  const size = Math.round((buffer.length / (1024 * 1024)) * 10) / 10
+  await expectRejected(
+    await upload(editor, 'large.png', 'image/png', buffer),
+    400,
+    `This image is ${size} MB; images must be 10 MB or smaller.`,
+  )
+})
+
+test('someone signed out gets only the generic denial, never the rule that failed', async ({ baseURL }) => {
+  const anonymous = await request.newContext({ baseURL })
+  try {
+    await expectGenericDenial(await upload(anonymous, 'page.png', 'image/png', HTML))
+    await expectGenericDenial(await upload(anonymous, 'photo.png', 'image/png', await image('jpeg')))
+    await expectGenericDenial(await upload(anonymous, 'large.png', 'image/png', await largePng(1900)))
+  } finally {
+    await anonymous.dispose()
+  }
+})
+
+test('an editor replacing a file gets only the generic denial', async () => {
+  const response = await editor.patch(`/api/media/${uploadedId}`, {
+    multipart: { file: { name: 'page.png', mimeType: 'image/png', buffer: HTML }, _payload: '{}' },
+  })
+  await expectGenericDenial(response)
 })
 
 test('a file over the 25 MB upload ceiling is refused while it is read', async ({ baseURL }) => {
@@ -139,8 +195,8 @@ test('a file over the 25 MB upload ceiling is refused while it is read', async (
 
 test('rejected uploads leave nothing behind', async () => {
   const response = await admin.get('/api/media')
-  // The PNG plus the three real files above; none of the rejected ones.
-  expect(((await response.json()) as { totalDocs: number }).totalDocs).toBe(1 + REAL_FILES.length)
+  // The PNG, the three real files and the image just under 10 MB; none of the rejected ones.
+  expect(((await response.json()) as { totalDocs: number }).totalDocs).toBe(1 + REAL_FILES.length + 1)
 })
 
 test('an editor cannot replace or edit an image; a publisher can', async () => {

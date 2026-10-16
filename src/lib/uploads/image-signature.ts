@@ -55,19 +55,44 @@ export function detectImageType(bytes: Uint8Array): ImageType | null {
 
 export type UploadedFile = { data: Uint8Array; mimetype: string; name: string; size: number }
 
+const LABELS: Record<ImageType, string> = {
+  'image/jpeg': 'JPEG',
+  'image/png': 'PNG',
+  'image/webp': 'WebP',
+  'image/avif': 'AVIF',
+}
+
+const MEDIA_TYPE_PATTERN = /^[a-z0-9][a-z0-9.+-]{0,40}\/[a-z0-9][a-z0-9.+-]{0,60}$/
+
+const megabytes =(bytes: number): string => `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`
+
+const extensionList = (extensions: readonly string[]): string => extensions.map((e) => `.${e}`).join(' or ')
+
 /**
  * Why an uploaded file is not an acceptable image, or null if it is. The bytes must be one of the
- * accepted types, and the declared type and file extension must both agree with them.
+ * accepted types, and the declared type and file extension must both agree with them. Each message
+ * names the rule that failed, for signed-in staff (the Media hook never shows them to anyone else).
  */
 export function imageUploadProblem(file: UploadedFile, maxBytes: number): string | null {
-  if (file.size > maxBytes) return `Images must be ${Math.round(maxBytes / (1024 * 1024))} MB or smaller.`
+  if (file.size > maxBytes) {
+    return `This image is ${megabytes(file.size)}; images must be ${megabytes(maxBytes)} or smaller.`
+  }
   const detected = detectImageType(file.data)
-  if (!detected) return 'Only JPEG, PNG, WebP and AVIF images can be uploaded.'
+  if (!detected) {
+    return 'Only JPEG, PNG, WebP and AVIF images are accepted, and this file is none of them. SVG, HEIC and other formats must be converted first.'
+  }
+  const label = LABELS[detected]
   const declared = file.mimetype.split(';')[0]!.trim().toLowerCase()
+  if (declared !== detected) {
+    // The declared type comes from the client, so it is repeated only if it looks like one.
+    const shown = MEDIA_TYPE_PATTERN.test(declared) ? declared : 'an unrecognised type'
+    return `The file was sent as ${shown}, but its content is a ${label} image.`
+  }
   const extension = file.name.includes('.') ? file.name.split('.').pop()!.toLowerCase() : ''
   const allowedExtensions: readonly string[] = IMAGE_TYPES[detected]
-  if (declared !== detected || !allowedExtensions.includes(extension)) {
-    return 'The file type, name and content do not match.'
+  if (!allowedExtensions.includes(extension)) {
+    const actual = extension ? `ends in .${extension}` : 'has no extension'
+    return `The file name ${actual}, but its content is a ${label} image. Rename it to end in ${extensionList(allowedExtensions)}.`
   }
   return null
 }

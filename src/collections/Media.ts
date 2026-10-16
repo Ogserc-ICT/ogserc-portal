@@ -1,15 +1,21 @@
 import { type CollectionBeforeOperationHook, type CollectionConfig, ValidationError } from 'payload'
 
-import { allowAll, isEditorOrAbove, isPublisherOrAbove } from '../access'
+import { allowAll, isEditorOrAbove, isPublisherOrAbove, userCan } from '../access'
 import { IMAGE_MIME_TYPES, imageUploadProblem } from '../lib/uploads/image-signature'
 import { MAX_IMAGE_BYTES } from '../lib/uploads/limits'
 
 /**
  * Checks every uploaded file by its content before Payload stores it: an accepted image type,
  * with a declared type and extension that agree with the bytes, and no larger than the limit.
+ *
+ * The messages say which rule failed, so they are only for staff who may upload here. Anyone
+ * else is left to the access check, which Payload runs after this hook and before it reads the
+ * file, and which answers with its generic 403. Trusted server code (overrideAccess) is checked.
  */
-const acceptOnlyRealImages: CollectionBeforeOperationHook = ({ args, operation, req }) => {
+export const acceptOnlyRealImages: CollectionBeforeOperationHook =({ args, operation, req }) => {
   if ((operation !== 'create' && operation !== 'update') || !req.file) return args
+  const mayUpload = userCan(req.user, operation === 'create' ? 'content:edit' : 'content:publish')
+  if (!mayUpload && (args as { overrideAccess?: boolean }).overrideAccess !== true) return args
   const { data, mimetype, name, size } = req.file
   const problem = data?.length
     ? imageUploadProblem({ data, mimetype, name, size }, MAX_IMAGE_BYTES)

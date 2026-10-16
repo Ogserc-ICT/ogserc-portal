@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test'
 
 import { detectImageType, imageUploadProblem } from '../../src/lib/uploads/image-signature'
+import { MAX_IMAGE_BYTES, MAX_UPLOAD_BYTES } from '../../src/lib/uploads/limits'
+
+test('the image limit is 10 MB and fits under the upload ceiling', () => {
+  expect(MAX_IMAGE_BYTES).toBe(10 * 1024 * 1024)
+  expect(MAX_UPLOAD_BYTES).toBe(25 * 1024 * 1024)
+  expect(MAX_IMAGE_BYTES).toBeLessThanOrEqual(MAX_UPLOAD_BYTES)
+})
 
 const bytes = (...parts: (number[] | string)[]) =>
   new Uint8Array(parts.flatMap((part) => (typeof part === 'string' ? [...part].map((c) => c.charCodeAt(0)) : part)))
@@ -73,19 +80,40 @@ test.describe('imageUploadProblem', () => {
   })
 
   test('rejects HTML and SVG, whatever they are called', () => {
-    expect(imageUploadProblem(file(HTML, 'text/html', 'page.html'), 5 * MB)).toMatch(/Only JPEG/)
-    expect(imageUploadProblem(file(HTML, 'image/png', 'page.png'), 5 * MB)).toMatch(/Only JPEG/)
-    expect(imageUploadProblem(file(SVG, 'image/svg+xml', 'logo.svg'), 5 * MB)).toMatch(/Only JPEG/)
+    const notAnImage = /^Only JPEG, PNG, WebP and AVIF images are accepted, and this file is none of them\./
+    expect(imageUploadProblem(file(HTML, 'text/html', 'page.html'), 5 * MB)).toMatch(notAnImage)
+    expect(imageUploadProblem(file(HTML, 'image/png', 'page.png'), 5 * MB)).toMatch(notAnImage)
+    expect(imageUploadProblem(file(SVG, 'image/svg+xml', 'logo.svg'), 5 * MB)).toMatch(notAnImage)
   })
 
-  test('rejects a declared type or extension that disagrees with the content', () => {
-    expect(imageUploadProblem(file(JPEG, 'image/png', 'photo.png'), 5 * MB)).toMatch(/do not match/)
-    expect(imageUploadProblem(file(JPEG, 'image/jpeg', 'photo.png'), 5 * MB)).toMatch(/do not match/)
-    expect(imageUploadProblem(file(PNG, 'image/png', 'photo'), 5 * MB)).toMatch(/do not match/)
+  test('says when the declared type disagrees with the content', () => {
+    expect(imageUploadProblem(file(JPEG, 'image/png', 'photo.png'), 5 * MB)).toBe(
+      'The file was sent as image/png, but its content is a JPEG image.',
+    )
   })
 
-  test('rejects images over the size limit', () => {
-    expect(imageUploadProblem(file(PNG, 'image/png', 'big.png', 5 * MB + 1), 5 * MB)).toMatch(/5 MB or smaller/)
-    expect(imageUploadProblem(file(PNG, 'image/png', 'edge.png', 5 * MB), 5 * MB)).toBeNull()
+  test('repeats the declared type only if it looks like a media type', () => {
+    const odd = '<script>alert(1)</script>'
+    expect(imageUploadProblem(file(JPEG, odd, 'photo.jpg'), 5 * MB)).toBe(
+      'The file was sent as an unrecognised type, but its content is a JPEG image.',
+    )
+    expect(imageUploadProblem(file(JPEG, '', 'photo.jpg'), 5 * MB)).toMatch(/sent as an unrecognised type/)
+  })
+
+  test('says when the extension disagrees with the content, and which ones fit', () => {
+    expect(imageUploadProblem(file(JPEG, 'image/jpeg', 'photo.png'), 5 * MB)).toBe(
+      'The file name ends in .png, but its content is a JPEG image. Rename it to end in .jpg or .jpeg.',
+    )
+    expect(imageUploadProblem(file(PNG, 'image/png', 'photo'), 5 * MB)).toBe(
+      'The file name has no extension, but its content is a PNG image. Rename it to end in .png.',
+    )
+  })
+
+  test('says how large the image is and what the limit is', () => {
+    expect(imageUploadProblem(file(PNG, 'image/png', 'big.png', 12.4 * MB), 10 * MB)).toBe(
+      'This image is 12.4 MB; images must be 10 MB or smaller.',
+    )
+    expect(imageUploadProblem(file(PNG, 'image/png', 'edge.png', 10 * MB), 10 * MB)).toBeNull()
+    expect(imageUploadProblem(file(PNG, 'image/png', 'over.png', 10 * MB + 1), 10 * MB)).toMatch(/10 MB or smaller/)
   })
 })

@@ -8,5 +8,8 @@ const MB = 1024 * 1024
  */
 export const MAX_UPLOAD_BYTES = 25 * MB
 
-/** Largest image the Media collection accepts. */
-export const MAX_IMAGE_BYTES = 5 * MB
+/**
+ * Largest image the Media collection accepts. OGSERC may change this; it must stay at or below
+ * MAX_UPLOAD_BYTES.
+ */
+export const MAX_IMAGE_BYTES = 10 * MB

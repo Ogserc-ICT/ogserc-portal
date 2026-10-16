@@ -55,7 +55,7 @@ export default buildConfig({
     prodMigrations: migrations,
   }),
   sharp,
-  // Ceiling for any uploaded file; collections set lower limits (Media: 5 MB images).
+  // Ceiling for any uploaded file; collections set lower limits (Media: 10 MB images).
   upload: {
     limits: { fileSize: MAX_UPLOAD_BYTES },
   },
