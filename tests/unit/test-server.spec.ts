@@ -4,6 +4,7 @@ import path from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
+import { fakeDatabaseUrl, fakeJwt, fakeSecret } from '../support/fakes'
 import { redact, resetConfirmation, secretValues } from '../support/test-server'
 
 // The database test server wrapper: the reset must confirm itself, because `payload run` can exit
@@ -33,12 +34,14 @@ test.describe('reset confirmation', () => {
 
 // The database test server's log file must never contain secrets or database URLs.
 
+// All fake, built at run time (tests/support/fakes.ts).
+const DEV_URL = fakeDatabaseUrl('ep-dev.example.neon.tech', 'neondb', '?sslmode=verify-full')
 const ENV = {
-  DATABASE_URL: 'postgres://app:dev-password-123@ep-dev.example.neon.tech/neondb?sslmode=verify-full',
-  TEST_DATABASE_URL: 'postgres://app:test-password-456@ep-test.example.neon.tech/ogserc_e2e',
-  PROTECTED_DATABASE_URL: 'postgres://app:dev-password-123@ep-dev.example.neon.tech/neondb?sslmode=verify-full',
-  PAYLOAD_SECRET: 'a'.repeat(48),
-  S3_SECRET_ACCESS_KEY: 'example-s3-secret',
+  DATABASE_URL: DEV_URL,
+  TEST_DATABASE_URL: fakeDatabaseUrl('ep-test.example.neon.tech', 'ogserc_e2e'),
+  PROTECTED_DATABASE_URL: DEV_URL,
+  PAYLOAD_SECRET: fakeSecret(24),
+  S3_SECRET_ACCESS_KEY: fakeSecret(),
   SITE_URL: 'http://localhost:3100',
   PORT: '3100',
   SHORT_TOKEN: 'abc',
@@ -58,26 +61,26 @@ test('removes environment secrets wherever they appear', () => {
   const secrets = secretValues(ENV)
   const line = `connecting with ${ENV.TEST_DATABASE_URL} secret=${ENV.PAYLOAD_SECRET} key ${ENV.S3_SECRET_ACCESS_KEY}`
   const out = redact(line, secrets)
-  expect(out).not.toContain('test-password-456')
+  expect(out).not.toContain(new URL(ENV.TEST_DATABASE_URL).password)
   expect(out).not.toContain(ENV.PAYLOAD_SECRET)
   expect(out).not.toContain(ENV.S3_SECRET_ACCESS_KEY)
 })
 
 test('removes any database connection string, even one not in the environment', () => {
-  const out = redact('Error: connect to postgresql://u:p4ss@other-host:5432/db failed', [])
-  expect(out).toBe('Error: connect to postgres://[redacted] failed')
+  const url = fakeDatabaseUrl('other-host:5432', 'db').replace('postgres:', 'postgresql:')
+  expect(redact(`Error: connect to ${url} failed`, [])).toBe('Error: connect to postgres://[redacted] failed')
 })
 
 test('removes JWTs, reset links, tokens in URLs and password fields', () => {
-  const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjEyMzQ1Njc4In0.c2lnbmF0dXJlLXZhbHVl'
-  expect(redact(`Authorization: JWT ${jwt}`, [])).toBe('Authorization: JWT [redacted-jwt]')
-  expect(redact('Reset: http://localhost:3100/admin/reset/9f8e7d6c5b4a3210', [])).toBe(
+  expect(redact(`Authorization: JWT ${fakeJwt()}`, [])).toBe('Authorization: JWT [redacted-jwt]')
+  expect(redact(`Reset: http://localhost:3100/admin/reset/${fakeSecret(8)}`, [])).toBe(
     'Reset: http://localhost:3100/admin/reset/[redacted]',
   )
-  expect(redact('GET /api/verify?token=abcdef123456&next=/admin', [])).toBe('GET /api/verify?token=[redacted]&next=/admin')
-  expect(redact('{"email":"a@test.invalid","password":"hunter2-hunter2"}', [])).toBe(
-    '{"email":"a@test.invalid","password":"[redacted]"}',
+  expect(redact(`GET /api/verify?token=${fakeSecret(6)}&next=/admin`, [])).toBe(
+    'GET /api/verify?token=[redacted]&next=/admin',
   )
+  const body = JSON.stringify({ email: 'a@test.invalid', password: fakeSecret() })
+  expect(redact(body, [])).toBe('{"email":"a@test.invalid","password":"[redacted]"}')
 })
 
 test('leaves ordinary log lines alone', () => {

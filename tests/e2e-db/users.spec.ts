@@ -1,6 +1,7 @@
 import { type APIRequestContext, expect, request, test } from '@playwright/test'
 
 import { attemptLogin, createStaff, loadAdminAccount, newAccount, signIn, signInToken, type TestAccount } from './support/auth'
+import { fakeSecret } from '../support/fakes'
 import { runTestDbScript } from './support/db-script'
 
 // Staff accounts: who may change roles, emails and Payload's internal auth fields (SRS Section 10,
@@ -168,19 +169,20 @@ test.describe('internal auth fields', () => {
     const account = await createStaff(admin, 'internal', ['editor'])
     const editor = await as(account)
     const { id } = await stored(account.email)
-    const resetToken = 'a'.repeat(40)
+    // Fakes built at run time (tests/support/fakes.ts); none can work anywhere.
+    const resetToken = fakeSecret(20)
     const future = new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString()
 
     const response = await editor.patch(`/api/users/${id}`, {
       data: {
-        hash: 'not-a-real-hash',
-        salt: 'not-a-real-salt',
+        hash: fakeSecret(),
+        salt: fakeSecret(),
         loginAttempts: 4,
         lockUntil: future,
         resetPasswordToken: resetToken,
         resetPasswordExpiration: future,
         _verified: true,
-        apiKey: 'test-api-key-0000000000',
+        apiKey: fakeSecret(),
         enableAPIKey: true,
       },
     })
@@ -189,13 +191,13 @@ test.describe('internal auth fields', () => {
     // hash, salt and lockUntil unchanged: the original password still signs in.
     expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(200)
     // loginAttempts unchanged: had it become 4, one more failure would lock the account (limit 5).
-    expect((await attemptLogin(baseURL, account.email, 'wrong-password-for-test')).status).toBe(401)
+    expect((await attemptLogin(baseURL, account.email, fakeSecret())).status).toBe(401)
     expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(200)
     // resetPasswordToken not stored: it cannot be used to set a new password.
     const anonymous = await request.newContext({ baseURL })
     opened.push(anonymous)
     const reset = await anonymous.post('/api/users/reset-password', {
-      data: { token: resetToken, password: 'a-new-password-for-test-only' },
+      data: { token: resetToken, password: fakeSecret() },
     })
     expect(reset.ok()).toBe(false)
     expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(200)

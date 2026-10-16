@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test'
 
 import { assertServerEnv, checkServerEnv } from '../../src/lib/env'
+import { fakeDatabaseUrl, fakeSecret } from '../support/fakes'
 
-// Placeholder values only; none of these is a real secret.
+// Placeholder values only, built at run time; none of these is a real secret.
 const SECRET_32 = 'x'.repeat(32)
 const valid = {
-  DATABASE_URL: 'postgres://user:pass@localhost:5432/db',
+  DATABASE_URL: fakeDatabaseUrl('localhost:5432', 'db'),
   PAYLOAD_SECRET: SECRET_32,
   SITE_URL: 'https://example.org',
 }
@@ -61,7 +62,7 @@ test.describe('server startup checks', () => {
   })
 
   test('assertServerEnv throws without revealing the secret', () => {
-    const shortSecret = 'short-secret-value'
+    const shortSecret = fakeSecret(4) // under 32 characters
     expect(() => assertServerEnv({ ...valid, PAYLOAD_SECRET: shortSecret })).toThrow(
       /PAYLOAD_SECRET must be at least 32 characters/,
     )
