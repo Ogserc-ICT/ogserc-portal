@@ -53,6 +53,7 @@ export default defineConfig({
     { name: 'first-user', testMatch: 'first-user.spec.ts', use: { ...devices['Desktop Chrome'] } },
     { name: 'media', testMatch: 'media.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'users', testMatch: 'users.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
+    { name: 'drafts', testMatch: 'drafts.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
     // CI tests the production build; locally a dev server with its own build folder, so it never

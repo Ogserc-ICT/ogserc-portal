@@ -10,11 +10,17 @@ const run = promisify(exec)
  * Runs a test-only `payload run` script against the test database and returns what it confirmed.
  * The script must write its result to E2E_SCRIPT_CONFIRM_FILE: `payload run` can exit with code 0
  * without running the script (D-047), so the exit code alone never counts. One retry.
+ * `extraEnv` is added for the script's process only, never for the test server.
  */
-export async function runTestDbScript(script: string, args: string[]): Promise<unknown> {
+export async function runTestDbScript(
+  script: string,
+  args: string[],
+  extraEnv: Record<string, string> = {},
+): Promise<unknown> {
   const confirmFile = path.join(os.tmpdir(), `ogserc-e2e-script-${process.pid}.json`)
   const env = {
     ...process.env,
+    ...extraEnv,
     DATABASE_URL: process.env.TEST_DATABASE_URL ?? '',
     PROTECTED_DATABASE_URL: process.env.DATABASE_URL ?? '',
     E2E_SCRIPT_CONFIRM_FILE: confirmFile,

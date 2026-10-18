@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { buildConfig, type SanitizedConfig } from 'payload'
 
-import { allowAll, publishedOnly } from '../../src/access'
+import { allowAll, canSaveContent, publishedOnly } from '../../src/access'
 import { denyByDefault } from '../../src/access/deny-by-default'
+import { guardPublishedContent } from '../../src/access/guard-published-content'
 import { testCollectionsEnabled } from '../../src/collections/test'
 import { MAX_DEPTH } from '../../src/lib/query-limits'
 import configPromise, { portalConfig } from '../../src/payload.config'
@@ -65,6 +66,13 @@ test.describe('test-only collections', () => {
   test('are registered when the flag is on', () => {
     for (const slug of TEST_ONLY_SLUGS) expect(slugsOf(configs['with test collections'])).toContain(slug)
   })
+
+  test('include a collection using canSaveContent, so the guard rule below is not vacuous', () => {
+    const users = configs['with test collections'].collections.filter(
+      (c) => (c.access as Record<string, unknown>).update === canSaveContent,
+    )
+    expect(users.length).toBeGreaterThan(0)
+  })
 })
 
 for (const name of ['deployed', 'with test collections'] as const) {
@@ -111,6 +119,15 @@ for (const name of ['deployed', 'with test collections'] as const) {
         if (collection.access.read !== publishedOnly) continue
         const versions = collection.versions as { drafts?: unknown } | false
         expect(Boolean(versions && versions.drafts), `${collection.slug} uses publishedOnly without drafts`).toBe(true)
+      }
+    })
+
+    test('every collection using canSaveContent also has guardPublishedContent', () => {
+      // canSaveContent alone lets editors change or unpublish published documents (D-049).
+      for (const collection of configs[name].collections) {
+        const access = collection.access as Record<string, unknown>
+        if (access.create !== canSaveContent && access.update !== canSaveContent) continue
+        expect(collection.hooks?.beforeOperation ?? [], String(collection.slug)).toContain(guardPublishedContent)
       }
     })
 

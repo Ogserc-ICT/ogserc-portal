@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { canSaveContent, isEditorOrAbove, isPublisherOrAbove, publishedOnly } from '../../access'
+import { guardPublishedContent } from '../../access/guard-published-content'
 
 /**
  * Test-only: the smallest drafts-enabled collection, so the content access rules (`canSaveContent`,
@@ -18,6 +19,9 @@ export const E2EDrafts: CollectionConfig = {
     create: canSaveContent,
     update: canSaveContent,
     delete: isPublisherOrAbove,
+  },
+  hooks: {
+    beforeOperation: [guardPublishedContent],
   },
   fields: [{ name: 'title', type: 'text', required: true }],
 }
