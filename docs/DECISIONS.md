@@ -754,3 +754,20 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Watch:**
 - Payload's `sessions` field has `update: () => false` but no `create` rule. Only administrators can create accounts, and a planted session id is useless without a token signed with `PAYLOAD_SECRET`. Revisit if account creation is ever opened up.
 - The last-administrator rules, sign-in limits, cookie settings and password policy are the next commits of the Step 3 plan, not this one.
+
+## D-050 A test-only drafts collection, with its tables in every database (2026-10-18)
+
+**Decision:**
+- `e2e-drafts` (`src/collections/test/E2EDrafts.ts`) is the smallest collection with drafts. It exists so the content rules (`canSaveContent`, `publishedOnly`) can be tested before Step 4 adds real content collections. Pulled forward from Step 3 plan commit 8.
+- It is registered only when `E2E_TEST_COLLECTIONS` is exactly `true`. The server already refuses that flag in production (`src/lib/env.ts`).
+- **Who sets the flag:** only the `migrate:create` and `generate:types` scripts and test code. `build`, `start`, `dev`, `migrate`, the Dockerfile, docker-compose, CI and both test servers never do. `tests/unit/test-flag.spec.ts` fails if the flag appears anywhere else.
+  - `migrate:create` always sets it. Otherwise a later migration made without it would contain `DROP` statements for these tables.
+  - The test servers don't need it. The drafts test runs through the Local API in a `payload run` script that sets it for that process only. CI's test server is the production build, which must refuse the flag.
+- **The tables are in a normal migration** (`20261018_173528_e2e_drafts`), so **every database, production included, has them, empty**:
+  - `e2e_drafts` and `_e2e_drafts_v`, with two enum types and indexes;
+  - plus a nullable `e2e_drafts_id` column, foreign key and index on Payload's own `payload_locked_documents_rels`.
+  - With the flag off, nothing reads or writes them. Payload ignores columns its config doesn't define.
+- **Not conditional.** A migration's `up` is TypeScript and could check the flag. It doesn't, because the schema would then depend on an environment variable at migrate time. The database would stop matching the committed snapshot (`src/migrations/*.json`), which later `migrate:create` runs diff against and the post-migration check verifies.
+- If OGSERC wants the tables gone before launch, a normal migration drops them (step 13 launch checklist).
+
+**Tests:** `tests/unit/config-access.spec.ts` audits the config both as deployed and with the test collections. It checks that the collection is absent unless the flag is exactly `true`.
