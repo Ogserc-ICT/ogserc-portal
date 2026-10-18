@@ -67,6 +67,11 @@ test.describe('test-only collections', () => {
     for (const slug of TEST_ONLY_SLUGS) expect(slugsOf(configs['with test collections'])).toContain(slug)
   })
 
+  test('never rewrite the committed types', () => {
+    expect(configs['with test collections'].typescript.autoGenerate).toBe(false)
+    expect(configs.deployed.typescript.autoGenerate).not.toBe(false)
+  })
+
   test('include a collection using canSaveContent, so the guard rule below is not vacuous', () => {
     const users = configs['with test collections'].collections.filter(
       (c) => (c.access as Record<string, unknown>).update === canSaveContent,

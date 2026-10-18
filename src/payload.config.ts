@@ -46,6 +46,9 @@ export const portalConfig = ({ withTestCollections }: { withTestCollections: boo
     secret: requireEnv('PAYLOAD_SECRET'),
     typescript: {
       outputFile: path.resolve(dirname, 'payload-types.ts'),
+      // The committed types describe the deployed config, so a development start with the test
+      // collections (a test script) must not rewrite them (D-050).
+      autoGenerate: !withTestCollections,
     },
     // The site reads content through Payload's local API and REST; GraphQL is unused.
     graphQL: {
