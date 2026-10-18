@@ -760,7 +760,8 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Decision:**
 - `e2e-drafts` (`src/collections/test/E2EDrafts.ts`) is the smallest collection with drafts. It exists so the content rules (`canSaveContent`, `publishedOnly`) can be tested before Step 4 adds real content collections. Pulled forward from Step 3 plan commit 8.
 - It is registered only when `E2E_TEST_COLLECTIONS` is exactly `true`. The server already refuses that flag in production (`src/lib/env.ts`).
-- **Who sets the flag:** only the `migrate:create` and `generate:types` scripts and test code. `build`, `start`, `dev`, `migrate`, the Dockerfile, docker-compose, CI and both test servers never do. `tests/unit/test-flag.spec.ts` fails if the flag appears anywhere else.
+- **Who sets the flag:** only the `migrate:create` script and test code. `build`, `start`, `dev`, `migrate`, `generate:types`, the Dockerfile, docker-compose, CI and both test servers never do. `tests/unit/test-flag.spec.ts` fails if the flag appears anywhere else.
+  - `generate:types` was meant to set it too, but Payload rewrites `payload-types.ts` on every development start without it, so the types would flip back and forth. The committed types describe the deployed config. Test code names the test collection with an explicit cast.
   - `migrate:create` always sets it. Otherwise a later migration made without it would contain `DROP` statements for these tables.
   - The test servers don't need it. The drafts test runs through the Local API in a `payload run` script that sets it for that process only. CI's test server is the production build, which must refuse the flag.
 - **The tables are in a normal migration** (`20261018_173528_e2e_drafts`), so **every database, production included, has them, empty**:

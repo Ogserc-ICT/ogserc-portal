@@ -96,7 +96,7 @@ Review the generated file, then commit it with the code change.
 
 **Before any production migration:** take a database backup (Section 6).
 
-**Test-only tables (D-050):** every database, production included, has the empty tables `e2e_drafts` and `_e2e_drafts_v` and a nullable `e2e_drafts_id` column on `payload_locked_documents_rels`. They belong to a collection that is registered only in tests. When `E2E_TEST_COLLECTIONS` is off (always, on every host), the collection is not registered at all: there is no `/api/e2e-drafts` route, no admin screen and no Local API access to it, so the tables can only be reached with SQL. Leave them alone; never set `E2E_TEST_COLLECTIONS` on a host. `pnpm migrate:create` sets it by itself, so new migrations keep these tables.
+**Test-only tables (D-050):** every database, production included, has the empty tables `e2e_drafts` and `_e2e_drafts_v` and a nullable `e2e_drafts_id` column on `payload_locked_documents_rels`. They belong to a collection that is registered only in tests. When `E2E_TEST_COLLECTIONS` is off (always, on every host), the collection is not registered at all: there is no `/api/e2e-drafts` route, no admin screen and no Local API access to it, so the tables can only be reached with SQL. Leave them alone; never set `E2E_TEST_COLLECTIONS` on a host. `pnpm migrate:create` (and nothing else) sets it by itself, so new migrations keep these tables.
 
 ### 3.1 Test database (`pnpm test:e2e:db`)
 

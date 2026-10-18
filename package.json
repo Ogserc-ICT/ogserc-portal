@@ -15,7 +15,7 @@
     "test:e2e:db": "cross-env NODE_OPTIONS=--no-deprecation playwright test --config playwright.db.config.ts",
     "test:unit": "cross-env NODE_OPTIONS=--no-deprecation playwright test --config playwright.unit.config.ts",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
-    "generate:types": "cross-env NODE_OPTIONS=--no-deprecation E2E_TEST_COLLECTIONS=true payload generate:types",
+    "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
     "migrate": "cross-env NODE_OPTIONS=--no-deprecation payload migrate",
     "migrate:create": "cross-env NODE_OPTIONS=--no-deprecation E2E_TEST_COLLECTIONS=true payload migrate:create",

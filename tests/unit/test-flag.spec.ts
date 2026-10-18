@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs'
 
 // E2E_TEST_COLLECTIONS registers test-only collections (src/collections/test). Production refuses
 // it (src/lib/env.ts); this test makes sure nothing that builds, starts or deploys the site sets it.
-// Only the migrate:create and generate:types scripts (so migrations and types always include the
-// test tables) and test code may. See docs/DECISIONS.md D-050.
+// Only the migrate:create script (so migrations always include the test tables) and test code may.
+// See docs/DECISIONS.md D-050.
 
 const FLAG = 'E2E_TEST_COLLECTIONS'
 
@@ -55,13 +55,17 @@ test('files that build, start or deploy the site never name it', () => {
   for (const file of NEVER) expect(readFileSync(file, 'utf8').includes(FLAG), file).toBe(false)
 })
 
-test('only migrate:create and generate:types set it in package.json', () => {
+test('only migrate:create sets it in package.json', () => {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as { scripts: Record<string, string> }
   const setters = Object.entries(pkg.scripts)
     .filter(([, command]) => command.includes(FLAG))
     .map(([name]) => name)
-  expect(setters.sort()).toEqual(['generate:types', 'migrate:create'])
-  for (const name of ['build', 'start', 'dev', 'migrate']) expect(pkg.scripts[name]).not.toContain(FLAG)
+  expect(setters).toEqual(['migrate:create'])
+  // generate:types too: Payload rewrites payload-types.ts on every development start, without the
+  // flag, so the committed types describe the deployed config.
+  for (const name of ['build', 'start', 'dev', 'migrate', 'generate:types']) {
+    expect(pkg.scripts[name]).not.toContain(FLAG)
+  }
   // Nowhere else in package.json either (config sections, engines, ...).
   const { scripts: _scripts, ...rest } = pkg
   expect(JSON.stringify(rest)).not.toContain(FLAG)

@@ -3,7 +3,7 @@ import type { CollectionConfig } from 'payload'
 import type { Env } from '../../lib/env'
 import { E2EDrafts } from './E2EDrafts'
 
-/** True only for the exact value `true`; set by the migrate:create and generate:types scripts and by tests. */
+/** True only for the exact value `true`; set by the migrate:create script and by tests. */
 export function testCollectionsEnabled(env: Env): boolean {
   return env.E2E_TEST_COLLECTIONS === 'true'
 }
