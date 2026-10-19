@@ -2,7 +2,8 @@
 // checks can be unit-tested with a mocked connection (tests/unit/reset-steps.spec.ts). The real
 // operations are supplied by reset-test-db.ts.
 
-import { type DatabaseIdentity, describeDatabase, sameDatabase } from './test-db'
+import { type DatabaseIdentity, describeDatabase, sameDatabase } from '../../src/lib/db/identity'
+import { checkSchema, type ExpectedSchema } from '../../src/lib/db/verify-schema'
 
 export type ResetOperations = {
   /** current_database() on the live connection, and the host the connection uses. */
@@ -16,20 +17,6 @@ export type ResetOperations = {
   appliedMigrations: () => Promise<string[]>
   /** Rows in the users table. */
   userCount: () => Promise<number>
-}
-
-/** What a successful reset must leave behind. */
-export type ExpectedSchema = { tables: string[]; migrations: string[] }
-
-/** Problems with the database after a reset; empty when it is as expected. */
-export function checkResetResult(expected: ExpectedSchema, tables: string[], migrations: string[]): string[] {
-  const problems: string[] = []
-  const missingTables = expected.tables.filter((name) => !tables.includes(name))
-  const missingMigrations = expected.migrations.filter((name) => !migrations.includes(name))
-  if (expected.tables.length === 0) problems.push('No expected tables were given.')
-  if (missingTables.length > 0) problems.push(`Missing tables: ${missingTables.join(', ')}.`)
-  if (missingMigrations.length > 0) problems.push(`Migrations not recorded: ${missingMigrations.join(', ')}.`)
-  return problems
 }
 
 /**
@@ -51,7 +38,7 @@ export async function resetAndVerify(
   await operations.resetSchema()
   await operations.migrate()
 
-  const problems = checkResetResult(expected, await operations.existingTables(), await operations.appliedMigrations())
+  const problems = checkSchema(expected, await operations.existingTables(), await operations.appliedMigrations())
   if (problems.length > 0) throw new Error(`The reset did not produce the expected database:\n- ${problems.join('\n- ')}`)
 
   // Tests rely on starting with no accounts (the first-user test creates the administrator).

@@ -10,7 +10,8 @@
 
 import { writeFile } from 'node:fs/promises'
 
-import { assertWipeableTestDatabase, databaseIdentity, describeDatabase, sameDatabase } from './test-db'
+import { databaseIdentity, describeDatabase, sameDatabase } from '../../src/lib/db/identity'
+import { assertWipeableTestDatabase } from './test-db'
 
 function fail(message: string): never {
   console.error(`[strip-roles] ${message}`)

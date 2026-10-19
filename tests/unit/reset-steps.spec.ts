@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { checkResetResult, type ResetOperations, resetAndVerify } from '../support/reset-steps'
+import { type ResetOperations, resetAndVerify } from '../support/reset-steps'
 
 const TARGET = { host: 'ep-test.example.neon.tech', database: 'ogserc_e2e' }
 const EXPECTED = { tables: ['users', 'media', 'payload_migrations'], migrations: ['20261008_211615_initial'] }
@@ -64,9 +64,5 @@ test.describe('test database reset', () => {
     await expect(resetAndVerify(TARGET, operations, EXPECTED, quiet)).rejects.toThrow(
       /users table has 1 row\(s\) straight after the reset; it must be empty/,
     )
-  })
-
-  test('an empty expectation is itself a failure', () => {
-    expect(checkResetResult({ tables: [], migrations: [] }, [], [])).toContain('No expected tables were given.')
   })
 })

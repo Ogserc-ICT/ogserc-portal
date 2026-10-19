@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test'
 
 import { fakeDatabaseUrl } from '../support/fakes'
-import { assertWipeableTestDatabase, checkTestDatabase, databaseIdentity } from '../support/test-db'
+import { databaseIdentity } from '../../src/lib/db/identity'
+import { assertWipeableTestDatabase, checkTestDatabase } from '../support/test-db'
 
 // Fake URLs with random passwords, built at run time (tests/support/fakes.ts).
 const DEV = fakeDatabaseUrl('ep-dev.example.neon.tech', 'neondb', '?sslmode=verify-full')

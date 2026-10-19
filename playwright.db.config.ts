@@ -3,7 +3,8 @@ import 'dotenv/config'
 import os from 'node:os'
 import path from 'node:path'
 
-import { assertWipeableTestDatabase, describeDatabase } from './tests/support/test-db'
+import { describeDatabase } from './src/lib/db/identity'
+import { assertWipeableTestDatabase } from './tests/support/test-db'
 import { emptyTestMediaDir, testMediaDir } from './tests/support/test-media-dir'
 import { previousServerProblem } from './tests/support/test-server'
 

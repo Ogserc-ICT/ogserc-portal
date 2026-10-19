@@ -3,7 +3,7 @@ import { writeFile } from 'node:fs/promises'
 import { type PostgresAdapter, sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
-export type DatabaseIdentity = { host: string; database: string }
+import type { DatabaseIdentity } from './db/identity'
 
 /**
  * The database this server is really using: the name Postgres reports on the live connection,

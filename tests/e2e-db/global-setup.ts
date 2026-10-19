@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 
 import type { FullConfig } from '@playwright/test'
 
-import { type DatabaseIdentity, databaseIdentity, describeDatabase, sameDatabase } from '../support/test-db'
+import { type DatabaseIdentity, databaseIdentity, describeDatabase, sameDatabase } from '../../src/lib/db/identity'
 
 const WAIT_MS = 60_000
 

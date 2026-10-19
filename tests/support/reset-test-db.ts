@@ -17,7 +17,8 @@
 import { rm, writeFile } from 'node:fs/promises'
 
 import { resetAndVerify } from './reset-steps'
-import { assertWipeableTestDatabase, databaseIdentity, describeDatabase, sameDatabase } from './test-db'
+import { databaseIdentity, describeDatabase, sameDatabase } from '../../src/lib/db/identity'
+import { assertWipeableTestDatabase } from './test-db'
 
 function fail(message: string): never {
   console.error(`[reset-test-db] ${message}`)

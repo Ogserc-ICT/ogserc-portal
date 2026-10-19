@@ -7,28 +7,12 @@
 
 import { pathToFileURL } from 'node:url'
 
+// With the .ts extension, so Node's type stripping can resolve it when this file is run directly.
+import { type DatabaseIdentity, databaseIdentity, describeDatabase, sameDatabase } from '../../src/lib/db/identity.ts'
+
 export type Env = Record<string, string | undefined>
 
-export type DatabaseIdentity = { host: string; database: string }
-
 const TEST_NAME_MARKERS = ['e2e', 'test']
-
-/** Host (with port, if given) and database name from a Postgres URL, or null if it cannot be read. */
-export function databaseIdentity(url: string | undefined): DatabaseIdentity | null {
-  if (!url) return null
-  try {
-    const parsed = new URL(url)
-    const database = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
-    if (!parsed.hostname || !database) return null
-    return { host: parsed.host.toLowerCase(), database }
-  } catch {
-    return null
-  }
-}
-
-export function sameDatabase(a: DatabaseIdentity, b: DatabaseIdentity): boolean {
-  return a.host === b.host && a.database === b.database
-}
 
 /** Reasons the test database must not be wiped; empty when it is safe. */
 export function checkTestDatabase(env: Env): { identity: DatabaseIdentity | null; errors: string[] } {
@@ -50,10 +34,6 @@ export function checkTestDatabase(env: Env): { identity: DatabaseIdentity | null
     }
   }
   return { identity, errors }
-}
-
-export function describeDatabase(identity: DatabaseIdentity | null): string {
-  return identity ? `host ${identity.host}, database ${identity.database}` : 'unknown database'
 }
 
 /** Throws unless the test database may be wiped. Returns its identity for logging. */

@@ -19,7 +19,8 @@ import { writeFile } from 'node:fs/promises'
 
 import type { Payload } from 'payload'
 
-import { assertWipeableTestDatabase, databaseIdentity, describeDatabase, sameDatabase } from './test-db'
+import { databaseIdentity, describeDatabase, sameDatabase } from '../../src/lib/db/identity'
+import { assertWipeableTestDatabase } from './test-db'
 
 const COLLECTION = 'e2e-drafts'
 
