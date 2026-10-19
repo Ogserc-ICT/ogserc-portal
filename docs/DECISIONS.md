@@ -755,6 +755,32 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - Payload's `sessions` field has `update: () => false` but no `create` rule. Only administrators can create accounts, and a planted session id is useless without a token signed with `PAYLOAD_SECRET`. Revisit if account creation is ever opened up.
 - The last-administrator rules, sign-in limits, cookie settings and password policy are the next commits of the Step 3 plan, not this one.
 
+## D-049 Content saving: only publishers change what the public sees; the Local API rule (2026-10-19)
+
+**Decision:**
+- **Editors save drafts only** (FR-CMS-06, SRS Section 10). Two layers:
+  - `canSaveContent` (create and update access) refuses an editor who sends `_status: 'published'`.
+  - `guardPublishedContent` (`src/access/guard-published-content.ts`), a `beforeOperation` hook on `create`, `update` and `restoreVersion`. For anyone without `content:publish` it refuses: a non-draft update of any published document (by id or in bulk); a draft save whose `_status` is not absent or `'draft'`; a non-boolean draft flag or missing data; a duplicate unless saved as a draft; restoring a version over a published document; and per-locale publish options. It **fails closed**: anything it does not recognise as safe is refused. Trusted server code (`overrideAccess: true`) passes; Payload never takes that value from a request.
+- **The Local API rule** (CLAUDE.md, Security and data rules): the Local API skips access control by default, so any query feeding a public page, search or the sitemap passes `overrideAccess: false` or filters to published documents. `overrideAccess: true` only in hooks, seed and migrations, never with request values.
+- **`allowAll` uses**, kept in step with `ALLOW_ALL_USES` in `tests/unit/config-access.spec.ts` (the audit fails on any other use, and on any use that is not a read):
+
+  | Use | Reason |
+  |---|---|
+  | `media.read` | Images are public (D-045). Revisit with the Step 4 draft-files decision. |
+
+**Why (group D results, 2026-10-18):**
+- Written as tests first, against `canSaveContent` alone. An editor could **change a published document by leaving `_status` out**, and **unpublish it by sending `_status: 'draft'`**. Payload runs create/update access on the request's `data` before it decides `_status`, without the stored document or the draft flag. A duplicate copies the original's `_status`, and a version restore is its own operation, so access never sees either.
+- With the hook, all 35 cases pass (`tests/e2e-db/drafts.spec.ts`, on the test-only `e2e-drafts` collection, D-050): creating, changing and unpublishing published documents, publishing drafts, bulk updates, version restores and duplicates, each through the Local API with a real user and through Payload's REST pipeline. Publishers and trusted code are allowed. Anonymous requests see only published documents and no versions, even when they send `overrideAccess` and `draft` in the query, headers and body. On the running server, an editor sending `overrideAccess` cannot change another account.
+- `tests/unit/config-access.spec.ts` requires the hook on every collection that uses `canSaveContent`, in the deployed config and with the test collections.
+
+**Not atomic:** the hook checks first ("is any target document published?") and Payload writes afterwards. Both run in the same transaction (`req`), but nothing is locked. So an editor's save of a draft can pass the check, a publisher can publish that same document in the same instant, and the editor's write then lands on the now-published document, where it can change or unpublish what the public sees. It needs an editor and a publisher saving the same document within milliseconds of each other. If it ever matters, take a transaction-scoped advisory lock per document in the hook, and in the publish path too (`src/lib/transaction-lock.ts`, as for the first user in D-044).
+
+**Step 4 notes:**
+- Hide or disable admin controls that return 403 for editors (for example Publish on a published document), so editors aren't shown actions they can't take.
+- Add one real HTTP test of these rules on a real content collection, and the test that a draft never appears on a public page, in search or in the sitemap.
+- Decide where draft documents' files live before building Documents (D-045 open question).
+- Watch the drafts test's second `payload run` in CI (time, silent exits: D-047).
+
 ## D-050 A test-only drafts collection, with its tables in every database (2026-10-18)
 
 **Decision:**

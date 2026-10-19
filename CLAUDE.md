@@ -91,6 +91,8 @@ Rules for anything that moves or responds to the pointer (SRS FR-WEB-08 to FR-WE
 - Never log passwords, tokens, payment data, or complaint/whistleblowing content. Never show stack traces to users.
 - Never ask for, print, or paste real secrets in chat or code. If a secret appears anywhere, say so and tell the user to rotate it.
 - Enforce authorisation on the server for every collection and endpoint, not only in the UI.
+- Payload's Local API skips access control by default. Every query that feeds a public page, search or the sitemap must pass `overrideAccess: false` or filter explicitly to published documents. Use `overrideAccess: true` only in trusted server code (hooks, seed, migrations), never with values taken from the request. Step 4 must include a test proving a draft never appears on a public page, in search or in the sitemap (docs/DECISIONS.md D-049).
+- Every collection that uses `canSaveContent` also needs the `guardPublishedContent` hook, and every new `allowAll` must be added to the list in `tests/unit/config-access.spec.ts` and D-049 with its reason.
 - Payments (Phase 3): hosted checkout only, verify the provider's webhook signature, process each notification once, check amounts on the server, never touch card details.
 - Before each commit that touches auth, uploads, forms, or access control, run through this checklist and state the result: input validated? access control enforced? secrets absent? errors safe? new dependency justified?
 - Never invent regulatory content, fees, tariffs, licence data, or legal text. Use clearly marked placeholder content (for example "[OGSERC to supply]") until real content exists.
