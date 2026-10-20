@@ -936,3 +936,15 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
   - The drafts scenario records `name: message` but only checks whether an error happened, and runs unbundled.
   - Payload's only runtime name comparison is `formatErrors`' Mongoose fallback, which our errors never reach.
 - The Step 3 lockout rewrite (an `afterError` hook) must follow this rule.
+
+**Depends on Payload 3.90.2 (re-check after every Payload upgrade, including Dependabot PR #17):** the part 4 fix relies on Payload internals that a release may change:
+- `BasePayload` being exported, with `init({ config })` and `destroy()`;
+- `getPayload` caching on the process-wide `global._payload`;
+- `formatErrors` using `instanceof`;
+- the adapter's `connect()` applying `prodMigrations` before `init` resolves;
+- Payload being bundled separately into the instrumentation entry.
+
+After an upgrade, before merging:
+- read those parts of the new source;
+- rebuild and check `.next/server/chunks` again;
+- confirm in CI that the media and error-details tests pass, with two `Database:` lines per server start in the database test log.
