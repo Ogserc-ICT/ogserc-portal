@@ -64,6 +64,7 @@ Before saying a task is done, run lint, typecheck, and the relevant tests, and f
 - Use server components by default; use client components only when interactivity needs them.
 - Write small, focused functions. Add comments only where intent is not obvious.
 - Never compare an error's `name` or `constructor.name`, in code or tests: the production build minifies class names (Payload's `ValidationError` is named `A` there). Compare status codes, a `code` property we set ourselves, or `instanceof` against the same module (docs/DECISIONS.md D-051).
+- No in-memory state shared between startup code (`src/instrumentation*.ts`) and route handlers: no module-level variables, caches or singletons, and never `getPayload` at startup. The production build bundles them separately, with their own copies of Payload and our modules, while globals are shared, so mixing them breaks in ways tests in dev mode don't show (D-051). Shared state lives in the database.
 - Before writing Next.js code, consult the version-matched docs in node_modules/next/dist/docs/ (see AGENTS.md). If AGENTS.md ever conflicts with this file or docs/SRS.md, CLAUDE.md and the SRS take precedence.
 
 ## Motion and interactivity
