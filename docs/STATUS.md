@@ -31,6 +31,11 @@ Steps 1, 2, 2b merged. Step 3 groups A, B, C and D done. Dependabot PRs #17 and 
 - Private files for draft documents, before Step 4 (D-045). **Undecided.** Leaning: Media for public images only;
   document files in their own upload collection whose read access follows the document's published status.
 - Dependabot PR #17 (Payload upgrade): re-check the D-051 boot instance before merging.
+- **Unsaved work at sign-out (open, decide before Step 4).** Seen 2026-10-20 with a temporary 5-minute token. The admin refreshes
+  the token only on a page change in its last 2 minutes, otherwise shows "Stay logged in" 1 minute before the end, then forces a
+  page change to the inactivity page. Separately, the 12-hour limit (4582f40) refuses the refresh and signs out with no warning.
+  Either can discard unsaved work in a long form. Before Step 4: test it with a filled-in form, then choose between a longer token
+  (for example 4 hours; the owner leans this way for now), a refresh mechanism, or autosave or draft recovery. Goes in D-052.
 
 ## Waiting on OGSERC
 - PDF size limit (25 MB ceiling until then); audit-log IP retention (NFR-SEC-19); homepage review; real content.
