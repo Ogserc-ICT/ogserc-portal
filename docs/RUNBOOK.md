@@ -160,6 +160,8 @@ On a brand-new, empty database, `/admin` shows a "create first user" screen that
 
 ## 5. Deploying *(to be completed in step 13)*
 
+**`SITE_URL` must be the public `https://` address.** A production server refuses to start if `SITE_URL` is not https (plain `http://` is accepted only for `localhost`, `127.0.0.1` and `[::1]`). On staging or production behind a proxy or load balancer that terminates HTTPS, set `SITE_URL` to the `https://` address visitors use, even though the app itself receives plain http.
+
 ### Vercel
 
 *(to be completed: project settings, environment variables, spend limits, NFR-HOST-03)*
