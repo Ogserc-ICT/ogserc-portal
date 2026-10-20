@@ -1,6 +1,12 @@
-import { type CollectionBeforeValidateHook, type CollectionConfig, type FieldAccess, Forbidden } from 'payload'
+import {
+  type CollectionBeforeDeleteHook,
+  type CollectionBeforeValidateHook,
+  type CollectionConfig,
+  type FieldAccess,
+  Forbidden,
+} from 'payload'
 
-import { fieldCan, isAdmin, isAdminOrSelf, isStaff, userCan } from '../access'
+import { fieldCan, isAdmin, isAdminNotSelf, isAdminOrSelf, isStaff, userCan } from '../access'
 import { ROLES } from '../access/roles'
 import { genericLoginError, LOCK_MINUTES, MAX_LOGIN_ATTEMPTS } from '../lib/auth/generic-login-error'
 import { endSessionsOnRoleChange } from '../lib/auth/revoke-sessions'
@@ -32,6 +38,14 @@ const firstUserIsAdministrator: CollectionBeforeValidateHook = async ({ data, op
     throw new Forbidden(req.t)
   }
   return data
+}
+
+/**
+ * Second layer behind `isAdminNotSelf`: nobody signed in deletes their own account, even if delete
+ * access were loosened later. Trusted server code (no signed-in user) is not affected.
+ */
+const refuseSelfDelete: CollectionBeforeDeleteHook = ({ id, req }) => {
+  if (req.user?.collection === 'users' && String(id) === String(req.user.id)) throw new Forbidden(req.t)
 }
 
 export const Users: CollectionConfig = {
@@ -66,12 +80,13 @@ export const Users: CollectionConfig = {
     create: isAdmin,
     read: isAdminOrSelf,
     update: isAdminOrSelf,
-    delete: isAdmin,
+    delete: isAdminNotSelf,
     unlock: isAdmin,
   },
   hooks: {
     beforeValidate: [firstUserIsAdministrator],
     beforeOperation: [limitSessionAge],
+    beforeDelete: [refuseSelfDelete],
     afterChange: [endSessionsOnRoleChange],
     afterError: [genericLoginError],
   },

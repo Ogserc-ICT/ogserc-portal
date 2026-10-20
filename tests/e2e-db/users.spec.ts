@@ -337,6 +337,46 @@ test.describe('sessions and cookies', () => {
   })
 })
 
+test.describe('deleting accounts', () => {
+  async function exists(email: string): Promise<boolean> {
+    const response = await admin.get(`/api/users?where[email][equals]=${encodeURIComponent(email)}&depth=0`)
+    expect(response.status()).toBe(200)
+    return ((await response.json()) as { totalDocs: number }).totalDocs === 1
+  }
+
+  test('an administrator cannot delete their own account', async () => {
+    const account = await createStaff(admin, 'delete-self', ['administrator'])
+    const self = await as(account)
+    const { id } = await stored(account.email)
+    const response = await self.delete(`/api/users/${id}`)
+    expect([403, 404], `status ${response.status()}`).toContain(response.status())
+    expect(await exists(account.email)).toBe(true)
+  })
+
+  test('a bulk delete that matches yourself deletes only the others', async () => {
+    const account = await createStaff(admin, 'delete-bulk-self', ['administrator'])
+    const other = await createStaff(admin, 'delete-bulk-other', ['editor'])
+    const self = await as(account)
+    const selfId = (await stored(account.email)).id
+    const otherId = (await stored(other.email)).id
+    const response = await self.delete(`/api/users?where[id][in][0]=${selfId}&where[id][in][1]=${otherId}&depth=0`)
+    expect(response.status()).toBeLessThan(500)
+    expect(await exists(account.email), 'the administrator who sent it').toBe(true)
+    expect(await exists(other.email), 'the other account').toBe(false)
+  })
+
+  test('an administrator can delete another account; an editor cannot', async () => {
+    const editorAccount = await createStaff(admin, 'delete-editor', ['editor'])
+    const target = await createStaff(admin, 'delete-target', ['editor'])
+    const editor = await as(editorAccount)
+    const targetId = (await stored(target.email)).id
+    expect([403, 404]).toContain((await editor.delete(`/api/users/${targetId}`)).status())
+    expect(await exists(target.email)).toBe(true)
+    expect((await admin.delete(`/api/users/${targetId}`)).status()).toBe(200)
+    expect(await exists(target.email)).toBe(false)
+  })
+})
+
 test.describe('sessions end when roles or the password change', () => {
   async function session(account: TestAccount): Promise<APIRequestContext> {
     const context = await request.newContext({ baseURL, extraHTTPHeaders: asUser(await signInToken(baseURL, account)) })

@@ -60,6 +60,16 @@ export const isAdminOrSelf: Access = ({ req }) => {
 }
 
 /**
+ * Administrators may delete any staff account except their own, so nobody removes themselves by
+ * mistake (or in a bulk delete that happens to match them). Another administrator can.
+ */
+export const isAdminNotSelf: Access = ({ req }) => {
+  if (!userCan(req.user, 'users:manage') || !req.user) return false
+  const others: Where = { id: { not_equals: req.user.id } }
+  return others
+}
+
+/**
  * Create/update access for drafts-enabled content: editors may save drafts, but only
  * publishers and administrators may save a published version.
  */

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { SanitizedConfig } from 'payload'
 
+import { isAdminNotSelf } from '../../src/access'
 import { genericLoginError } from '../../src/lib/auth/generic-login-error'
 import { endSessionsOnRoleChange } from '../../src/lib/auth/revoke-sessions'
 import { limitSessionAge } from '../../src/lib/auth/session-cap'
@@ -33,6 +34,8 @@ for (const variant of ['deployed', 'with test collections']) {
     expect(users!.hooks.afterError).toContain(genericLoginError)
     expect(users!.hooks.beforeOperation).toContain(limitSessionAge)
     expect(users!.hooks.afterChange).toContain(endSessionsOnRoleChange)
+    expect(users!.access.delete).toBe(isAdminNotSelf)
+    expect(users!.hooks.beforeDelete.length).toBeGreaterThan(0)
   })
 
   test(`serverURL and every CSRF origin are the normalised site origin (${variant})`, () => {
@@ -48,3 +51,11 @@ for (const variant of ['deployed', 'with test collections']) {
     }
   })
 }
+
+test('delete access: administrators, never their own account', async () => {
+  const requestAs = (user: Record<string, unknown> | null) => ({ req: { user } }) as unknown as Parameters<typeof isAdminNotSelf>[0]
+  const admin = { collection: 'users', id: 7, roles: ['administrator'] }
+  expect(await isAdminNotSelf(requestAs(admin))).toEqual({ id: { not_equals: 7 } })
+  expect(await isAdminNotSelf(requestAs({ ...admin, roles: ['publisher', 'editor'] }))).toBe(false)
+  expect(await isAdminNotSelf(requestAs(null))).toBe(false)
+})
