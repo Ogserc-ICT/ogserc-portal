@@ -10,7 +10,7 @@ import { hardenPayloadInternals } from './access/payload-internals'
 import { Media } from './collections/Media'
 import { TEST_COLLECTIONS, testCollectionsEnabled } from './collections/test'
 import { Users } from './collections/Users'
-import { assertServerEnv } from './lib/env'
+import { assertServerEnv, csrfOrigins, siteOrigin } from './lib/env'
 import { queryLimits } from './lib/query-limits'
 import { onPayloadInit } from './lib/startup'
 import { MAX_UPLOAD_BYTES } from './lib/uploads/limits'
@@ -34,7 +34,12 @@ function requireEnv(name: string): string {
  */
 export const portalConfig = ({ withTestCollections }: { withTestCollections: boolean }) =>
   buildConfig({
-    serverURL: process.env.SITE_URL,
+    // The normalised origin, so links and the CSRF list never carry a trailing slash or path.
+    serverURL: siteOrigin(process.env),
+    // Cookie-authenticated requests are accepted only from the site's own origin; requests without
+    // an Origin header need Sec-Fetch-Site same-origin, same-site or none (Payload's extractJWT).
+    // Requests that send the token in the Authorization header are not affected.
+    csrf: csrfOrigins(process.env),
     admin: {
       user: Users.slug,
       importMap: {

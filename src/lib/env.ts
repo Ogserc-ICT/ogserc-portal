@@ -13,13 +13,33 @@ function isBuildPhase(env: Env): boolean {
   return env.NEXT_PHASE === 'phase-production-build'
 }
 
-function isValidUrl(value: string): boolean {
+function parseUrl(value: string): URL | undefined {
   try {
-    new URL(value)
-    return true
+    return new URL(value)
   } catch {
-    return false
+    return undefined
   }
+}
+
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
+
+/**
+ * The site's origin ("https://example.org") from SITE_URL, without any path, query or trailing
+ * slash. Browsers send exactly this in the Origin header, which Payload compares as a string for
+ * its CSRF check, so a SITE_URL of "https://example.org/" must not end up there as written.
+ * The site is always served at the root (no basePath), so the origin is the site's address.
+ * Undefined if SITE_URL is missing or not an http(s) URL.
+ */
+export function siteOrigin(env: Env): string | undefined {
+  const url = env.SITE_URL ? parseUrl(env.SITE_URL) : undefined
+  if (!url || (url.protocol !== 'https:' && url.protocol !== 'http:')) return undefined
+  return url.origin
+}
+
+/** Payload's `csrf` list: the site's origin only, or empty (no check) when SITE_URL is unset. */
+export function csrfOrigins(env: Env): string[] {
+  const origin = siteOrigin(env)
+  return origin ? [origin] : []
 }
 
 export function checkServerEnv(env: Env): EnvCheck {
@@ -36,8 +56,14 @@ export function checkServerEnv(env: Env): EnvCheck {
   }
 
   if (production && !isBuildPhase(env)) {
+    const url = env.SITE_URL ? parseUrl(env.SITE_URL) : undefined
     if (!env.SITE_URL) errors.push('SITE_URL is required in production.')
-    else if (!isValidUrl(env.SITE_URL)) errors.push('SITE_URL must be a full URL, e.g. https://example.org.')
+    else if (!url) errors.push('SITE_URL must be a full URL, e.g. https://example.org.')
+    // Session cookies are Secure in production, and staff passwords must never cross the network
+    // unencrypted. Plain http is allowed only on this machine (CI and the Docker check use it).
+    else if (url.protocol !== 'https:' && !(url.protocol === 'http:' && LOCAL_HOSTS.has(url.hostname))) {
+      errors.push('SITE_URL must use https in production (http is allowed only for localhost).')
+    }
   }
 
   if (env.E2E_TEST_COLLECTIONS === 'true' && production) {

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { SanitizedConfig } from 'payload'
 
+import { siteOrigin } from '../../src/lib/env'
 import configPromise, { portalConfig } from '../../src/payload.config'
 
 // Pins the staff sign-in settings in the FINAL assembled config, deployed and with the test-only
@@ -24,5 +25,18 @@ for (const variant of ['deployed', 'with test collections']) {
     expect(auth.removeTokenFromResponses).toBe(true)
     expect(auth.useSessions).toBe(true)
     expect(auth.cookies.sameSite).toBe('Strict')
+  })
+
+  test(`serverURL and every CSRF origin are the normalised site origin (${variant})`, () => {
+    const config = configs[variant]!
+    const origin = siteOrigin(process.env)
+    // Payload appends serverURL to the list itself, so it may appear twice; never in another form.
+    if (origin) {
+      expect(config.serverURL).toBe(origin)
+      expect(config.csrf.length).toBeGreaterThan(0)
+      for (const entry of config.csrf) expect(entry).toBe(origin)
+    } else {
+      expect(config.csrf.filter(Boolean)).toEqual([])
+    }
   })
 }

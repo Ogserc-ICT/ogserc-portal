@@ -76,7 +76,9 @@ export default defineConfig({
       E2E_DB_IDENTITY_FILE: process.env.E2E_DB_IDENTITY_FILE,
       MEDIA_DIR: process.env.E2E_MEDIA_DIR ?? testMediaDir(),
       PORT: String(port),
-      SITE_URL: baseURL,
+      // Deliberately written with a path and a trailing slash: the server must normalise it to the
+      // origin (src/lib/env.ts siteOrigin), or the CSRF tests and every cookie sign-in would fail.
+      SITE_URL: `${baseURL}/portal/`,
       // Local dev server only: build into .next-e2e (next.config.ts). CI uses the production build.
       ...(isCI ? {} : { E2E_TEST_SERVER: 'true' }),
     },

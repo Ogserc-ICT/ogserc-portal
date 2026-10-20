@@ -6,6 +6,7 @@ import {
   createStaff,
   loadAdminAccount,
   newAccount,
+  SESSION_COOKIE,
   sessionCookie,
   signIn,
   signInToken,
@@ -292,6 +293,67 @@ test.describe('sessions and cookies', () => {
     expect(me.status()).toBe(200)
     expect(((await me.json()) as { user: unknown }).user).toBeNull()
     expect((await anonymous.get('/api/users?depth=0', { headers })).status()).toBe(403)
+  })
+})
+
+test.describe('cross-site requests with the session cookie (CSRF)', () => {
+  // The server runs with SITE_URL written as `${baseURL}/portal/` (playwright.db.config.ts), so
+  // these also prove the origin is normalised. The cookie is sent by hand in a Cookie header, never
+  // through a cookie jar, so the Secure flag on the production build plays no part.
+  let account: TestAccount
+  let token: string
+  let id: string | number
+
+  test.beforeAll(async () => {
+    account = await createStaff(admin, 'csrf', ['editor'])
+    token = await signInToken(baseURL, account)
+    id = (await stored(account.email)).id
+  })
+
+  async function withCookie(headers: Record<string, string>): Promise<APIRequestContext> {
+    const context = await request.newContext({ baseURL, extraHTTPHeaders: { Cookie: `${SESSION_COOKIE}=${token}`, ...headers } })
+    opened.push(context)
+    return context
+  }
+
+  async function signedInEmail(context: APIRequestContext): Promise<string | null> {
+    const response = await context.get('/api/users/me')
+    expect(response.status()).toBe(200)
+    return ((await response.json()) as { user: { email: string } | null }).user?.email ?? null
+  }
+
+  test('the site\'s own origin is accepted, for reading and for changes', async () => {
+    const sameOrigin = await withCookie({ Origin: baseURL })
+    expect(await signedInEmail(sameOrigin)).toBe(account.email)
+    const change = await sameOrigin.patch(`/api/users/${id}`, { data: { name: '[Test] csrf same-origin' } })
+    expect(change.status()).toBe(200)
+    expect((await stored(account.email)).name).toBe('[Test] csrf same-origin')
+  })
+
+  test('a browser request without Origin but marked same-origin is accepted', async () => {
+    expect(await signedInEmail(await withCookie({ 'Sec-Fetch-Site': 'same-origin' }))).toBe(account.email)
+  })
+
+  test('another origin gets no session and cannot change anything', async () => {
+    const foreign = await withCookie({ Origin: 'https://evil.example' })
+    expect(await signedInEmail(foreign)).toBeNull()
+    const before = (await stored(account.email)).name
+    const change = await foreign.patch(`/api/users/${id}`, { data: { name: '[Test] csrf cross-site' } })
+    expect(change.status()).toBe(403)
+    expect((await stored(account.email)).name).toBe(before)
+  })
+
+  test('the origin written as SITE_URL (with its path and slash) is not what browsers send, and is refused', async () => {
+    // Shows that only the normalised origin is on the list.
+    expect(await signedInEmail(await withCookie({ Origin: `${baseURL}/portal/` }))).toBeNull()
+  })
+
+  test('a cross-site request without Origin gets no session', async () => {
+    expect(await signedInEmail(await withCookie({ 'Sec-Fetch-Site': 'cross-site' }))).toBeNull()
+  })
+
+  test('a request with neither Origin nor Sec-Fetch-Site (not a browser) gets no session from the cookie', async () => {
+    expect(await signedInEmail(await withCookie({}))).toBeNull()
   })
 })
 

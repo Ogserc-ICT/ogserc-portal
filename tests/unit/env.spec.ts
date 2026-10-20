@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { assertServerEnv, checkServerEnv } from '../../src/lib/env'
+import { assertServerEnv, checkServerEnv, csrfOrigins, siteOrigin } from '../../src/lib/env'
 import { fakeDatabaseUrl, fakeSecret } from '../support/fakes'
 
 // Placeholder values only, built at run time; none of these is a real secret.
@@ -55,6 +55,21 @@ test.describe('server startup checks', () => {
     expect(errorsFor(env)).toEqual([])
   })
 
+  test('SITE_URL must use https in production', () => {
+    const httpsError = 'SITE_URL must use https in production (http is allowed only for localhost).'
+    for (const SITE_URL of ['http://example.org', 'http://192.168.1.10:3000', 'ftp://example.org']) {
+      expect(errorsFor({ ...valid, SITE_URL, NODE_ENV: 'production' }), SITE_URL).toEqual([httpsError])
+    }
+    // CI and the Docker check run the production build on this machine over plain http.
+    for (const SITE_URL of ['http://localhost:3000', 'http://127.0.0.1:3100', 'http://[::1]:3000', 'https://example.org/']) {
+      expect(errorsFor({ ...valid, SITE_URL, NODE_ENV: 'production' }), SITE_URL).toEqual([])
+    }
+    // Development and `next build` are not affected.
+    expect(errorsFor({ ...valid, SITE_URL: 'http://example.org', NODE_ENV: 'development' })).toEqual([])
+    const build = { ...valid, SITE_URL: 'http://example.org', NODE_ENV: 'production', NEXT_PHASE: 'phase-production-build' }
+    expect(errorsFor(build)).toEqual([])
+  })
+
   test('test-only collections are refused in production', () => {
     expect(errorsFor({ ...valid, NODE_ENV: 'production', E2E_TEST_COLLECTIONS: 'true' })).toEqual([
       'E2E_TEST_COLLECTIONS must never be enabled in production.',
@@ -70,6 +85,35 @@ test.describe('server startup checks', () => {
       assertServerEnv({ ...valid, PAYLOAD_SECRET: shortSecret })
     } catch (error) {
       expect(String(error)).not.toContain(shortSecret)
+    }
+  })
+})
+
+test.describe('site origin (serverURL and the CSRF list)', () => {
+  // Browsers send the bare origin in the Origin header, and Payload compares it as a string, so
+  // any other form of SITE_URL would refuse every cookie-authenticated request.
+  test('a trailing slash, a path, a query or a fragment is removed', () => {
+    for (const SITE_URL of [
+      'https://example.org',
+      'https://example.org/',
+      'https://example.org/admin/',
+      'https://example.org/a/b?x=1#top',
+      'HTTPS://Example.ORG/',
+    ]) {
+      expect(siteOrigin({ SITE_URL }), SITE_URL).toBe('https://example.org')
+      expect(csrfOrigins({ SITE_URL }), SITE_URL).toEqual(['https://example.org'])
+    }
+  })
+
+  test('a port is kept and a default port is dropped', () => {
+    expect(siteOrigin({ SITE_URL: 'http://localhost:3100/' })).toBe('http://localhost:3100')
+    expect(siteOrigin({ SITE_URL: 'https://example.org:443/' })).toBe('https://example.org')
+  })
+
+  test('no SITE_URL, or one that is not an http(s) URL, gives no origin and an empty list', () => {
+    for (const SITE_URL of [undefined, '', 'example.org', 'ftp://example.org', 'javascript:alert(1)']) {
+      expect(siteOrigin({ SITE_URL }), String(SITE_URL)).toBeUndefined()
+      expect(csrfOrigins({ SITE_URL }), String(SITE_URL)).toEqual([])
     }
   })
 })
