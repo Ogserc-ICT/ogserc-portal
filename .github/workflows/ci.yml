@@ -70,6 +70,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Apply database migrations
         run: pnpm migrate
+      # Read-only: every table the code defines and every migration is recorded (D-051).
+      - name: Verify the database after migrations
+        run: pnpm db:verify
       - name: Create the end-to-end test database
         run: PGPASSWORD=ogserc psql -h localhost -U ogserc -d ogserc -c 'CREATE DATABASE ogserc_e2e'
       - run: pnpm build

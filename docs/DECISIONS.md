@@ -798,3 +798,40 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - If OGSERC wants the tables gone before launch, a normal migration drops them (step 13 launch checklist).
 
 **Tests:** `tests/unit/config-access.spec.ts` audits the config both as deployed and with the test collections. It checks that the collection is absent unless the flag is exactly `true`.
+
+## D-051 Checking the database after migrations (2026-10-19)
+
+### Part 1: `pnpm db:verify`
+
+**Decision:**
+- **`pnpm db:verify`** (`scripts/db-verify.ts`, which runs `scripts/db-verify-payload.ts` through `payload run`) checks that the database in `DATABASE_URL` has:
+  - every table the code's Payload config defines;
+  - a record in `payload_migrations` for every migration in `src/migrations`.
+
+  It prints the host and database name, then any missing tables or migrations, and exits non-zero if anything is missing.
+- **Where it runs:**
+  - In CI, straight after `pnpm migrate`.
+  - On a developer's machine after `pnpm migrate`.
+  - Against production only from a full checkout of the deployed commit. The production image has no `src/`, no Payload CLI and no TypeScript loader, so it cannot run there.
+- **`--show-target`** prints the host and database name and connects to nothing, so the target can be checked first.
+- **Read-only:**
+  - It refuses `NODE_ENV=production`, because Payload applies pending migrations on connect in production.
+  - It adds `-c default_transaction_read_only=on` to the connection's `options` parameter (`src/lib/db/read-only.ts`), merged with any existing value, so Postgres refuses every write, DDL statement and `CREATE DATABASE` in the session.
+  - It checks `SHOW transaction_read_only` on the live session before anything else and stops if it is not `on`. A server or pooler that ignored the option therefore causes a refusal, not an unprotected check.
+  - It checks that the live connection is the host and database in `DATABASE_URL`.
+- **It confirms itself (D-047):** the script writes a confirmation file, and the wrapper counts success only from a fresh one. Without one, the wrapper retries once and then exits non-zero.
+- **No secrets in output:** database names come only from `describeDatabase` (host and database name; unit-tested against many connection-string shapes). On an unexpected error it does not repeat the driver's message, which can name the database user.
+- The shared code moved out of `tests/` into `src/lib/db/` (`identity.ts`, `verify-schema.ts`), because the Docker context excludes `tests/` (D-046). Scripts run directly by Node import it with a `.ts` extension (`allowImportingTsExtensions`; tsconfig already has `noEmit`).
+
+**What it does not check:**
+- **Column-level drift:** missing, extra or changed columns, types, nullability and defaults.
+- Enums, indexes, constraints and foreign keys.
+- Tables that should not be there (the test-only tables from D-050 are expected, but are not required by the deployed config).
+- Data.
+- A migration file that was edited after it ran under the same name. The names are compared, not the contents.
+- Schemas other than `public`.
+- Anything newer than the checked-out commit. A checkout newer than production reports production's missing migrations, as it should.
+
+**Why:**
+- A migration that half-applied, a database restored from an older dump, or `prodMigrations` silently not running would otherwise show up only as errors on pages.
+- Table and migration names catch those cases cheaply. A full schema diff against the Drizzle snapshot would cover column drift, but needs much more code. Revisit if drift is ever seen.
