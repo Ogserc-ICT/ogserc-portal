@@ -1,6 +1,16 @@
 import { type APIRequestContext, expect, request, test } from '@playwright/test'
 
-import { attemptLogin, createStaff, loadAdminAccount, newAccount, signIn, signInToken, type TestAccount } from './support/auth'
+import {
+  asUser,
+  attemptLogin,
+  createStaff,
+  loadAdminAccount,
+  newAccount,
+  sessionCookie,
+  signIn,
+  signInToken,
+  type TestAccount,
+} from './support/auth'
 import { fakeSecret } from '../support/fakes'
 import { runTestDbScript } from './support/db-script'
 
@@ -206,6 +216,82 @@ test.describe('internal auth fields', () => {
     for (const field of ['apiKey', 'enableAPIKey', '_verified', 'hash', 'salt', 'resetPasswordToken']) {
       expect(record, field).not.toHaveProperty(field)
     }
+  })
+})
+
+test.describe('sessions and cookies', () => {
+  const ONE_HOUR = 3600
+
+  function claims(token: string): { iat: number; exp: number } {
+    return JSON.parse(Buffer.from(token.split('.')[1]!, 'base64url').toString('utf8')) as { iat: number; exp: number }
+  }
+
+  /** An attribute as Payload writes it ("HttpOnly=true", "SameSite=Strict"), matched by name. */
+  function attribute(attributes: string[], name: string): string | undefined {
+    return attributes.find((part) => part.split('=')[0]!.toLowerCase() === name.toLowerCase())
+  }
+
+  test('the session token is only in the cookie, which is HttpOnly, SameSite=Strict and lasts an hour', async () => {
+    const account = await createStaff(admin, 'cookie', ['editor'])
+    const anonymous = await request.newContext({ baseURL })
+    opened.push(anonymous)
+    const response = await anonymous.post('/api/users/login', { data: { email: account.email, password: account.password } })
+    expect(response.status()).toBe(200)
+    expect(await response.json()).not.toHaveProperty('token')
+
+    const cookie = sessionCookie(response.headersArray())
+    expect(cookie, 'login sets the session cookie').toBeDefined()
+    const { attributes } = cookie!
+    expect(attribute(attributes, 'HttpOnly')).toBeDefined()
+    expect(attribute(attributes, 'SameSite')).toBe('SameSite=Strict')
+    expect(attribute(attributes, 'Path')).toBe('Path=/')
+    const expires = Date.parse(attribute(attributes, 'Expires')!.slice('Expires='.length))
+    expect(Math.abs(expires - (Date.now() + ONE_HOUR * 1000))).toBeLessThan(2 * 60 * 1000)
+
+    // Secure comes from NODE_ENV=production (Users.ts), so only the production build sets it.
+    // CI always tests that build; the local dev server cannot, and the check is skipped there.
+    if (process.env.E2E_SERVER_MODE === 'start') {
+      expect(attribute(attributes, 'Secure'), 'the production build sets Secure').toBeDefined()
+    } else {
+      test.info().annotations.push({ type: 'skipped check', description: 'Secure flag: dev server (checked in CI)' })
+    }
+
+    const { iat, exp } = claims(cookie!.value)
+    expect(exp - iat).toBe(ONE_HOUR)
+  })
+
+  test('me and refresh never return the token in their bodies', async () => {
+    const account = await createStaff(admin, 'no-token', ['editor'])
+    const token = await signInToken(baseURL, account)
+    const user = await request.newContext({ baseURL, extraHTTPHeaders: asUser(token) })
+    opened.push(user)
+
+    const me = await user.get('/api/users/me')
+    expect(me.status()).toBe(200)
+    const meBody = (await me.json()) as Record<string, unknown>
+    expect((meBody.user as { email?: string } | null)?.email).toBe(account.email)
+    expect(meBody).not.toHaveProperty('token')
+
+    const refresh = await user.post('/api/users/refresh-token')
+    expect(refresh.status()).toBe(200)
+    const refreshBody = (await refresh.json()) as Record<string, unknown>
+    expect(refreshBody).not.toHaveProperty('refreshedToken')
+    expect(refreshBody).not.toHaveProperty('token')
+    // The new token arrives as a cookie, again valid for one hour.
+    const renewed = sessionCookie(refresh.headersArray())
+    expect(renewed, 'refresh sets the session cookie').toBeDefined()
+    const { iat, exp } = claims(renewed!.value)
+    expect(exp - iat).toBe(ONE_HOUR)
+  })
+
+  test('an API key header signs nobody in', async () => {
+    const anonymous = await request.newContext({ baseURL })
+    opened.push(anonymous)
+    const headers = { Authorization: `users API-Key ${fakeSecret()}` }
+    const me = await anonymous.get('/api/users/me', { headers })
+    expect(me.status()).toBe(200)
+    expect(((await me.json()) as { user: unknown }).user).toBeNull()
+    expect((await anonymous.get('/api/users?depth=0', { headers })).status()).toBe(403)
   })
 })
 

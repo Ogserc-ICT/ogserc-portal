@@ -38,10 +38,18 @@ export const Users: CollectionConfig = {
     defaultColumns: ['email', 'name', 'roles'],
   },
   auth: {
+    // One hour; the admin panel refreshes the token while it is in use (D-052).
+    tokenExpiration: 3600,
+    // Staff sign in with a password only; no long-lived API keys (Payload's default, made explicit).
+    useAPIKey: false,
+    // The token travels only in the HttpOnly cookie, never in a response body that scripts can read.
+    removeTokenFromResponses: true,
     cookies: {
       // From NODE_ENV, not SITE_URL, so a production server never sends the session cookie
       // without Secure. Browsers accept Secure cookies on http://localhost, which CI uses.
       secure: process.env.NODE_ENV === 'production',
+      // The admin panel is same-origin, so the cookie is never needed on a cross-site request.
+      sameSite: 'Strict',
     },
   },
   access: {

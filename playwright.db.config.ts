@@ -13,6 +13,10 @@ import { previousServerProblem } from './tests/support/test-server'
 // The test database is emptied first (tests/support/reset-test-db.ts). See docs/RUNBOOK.md.
 
 const isCI = !!process.env.CI
+// CI tests the production build ("start"); locally a dev server ("dev"). Tests read this to know
+// which server answers, e.g. only the production build sets the Secure cookie flag.
+const serverMode = isCI ? 'start' : 'dev'
+process.env.E2E_SERVER_MODE = serverMode
 
 // Refuses before anything starts if TEST_DATABASE_URL could be the normal database.
 const testDatabase = assertWipeableTestDatabase(process.env)
@@ -61,7 +65,7 @@ export default defineConfig({
     // clashes with a dev server you already have running. The wrapper refuses if an earlier test
     // server is still running, resets the database, starts the server, and writes its output
     // (secrets removed) to test-results/e2e-db-server.log.
-    command: `node --experimental-strip-types tests/support/test-server.ts ${isCI ? 'start' : 'dev'}`,
+    command: `node --experimental-strip-types tests/support/test-server.ts ${serverMode}`,
     url: baseURL,
     reuseExistingServer: false,
     timeout: 300_000,

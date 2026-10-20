@@ -23,17 +23,40 @@ export function asUser(token: string): Record<string, string> {
   return { Authorization: `JWT ${token}` }
 }
 
-/** One login attempt; returns the status and, on success, the session token. */
+/** Name of Payload's session cookie (default cookie prefix "payload"). */
+export const SESSION_COOKIE = 'payload-token'
+
+/**
+ * The session cookie from a response's Set-Cookie headers: its value and its attributes as
+ * written (e.g. "HttpOnly=true", "SameSite=Strict"). Undefined if the response sets none.
+ */
+export function sessionCookie(
+  headers: { name: string; value: string }[],
+): { value: string; attributes: string[] } | undefined {
+  for (const { name, value } of headers) {
+    if (name.toLowerCase() !== 'set-cookie') continue
+    const [pair, ...attributes] = value.split(';').map((part) => part.trim())
+    if (!pair?.startsWith(`${SESSION_COOKIE}=`)) continue
+    return { value: pair.slice(SESSION_COOKIE.length + 1), attributes }
+  }
+  return undefined
+}
+
+/**
+ * One login attempt; returns the status, the response body and, on success, the session token.
+ * The token comes from the session cookie: the server never puts it in a response body
+ * (`removeTokenFromResponses`).
+ */
 export async function attemptLogin(
   baseURL: string,
   email: string,
   password: string,
-): Promise<{ status: number; token?: string }> {
+): Promise<{ status: number; body: string; token?: string }> {
   const anonymous = await request.newContext({ baseURL })
   try {
     const response = await anonymous.post('/api/users/login', { data: { email, password } })
-    const token = response.ok() ? ((await response.json()) as { token?: string }).token : undefined
-    return { status: response.status(), token }
+    const token = response.ok() ? sessionCookie(response.headersArray())?.value : undefined
+    return { status: response.status(), body: await response.text(), token }
   } finally {
     await anonymous.dispose()
   }
