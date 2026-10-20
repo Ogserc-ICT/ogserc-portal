@@ -292,6 +292,37 @@ test.describe('sessions and cookies', () => {
     expect(exp - iat).toBe(ONE_HOUR)
   })
 
+  test('a session can be refreshed only while the new token would end within 12 hours of sign-in', async () => {
+    test.setTimeout(240_000) // includes two `payload run` processes against the test database
+    const account = await createStaff(admin, 'session-cap', ['editor'])
+    let token = await signInToken(baseURL, account)
+
+    async function refresh(): Promise<number> {
+      const context = await request.newContext({ baseURL, extraHTTPHeaders: asUser(token) })
+      opened.push(context)
+      const response = await context.post('/api/users/refresh-token')
+      const renewed = sessionCookie(response.headersArray())?.value
+      if (response.ok() && renewed) token = renewed
+      return response.status()
+    }
+
+    expect(await refresh(), 'fresh session').toBe(200)
+    const { iat, exp } = claims(token)
+    expect(exp - iat).toBe(ONE_HOUR)
+
+    // Signed in 10 hours ago: a new one-hour token would end at 11 hours, inside the limit.
+    await runTestDbScript('tests/support/age-session.ts', [account.email, '10'])
+    expect(await refresh(), 'session started 10 h ago').toBe(200)
+
+    // Signed in 11.5 hours ago: a new token would end at 12.5 hours, so the refresh is refused.
+    await runTestDbScript('tests/support/age-session.ts', [account.email, '11.5'])
+    expect(await refresh(), 'session started 11.5 h ago').toBe(403)
+
+    // Signing in again starts a new session, which can be refreshed.
+    token = await signInToken(baseURL, account)
+    expect(await refresh(), 'new session after signing in again').toBe(200)
+  })
+
   test('an API key header signs nobody in', async () => {
     const anonymous = await request.newContext({ baseURL })
     opened.push(anonymous)

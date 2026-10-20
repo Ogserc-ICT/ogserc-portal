@@ -3,6 +3,7 @@ import { type CollectionBeforeValidateHook, type CollectionConfig, type FieldAcc
 import { fieldCan, isAdmin, isAdminOrSelf, isStaff, userCan } from '../access'
 import { ROLES } from '../access/roles'
 import { genericLoginError, LOCK_MINUTES, MAX_LOGIN_ATTEMPTS } from '../lib/auth/generic-login-error'
+import { limitSessionAge } from '../lib/auth/session-cap'
 import { lockForTransaction } from '../lib/transaction-lock'
 
 /** Only administrators may set roles, and never on their own account. */
@@ -43,7 +44,9 @@ export const Users: CollectionConfig = {
     // Every failed sign-in gets the same reply (genericLoginError).
     maxLoginAttempts: MAX_LOGIN_ATTEMPTS,
     lockTime: LOCK_MINUTES * 60 * 1000,
-    // One hour; the admin panel refreshes the token while it is in use (D-052).
+    // One hour. The admin panel refreshes it on a page change in its last 2 minutes, and otherwise
+    // warns ("Stay logged in") 1 minute before it ends (D-052). Never beyond 12 hours from
+    // sign-in (limitSessionAge).
     tokenExpiration: 3600,
     // Staff sign in with a password only; no long-lived API keys (Payload's default, made explicit).
     useAPIKey: false,
@@ -67,6 +70,7 @@ export const Users: CollectionConfig = {
   },
   hooks: {
     beforeValidate: [firstUserIsAdministrator],
+    beforeOperation: [limitSessionAge],
     afterError: [genericLoginError],
   },
   fields: [

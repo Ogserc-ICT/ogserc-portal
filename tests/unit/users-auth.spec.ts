@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import type { SanitizedConfig } from 'payload'
 
 import { genericLoginError } from '../../src/lib/auth/generic-login-error'
+import { limitSessionAge } from '../../src/lib/auth/session-cap'
 import { siteOrigin } from '../../src/lib/env'
 import configPromise, { portalConfig } from '../../src/payload.config'
 
@@ -29,6 +30,7 @@ for (const variant of ['deployed', 'with test collections']) {
     expect(auth.maxLoginAttempts).toBe(5)
     expect(auth.lockTime).toBe(15 * 60 * 1000)
     expect(users!.hooks.afterError).toContain(genericLoginError)
+    expect(users!.hooks.beforeOperation).toContain(limitSessionAge)
   })
 
   test(`serverURL and every CSRF origin are the normalised site origin (${variant})`, () => {
