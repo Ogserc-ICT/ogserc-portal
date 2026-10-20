@@ -27,7 +27,7 @@ test('two simultaneous first-register requests create exactly one administrator'
   const { token } = (await created!.json()) as { token: string }
   const list = await request.get('/api/users', { headers: asUser(token) })
   expect(list.ok()).toBe(true)
-  const { totalDocs, docs } = (await list.json()) as { totalDocs: number; docs: { roles: string[] }[] }
+  const { totalDocs, docs } = (await list.json()) as { totalDocs: number; docs: { roles: string[]; email: string }[] }
 
   const report = `statuses ${statuses.join(', ')}; users afterwards: ${totalDocs}`
   test.info().annotations.push({ type: 'first-register race', description: report })
@@ -36,6 +36,10 @@ test('two simultaneous first-register requests create exactly one administrator'
   expect(succeeded, report).toHaveLength(1)
   expect(totalDocs, report).toBe(1)
   expect(docs[0]?.roles).toEqual(['administrator'])
+  // First-register has no signed-in user, so the email field's admin-only update rule (D-048)
+  // must not drop the address: it is stored exactly as submitted (newAccount is lower-case).
+  const submitted = accounts[responses.indexOf(created!)]!
+  expect(docs[0]?.email).toBe(submitted.email)
 
   // The run's administrator, for the projects that depend on this one.
   await saveAdminAccount(accounts[responses.indexOf(created!)]!)

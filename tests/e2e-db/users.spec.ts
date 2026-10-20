@@ -234,6 +234,36 @@ test.describe('error responses', () => {
 })
 
 test.describe('email', () => {
+  // The email field overrides only update access on Payload's built-in field (D-048); these check
+  // that its lower-casing and uniqueness still apply when an administrator creates an account.
+  test('an administrator creates an account; the email is stored lower-cased and signs in', async () => {
+    const account = newAccount('Mixed-Case')
+    const [local, domain] = account.email.split('@')
+    const mixed = `${local!.toUpperCase()}@${domain!.replace('test.invalid', 'Test.Invalid')}`
+    const response = await admin.post('/api/users', { data: { ...account, email: mixed, roles: ['editor'] } })
+    expect(response.status(), await response.text()).toBe(201)
+
+    const lower = mixed.toLowerCase()
+    expect((await stored(lower)).email).toBe(lower)
+    // Payload lower-cases the address at sign-in too, so both forms work.
+    for (const email of [lower, mixed]) {
+      const { status } = await attemptLogin(baseURL, email, account.password)
+      expect(status, `sign-in as ${email}`).toBe(200)
+    }
+  })
+
+  test('a second account with the same email, in any case, is refused', async () => {
+    const account = await createStaff(admin, 'duplicate', ['editor'])
+    for (const email of [account.email, account.email.toUpperCase()]) {
+      const response = await admin.post('/api/users', {
+        data: { ...newAccount('duplicate-again'), email, roles: ['editor'] },
+      })
+      expect(response.status(), `${email}: ${await response.text()}`).toBe(400)
+    }
+    const list = await admin.get(`/api/users?where[email][equals]=${encodeURIComponent(account.email)}&depth=0`)
+    expect(((await list.json()) as { totalDocs: number }).totalDocs).toBe(1)
+  })
+
   test('only an administrator can change an email address', async () => {
     const account = await createStaff(admin, 'email', ['publisher'])
     const publisher = await as(account)
