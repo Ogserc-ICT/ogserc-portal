@@ -36,7 +36,9 @@ Do not add new libraries without explaining why and getting approval. Prefer wha
 - `pnpm typecheck`: TypeScript check (generates Next.js route types first)
 - `pnpm test:e2e`: Playwright tests with axe accessibility checks (mobile 360px and desktop)
 - `pnpm migrate:create <name>`: create a migration after changing collections (schema push is off; see docs/DECISIONS.md D-008)
-- `pnpm migrate` / `pnpm migrate:status`: apply / list migrations
+- `pnpm migrate` / `pnpm migrate:status`: apply (and confirm every table and migration is there) / list migrations. Don't use `pnpm payload migrate`, which can exit 0 without applying anything (D-051)
+- `pnpm db:verify`: read-only check that every table and migration is in the database; `--show-target` prints only which database, without connecting
+- `pnpm test:unit`: unit tests and the access audit of the Payload config (no database); `pnpm test:e2e:db`: database-backed tests, which empty `TEST_DATABASE_URL` first
 - `pnpm generate:types` and `pnpm generate:importmap`: regenerate Payload types and admin import map after collection changes
 - `pnpm audit --audit-level high`: dependency audit as run in CI
 
@@ -123,6 +125,7 @@ The site must be movable to any host that runs Node.js or Docker (a VPS, Railway
 7. Work on a branch and open a pull request for each slice; do not commit directly to `main`. Every CI check (lint, typecheck, dependency audit, build, Playwright with axe accessibility, secret scan, Docker build) must be green before merging. GitHub does not enforce this on the current plan, so it is a rule to follow, not a setting (see docs/RUNBOOK.md Section 2).
 8. Record important technical choices and the reasons in `docs/DECISIONS.md`.
 9. Include privacy-friendly analytics, a legal-pages footer (Privacy, Terms, Cookies, Accessibility, Sitemap), and PDF text extraction for search, as specified in the SRS.
+10. Update `docs/STATUS.md` at the end of each session: what was committed (with hashes), the latest CI results, open owner and OGSERC items, and the exact next step. Start each session by reading it.
 
 ## Build order (Phase 1)
 
