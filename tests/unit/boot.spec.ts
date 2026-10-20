@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+
 import { expect, test } from '@playwright/test'
 import type { Payload } from 'payload'
 
@@ -102,6 +105,22 @@ test.describe('starting at boot', () => {
   test('no fixed message contains a URL, user name or password', () => {
     expectNoSecrets(Object.values(REFUSALS))
     for (const message of Object.values(REFUSALS)) expect(message).not.toMatch(/:\/\/|@/)
+  })
+})
+
+test.describe('the boot-time start', () => {
+  // The instrumentation bundle has its own copy of Payload. An instance it created through
+  // getPayload's process-wide cache served every request, and Payload's error responses lost
+  // their details (D-051, part 4). The boot check must use its own instance and close it.
+  const source = readFileSync(path.resolve('src/instrumentation-node.ts'), 'utf8').replace(/\/\/.*$|\/\*[\s\S]*?\*\//gm, '')
+
+  test('never calls getPayload', () => {
+    expect(source).not.toMatch(/getPayload/)
+  })
+
+  test('uses its own instance and destroys it, also after a failure', () => {
+    expect(source).toMatch(/new BasePayload\(\)/)
+    expect(source).toMatch(/finally\s*\{[^}]*\.destroy\(\)/)
   })
 })
 

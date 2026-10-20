@@ -209,6 +209,21 @@ test.describe('internal auth fields', () => {
   })
 })
 
+test.describe('error responses', () => {
+  // A production server once answered with Payload's errors stripped of their name and details:
+  // the instance serving requests had been created by another bundle's copy of Payload, so the
+  // route's error formatting did not recognise its error classes (D-051, part 4).
+  test('a validation error keeps its name and the details of the field that failed', async () => {
+    const response = await admin.post('/api/users', { data: { ...newAccount('error-format'), roles: ['superuser'] } })
+    expect(response.status()).toBe(400)
+    const { errors } = (await response.json()) as {
+      errors: { name?: string; data?: { errors?: { path?: string }[] } }[]
+    }
+    expect(errors[0]?.name).toBe('ValidationError')
+    expect(errors[0]?.data?.errors?.map((error) => error.path)).toContain('roles')
+  })
+})
+
 test.describe('email', () => {
   test('only an administrator can change an email address', async () => {
     const account = await createStaff(admin, 'email', ['publisher'])

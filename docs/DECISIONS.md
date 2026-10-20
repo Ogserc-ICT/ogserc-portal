@@ -900,3 +900,28 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - **db:verify stays a separate CI step.** It is read-only and independent of the migrate script, so a fault in the new migrate path is still caught.
 
 **Not verified:** why `payload migrate` stalled in CI. That needs the step's log. The fix does not depend on the reason.
+
+### Part 4: the boot check uses its own Payload instance (2026-10-20)
+
+**What happened:** on the CI run for 7c2a685, one database test failed: `tests/e2e-db/media.spec.ts` "HEIC and HEIF files are rejected". It expected the Media hook's staff message and got `{"errors":[{"message":"The following field is invalid: file"}]}` (400). The test had passed on every run before part 2.
+
+**Cause (from Payload 3.90.2's source and the production build output):**
+- Payload's REST error handler (`routeError` → `formatErrors`) includes an error's `name` and `data` (where the per-field messages are) only if `err instanceof ValidationError` or `APIError`. Otherwise it returns `{ errors: [{ message }] }`, exactly the body CI received. So the hook ran and threw its message, but the details were dropped.
+- `instanceof` failed because there were **two copies of Payload in one server process**. The production build bundles Payload into each server entry. The instrumentation entry has its own copy of Payload and of our config, Media hook included, in chunks separate from the API route's copy. That was confirmed by searching `.next/server/chunks` for Payload's `ValidationError` and the Media hook.
+- `getPayload` caches its instance on a **process-wide global** (`global._payload`). So the instance created at boot (part 2) was also the one every route handler got. Its hooks threw the instrumentation copy's `ValidationError`, which the route copy's `formatErrors` did not recognise.
+- Status codes and top-level messages survived, so only tests that read an error's details failed.
+- **Q: do the boot-time `getPayload` and the route handlers share one instance?** Yes, they did, and that was the bug.
+
+**Decision:**
+- The boot check (`startPayloadAtBoot`) creates its own instance (`new BasePayload().init({ config })`), runs the startup check, and closes it (`destroy()`, also after a failed attempt). It never calls `getPayload`.
+- Route handlers then start their own instance from their own bundle on the first request, as they did before part 2.
+- The migrations have already run at boot, so the second start finds nothing pending.
+- Expect **two `Database:` lines per server start**: one from the boot check, one when the first request starts the routes' instance.
+- Retries are cleaner too: each attempt is a fresh instance with its own `onInit` and its pool closed.
+
+**Tests that pin it:**
+- The media test, unchanged.
+- `tests/e2e-db/users.spec.ts` "a validation error keeps its name and the details of the field that failed": a 400 from Payload's own field validation must keep `name: 'ValidationError'` and the field path in `data`.
+- `tests/unit/boot.spec.ts`: `src/instrumentation-node.ts` never calls `getPayload`, and it destroys its own instance in a `finally`.
+
+**Watch:** any other code that runs outside the route handlers and calls `getPayload` in the same process would hit the same problem. Examples: another `register()` step, or a job runner started at boot. Give it its own instance, or call it only from route code.
