@@ -12,6 +12,7 @@ import {
   signInToken,
   type TestAccount,
 } from './support/auth'
+import { LOCK_MINUTES, LOGIN_FAILED_MESSAGE, MAX_LOGIN_ATTEMPTS } from '../../src/lib/auth/generic-login-error'
 import { fakeSecret } from '../support/fakes'
 import { runTestDbScript } from './support/db-script'
 
@@ -354,6 +355,84 @@ test.describe('cross-site requests with the session cookie (CSRF)', () => {
 
   test('a request with neither Origin nor Sec-Fetch-Site (not a browser) gets no session from the cookie', async () => {
     expect(await signedInEmail(await withCookie({}))).toBeNull()
+  })
+})
+
+test.describe('failed sign-ins and lockout', () => {
+  // Every failed sign-in must look the same from outside, whether the email is unknown, the
+  // password is wrong, or the account is locked, so the reply never shows that an account exists.
+  type Attempt = { label: string; status: number; body: string }
+
+  async function fail(label: string, email: string, password: string): Promise<Attempt> {
+    const { status, body } = await attemptLogin(baseURL, email, password)
+    return { label, status, body }
+  }
+
+  async function lockOf(email: string): Promise<{ lockUntil: string | null; loginAttempts: number | null }> {
+    return (await runTestDbScript('tests/support/read-lock.ts', [email])) as {
+      lockUntil: string | null
+      loginAttempts: number | null
+    }
+  }
+
+  test('every failed sign-in gets the same status and exactly the same body', async () => {
+    const account = await createStaff(admin, 'lockout-same', ['editor'])
+    const attempts: Attempt[] = [await fail('unknown email', newAccount('nobody').email, fakeSecret())]
+    for (let n = 1; n <= MAX_LOGIN_ATTEMPTS; n++) {
+      attempts.push(await fail(`wrong password ${n}`, account.email, fakeSecret()))
+    }
+    attempts.push(await fail('locked, right password', account.email, account.password))
+    attempts.push(await fail('locked, wrong password', account.email, fakeSecret()))
+    attempts.push(await fail('unknown email after the lock', newAccount('nobody').email, fakeSecret()))
+
+    const expected = JSON.stringify({ errors: [{ message: LOGIN_FAILED_MESSAGE }] })
+    const shown = attempts.map(({ label, status, body }) => `${label}: ${status} ${body}`).join('\n')
+    console.log(`[lockout] replies:\n${shown}`)
+    for (const { label, status, body } of attempts) {
+      expect(status, `${label}\n${shown}`).toBe(401)
+      expect(body, `${label}\n${shown}`).toBe(expected)
+    }
+  })
+
+  test('after 5 wrong passwords the right one is refused, for 15 minutes', async () => {
+    test.setTimeout(120_000) // includes a `payload run` against the test database
+    const account = await createStaff(admin, 'lockout-time', ['editor'])
+    for (let n = 1; n < MAX_LOGIN_ATTEMPTS; n++) await attemptLogin(baseURL, account.email, fakeSecret())
+    // Four failures do not lock: the right password still works (and resets the count).
+    expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(200)
+
+    for (let n = 1; n <= MAX_LOGIN_ATTEMPTS; n++) await attemptLogin(baseURL, account.email, fakeSecret())
+    const lockedAt = Date.now()
+    expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(401)
+
+    const { lockUntil } = await lockOf(account.email)
+    expect(lockUntil, 'the account is locked').not.toBeNull()
+    const remaining = Date.parse(lockUntil!) - lockedAt
+    expect(Math.abs(remaining - LOCK_MINUTES * 60 * 1000), `lock ends in ${Math.round(remaining / 1000)} s`).toBeLessThan(60_000)
+  })
+
+  test('only an administrator can unlock an account, and the right password then works', async () => {
+    const account = await createStaff(admin, 'lockout-unlock', ['editor'])
+    const editor = await as(await createStaff(admin, 'lockout-editor', ['editor']))
+    for (let n = 1; n <= MAX_LOGIN_ATTEMPTS; n++) await attemptLogin(baseURL, account.email, fakeSecret())
+    expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(401)
+
+    const anonymous = await request.newContext({ baseURL })
+    opened.push(anonymous)
+    expect((await anonymous.post('/api/users/unlock', { data: { email: account.email } })).status()).toBe(403)
+    expect((await editor.post('/api/users/unlock', { data: { email: account.email } })).status()).toBe(403)
+    expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(401)
+
+    expect((await admin.post('/api/users/unlock', { data: { email: account.email } })).status()).toBe(200)
+    expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(200)
+  })
+
+  test('a sign-in with a missing password still says which field is missing', async () => {
+    const anonymous = await request.newContext({ baseURL })
+    opened.push(anonymous)
+    const response = await anonymous.post('/api/users/login', { data: { email: newAccount('x').email } })
+    expect(response.status()).toBe(400)
+    expect(await response.text()).not.toContain(LOGIN_FAILED_MESSAGE)
   })
 })
 

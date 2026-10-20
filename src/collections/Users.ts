@@ -2,6 +2,7 @@ import { type CollectionBeforeValidateHook, type CollectionConfig, type FieldAcc
 
 import { fieldCan, isAdmin, isAdminOrSelf, isStaff, userCan } from '../access'
 import { ROLES } from '../access/roles'
+import { genericLoginError, LOCK_MINUTES, MAX_LOGIN_ATTEMPTS } from '../lib/auth/generic-login-error'
 import { lockForTransaction } from '../lib/transaction-lock'
 
 /** Only administrators may set roles, and never on their own account. */
@@ -38,6 +39,10 @@ export const Users: CollectionConfig = {
     defaultColumns: ['email', 'name', 'roles'],
   },
   auth: {
+    // Locked for 15 minutes after 5 failures in a row; an administrator can unlock sooner.
+    // Every failed sign-in gets the same reply (genericLoginError).
+    maxLoginAttempts: MAX_LOGIN_ATTEMPTS,
+    lockTime: LOCK_MINUTES * 60 * 1000,
     // One hour; the admin panel refreshes the token while it is in use (D-052).
     tokenExpiration: 3600,
     // Staff sign in with a password only; no long-lived API keys (Payload's default, made explicit).
@@ -62,6 +67,7 @@ export const Users: CollectionConfig = {
   },
   hooks: {
     beforeValidate: [firstUserIsAdministrator],
+    afterError: [genericLoginError],
   },
   fields: [
     // Overrides only the access of Payload's built-in email field; it is deep-merged with the
