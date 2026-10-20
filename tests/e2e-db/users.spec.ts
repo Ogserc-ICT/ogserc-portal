@@ -213,14 +213,23 @@ test.describe('error responses', () => {
   // A production server once answered with Payload's errors stripped of their name and details:
   // the instance serving requests had been created by another bundle's copy of Payload, so the
   // route's error formatting did not recognise its error classes (D-051, part 4).
-  test('a validation error keeps its name and the details of the field that failed', async () => {
+  // Not asserted: errors[0].name. Payload sets it from the class name (this.constructor.name), and
+  // the production build minifies class names, so it reads "A" there. A `name` is present only
+  // when Payload recognised the error, and the details in `data` are what staff see.
+  test('a validation error keeps the details of the field that failed', async () => {
     const response = await admin.post('/api/users', { data: { ...newAccount('error-format'), roles: ['superuser'] } })
-    expect(response.status()).toBe(400)
-    const { errors } = (await response.json()) as {
-      errors: { name?: string; data?: { errors?: { path?: string }[] } }[]
+    const body = await response.text()
+    // Printed with every failure. It holds Payload's error only; the request's password is never echoed.
+    const shown = `status ${response.status()}, body ${body}`
+    console.log(`[error-format] ${shown}`)
+    expect(response.status(), shown).toBe(400)
+    const { errors } = JSON.parse(body) as {
+      errors: { message?: string; data?: { errors?: { path?: string; message?: string }[] } }[]
     }
-    expect(errors[0]?.name).toBe('ValidationError')
-    expect(errors[0]?.data?.errors?.map((error) => error.path)).toContain('roles')
+    const roles = errors[0]?.data?.errors?.find((error) => error.path === 'roles')
+    expect(roles, shown).toBeDefined()
+    expect(typeof roles?.message === 'string' && roles.message.length > 0, shown).toBe(true)
+    expect(roles?.message, shown).not.toBe(errors[0]?.message)
   })
 })
 

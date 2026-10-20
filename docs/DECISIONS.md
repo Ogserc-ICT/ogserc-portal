@@ -921,7 +921,18 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 
 **Tests that pin it:**
 - The media test, unchanged.
-- `tests/e2e-db/users.spec.ts` "a validation error keeps its name and the details of the field that failed": a 400 from Payload's own field validation must keep `name: 'ValidationError'` and the field path in `data`.
+- `tests/e2e-db/users.spec.ts` "a validation error keeps the details of the field that failed": a 400 from Payload's own field validation must keep the `roles` field path and a field-level message in `data.errors`. The test prints the status and body on every run.
 - `tests/unit/boot.spec.ts`: `src/instrumentation-node.ts` never calls `getPayload`, and it destroys its own instance in a `finally`.
 
 **Watch:** any other code that runs outside the route handlers and calls `getPayload` in the same process would hit the same problem. Examples: another `register()` step, or a job runner started at boot. Give it its own instance, or call it only from route code.
+
+**Error names in the production build (2026-10-20):**
+- The first version of that test also asserted `errors[0].name === 'ValidationError'`. It received `"A"`.
+- **Why:** Payload sets an error's name from its class (`this.name = this.constructor.name`, `payload/dist/errors/APIError.js`), and the production build minifies class names. In `.next/server/chunks` the class is `class A extends h.f{…"error:followingFieldsInvalid"…}`. So error names are not stable in production.
+- **The fix still works:** `formatErrors` only adds a `name` on its `instanceof` branch, which always includes `data`. The fallback branch of the part 4 bug had no `name` at all, so a name of "A" itself shows the error was recognised. The media tests (their message is only in `data.errors`) pass.
+- **Rule:** never compare an error's `name` or `constructor.name`, in code or tests. Compare status codes, `instanceof` against the same copy of Payload, or our own `code` property (as `classifyStartError` does).
+- **Checked on 2026-10-20:**
+  - The only such comparison in `src/`, `tests/` and `scripts/` was this assertion. Other matches are Playwright project names or a document's `name` field.
+  - The drafts scenario records `name: message` but only checks whether an error happened, and runs unbundled.
+  - Payload's only runtime name comparison is `formatErrors`' Mongoose fallback, which our errors never reach.
+- The Step 3 lockout rewrite (an `afterError` hook) must follow this rule.
