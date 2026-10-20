@@ -147,11 +147,14 @@ test.describe('roles', () => {
     const { id } = await stored(account.email)
     expect((await admin.patch(`/api/users/${id}`, { data: { roles: ['editor'] } })).status()).toBe(200)
 
-    // Same token: an editor sees only their own account and cannot create users.
-    const after = await demoted.get('/api/users?depth=0')
-    expect(((await after.json()) as { totalDocs: number }).totalDocs).toBe(1)
+    // Same token: the role change ended the session (endSessionsOnRoleChange), so it now has no
+    // access at all, not even an editor's: it cannot list accounts or create one.
+    expect((await demoted.get('/api/users?depth=0')).status()).toBe(403)
     const create = await demoted.post('/api/users', { data: { ...newAccount('y'), roles: ['editor'] } })
     expect(create.status()).toBe(403)
+    // Signing in again gives the editor's access: only their own account.
+    const again = await as(account)
+    expect(((await (await again.get('/api/users?depth=0')).json()) as { totalDocs: number }).totalDocs).toBe(1)
   })
 
   test('roles are not stored in the session token', async () => {
@@ -331,6 +334,63 @@ test.describe('sessions and cookies', () => {
     expect(me.status()).toBe(200)
     expect(((await me.json()) as { user: unknown }).user).toBeNull()
     expect((await anonymous.get('/api/users?depth=0', { headers })).status()).toBe(403)
+  })
+})
+
+test.describe('sessions end when roles or the password change', () => {
+  async function session(account: TestAccount): Promise<APIRequestContext> {
+    const context = await request.newContext({ baseURL, extraHTTPHeaders: asUser(await signInToken(baseURL, account)) })
+    opened.push(context)
+    return context
+  }
+
+  async function signedIn(context: APIRequestContext): Promise<boolean> {
+    const response = await context.get('/api/users/me')
+    expect(response.status()).toBe(200)
+    return ((await response.json()) as { user: unknown }).user !== null
+  }
+
+  test('a change of roles ends every session of that account', async () => {
+    const account = await createStaff(admin, 'revoke-roles', ['editor'])
+    const [first, second] = [await session(account), await session(account)]
+    expect(await signedIn(first)).toBe(true)
+    expect(await signedIn(second)).toBe(true)
+
+    const { id } = await stored(account.email)
+    expect((await admin.patch(`/api/users/${id}`, { data: { roles: ['publisher'] } })).status()).toBe(200)
+    expect(await signedIn(first), 'first session after the role change').toBe(false)
+    expect(await signedIn(second), 'second session after the role change').toBe(false)
+    // The account itself still works: signing in again starts a new session with the new role.
+    expect(await signedIn(await session(account))).toBe(true)
+  })
+
+  test('a change that leaves the roles as they were ends nothing', async () => {
+    const account = await createStaff(admin, 'revoke-none', ['editor'])
+    const context = await session(account)
+    const { id } = await stored(account.email)
+    expect((await admin.patch(`/api/users/${id}`, { data: { name: '[Test] renamed' } })).status()).toBe(200)
+    expect((await admin.patch(`/api/users/${id}`, { data: { roles: ['editor'] } })).status()).toBe(200)
+    expect(await signedIn(context)).toBe(true)
+  })
+
+  test('an administrator setting a new password ends every session of that account', async () => {
+    const account = await createStaff(admin, 'revoke-password', ['editor'])
+    const [first, second] = [await session(account), await session(account)]
+    const { id } = await stored(account.email)
+    const password = fakeSecret()
+    expect((await admin.patch(`/api/users/${id}`, { data: { password } })).status()).toBe(200)
+    expect(await signedIn(first)).toBe(false)
+    expect(await signedIn(second)).toBe(false)
+    expect((await attemptLogin(baseURL, account.email, password)).status).toBe(200)
+  })
+
+  test('changing your own password keeps this session and ends the others', async () => {
+    const account = await createStaff(admin, 'revoke-own', ['editor'])
+    const [current, other] = [await session(account), await session(account)]
+    const { id } = await stored(account.email)
+    expect((await current.patch(`/api/users/${id}`, { data: { password: fakeSecret() } })).status()).toBe(200)
+    expect(await signedIn(current), 'the session that changed the password').toBe(true)
+    expect(await signedIn(other), 'another session of the same account').toBe(false)
   })
 })
 

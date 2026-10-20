@@ -3,6 +3,7 @@ import { type CollectionBeforeValidateHook, type CollectionConfig, type FieldAcc
 import { fieldCan, isAdmin, isAdminOrSelf, isStaff, userCan } from '../access'
 import { ROLES } from '../access/roles'
 import { genericLoginError, LOCK_MINUTES, MAX_LOGIN_ATTEMPTS } from '../lib/auth/generic-login-error'
+import { endSessionsOnRoleChange } from '../lib/auth/revoke-sessions'
 import { limitSessionAge } from '../lib/auth/session-cap'
 import { lockForTransaction } from '../lib/transaction-lock'
 
@@ -71,6 +72,7 @@ export const Users: CollectionConfig = {
   hooks: {
     beforeValidate: [firstUserIsAdministrator],
     beforeOperation: [limitSessionAge],
+    afterChange: [endSessionsOnRoleChange],
     afterError: [genericLoginError],
   },
   fields: [

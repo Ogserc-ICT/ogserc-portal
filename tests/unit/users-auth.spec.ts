@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import type { SanitizedConfig } from 'payload'
 
 import { genericLoginError } from '../../src/lib/auth/generic-login-error'
+import { endSessionsOnRoleChange } from '../../src/lib/auth/revoke-sessions'
 import { limitSessionAge } from '../../src/lib/auth/session-cap'
 import { siteOrigin } from '../../src/lib/env'
 import configPromise, { portalConfig } from '../../src/payload.config'
@@ -31,6 +32,7 @@ for (const variant of ['deployed', 'with test collections']) {
     expect(auth.lockTime).toBe(15 * 60 * 1000)
     expect(users!.hooks.afterError).toContain(genericLoginError)
     expect(users!.hooks.beforeOperation).toContain(limitSessionAge)
+    expect(users!.hooks.afterChange).toContain(endSessionsOnRoleChange)
   })
 
   test(`serverURL and every CSRF origin are the normalised site origin (${variant})`, () => {
