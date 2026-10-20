@@ -55,9 +55,9 @@ async function main(): Promise<void> {
   console.log(`[db:verify] Verified: ${tables.length} tables and ${names.length} migrations present.`)
   // `payload run` can exit with code 0 without running this script (D-047), so the wrapper counts
   // success only from this file.
-  if (process.env.DB_VERIFY_CONFIRM_FILE) {
+  if (process.env.DB_SCRIPT_CONFIRM_FILE) {
     const confirmation = { ...live, tables: tables.length, migrations: names.length, at: new Date().toISOString() }
-    await writeFile(process.env.DB_VERIFY_CONFIRM_FILE, JSON.stringify(confirmation))
+    await writeFile(process.env.DB_SCRIPT_CONFIRM_FILE, JSON.stringify(confirmation))
   }
   process.exit(0)
 }

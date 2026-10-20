@@ -876,3 +876,27 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Not verified:**
 - Vercel's cold-start behaviour.
 - Whether the boot-time `getPayload` shares its cached instance with the route handlers. Check for one `Database:` log line per server start in the CI server log.
+
+### Part 3: `pnpm migrate` must confirm itself (2026-10-20)
+
+**What happened:** on the first CI run of part 2 (a47ddb1), "Verify the database after migrations" failed. For `ogserc` on `localhost:5432` it reported all 10 tables missing and all 3 migrations unrecorded, straight after `pnpm migrate` had passed.
+
+**How the cause was decided** (the CI logs could not be read from the developer's machine, so this rests on the workflow file and Payload's source):
+- **Not a different database (b).** Neither step sets step-level variables, so both get the same job-level `DATABASE_URL`, `TEST_DATABASE_URL`, `SITE_URL` and `PAYLOAD_SECRET`. Neither finds a `.env` file in CI, and db:verify reported the database `pnpm migrate` targets.
+- **Not the wrong schema or place (c).** db:verify reads the `public` schema, where Payload's adapter creates its tables, with the same code that found 10 tables and 3 migrations on the Neon dev database. A missing `payload_migrations` table explains why all 3 migrations were reported as unrecorded.
+- **So (a): `payload migrate` exited 0 without applying anything.** That is the silent exit already seen with `payload run` (D-047), whose Watch note named `pnpm migrate` in CI as a likely case.
+- **Why no earlier run noticed:** before part 2, the production server applied `prodMigrations` itself on its first request during `pnpm test:e2e`, so the tables appeared anyway. db:verify is the first step that looks at `ogserc` before any server starts.
+- **Why the test database was fine:** its reset applies migrations through `payload run` with a confirmation file (D-047), and has been passing in CI.
+
+**Decision:**
+- **`pnpm migrate` is now `scripts/db-migrate.ts`.**
+  - It runs `scripts/db-migrate-payload.ts` through `payload run`.
+  - That script checks the live connection is the database in `DATABASE_URL`, applies the compiled migration list from `src/migrations` (the same list the server applies as `prodMigrations`), runs the same schema check as db:verify, and only then writes a confirmation file.
+  - The wrapper deletes the file before each attempt and counts success only from a fresh one, with one retry (migrating is idempotent). Otherwise it fails with "Exited with code 0 but did not confirm that it ran (attempt 2 of 2)".
+  - A migration that fails still makes Payload exit with code 1.
+  - `--show-target` works as for db:verify.
+- **Shared code:** both wrappers use `scripts/confirmed-run.ts`. The confirmation variable is now `DB_SCRIPT_CONFIRM_FILE` for both.
+- **Payload's own command** remains available as `pnpm payload migrate`, without this protection. Only use it to diagnose.
+- **db:verify stays a separate CI step.** It is read-only and independent of the migrate script, so a fault in the new migrate path is still caught.
+
+**Not verified:** why `payload migrate` stalled in CI. That needs the step's log. The fix does not depend on the reason.

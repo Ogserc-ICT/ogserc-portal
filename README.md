@@ -63,7 +63,7 @@ Requirements: Node.js 22 (see `.nvmrc`) and pnpm 10. Docker is optional (only fo
 | `pnpm test:e2e:db` | Run database-backed tests (sign-in, roles, uploads). **Empties `TEST_DATABASE_URL`** first; see `docs/RUNBOOK.md` Section 3.1 |
 | `pnpm test:unit` | Unit tests and the access audit of the Payload config (no browser, no database) |
 | `pnpm format` | Format code with Prettier |
-| `pnpm migrate` | Apply pending database migrations |
+| `pnpm migrate` | Apply pending database migrations, then confirm every table and migration is there (`--show-target` prints only which database, without connecting) |
 | `pnpm migrate:create <name>` | Create a migration after changing collections |
 | `pnpm migrate:status` | Show which migrations have run |
 | `pnpm db:verify` | Check, read-only, that every table and migration is in the database (`--show-target` prints only which database, without connecting); see `docs/RUNBOOK.md` Section 3 |

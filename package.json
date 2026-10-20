@@ -17,7 +17,7 @@
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
-    "migrate": "cross-env NODE_OPTIONS=--no-deprecation payload migrate",
+    "migrate": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/db-migrate.ts",
     "migrate:create": "cross-env NODE_OPTIONS=--no-deprecation E2E_TEST_COLLECTIONS=true payload migrate:create",
     "migrate:status": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:status",
     "db:verify": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/db-verify.ts",

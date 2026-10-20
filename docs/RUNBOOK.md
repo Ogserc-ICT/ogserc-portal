@@ -91,6 +91,8 @@ pnpm db:verify                            # checks, read-only, that every table 
 
 Review the generated file, then commit it with the code change.
 
+`pnpm migrate` applies the migrations, checks that every table and migration record is there, and counts as done only if it confirms that itself (it retries once). Payload's own command, `pnpm payload migrate`, once exited "successfully" in CI without applying anything (D-051), so don't rely on it. Use `pnpm migrate --show-target` first to see which database it will change; it connects to nothing.
+
 **Check what has run:** `pnpm migrate:status`
 
 **The database must exist first.** The app never creates a database (`disableCreateDatabase`, D-051): a wrong name in `DATABASE_URL` stops the server instead of producing an empty database that anyone could claim through first-register. Create the database (a Neon branch has one; on Postgres, `createdb`) before the first `pnpm migrate`.
