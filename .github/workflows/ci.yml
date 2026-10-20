@@ -73,9 +73,47 @@ jobs:
       # Read-only: every table the code defines and every migration is recorded (D-051).
       - name: Verify the database after migrations
         run: pnpm db:verify
+      # The session option db:verify relies on must make Postgres refuse writes (D-051).
+      - name: A write in a read-only session is refused
+        run: bash scripts/ci/expect-read-only-refusal.sh
       - name: Create the end-to-end test database
         run: PGPASSWORD=ogserc psql -h localhost -U ogserc -d ogserc -c 'CREATE DATABASE ogserc_e2e'
-      - run: pnpm build
+      # Nothing listens on port 5999, so the build succeeds only if it never connects to a database.
+      - name: Build without any database
+        run: pnpm build
+        env:
+          DATABASE_URL: postgres://build:build@127.0.0.1:5999/build
+      # The production build's startup (D-051). Each step prints the server's output.
+      - name: The server refuses to start on an incomplete database
+        run: |
+          export PGPASSWORD=ogserc
+          psql -h localhost -U ogserc -d ogserc -c 'CREATE DATABASE ogserc_incomplete'
+          DATABASE_URL=postgres://ogserc:ogserc@localhost:5432/ogserc_incomplete pnpm migrate
+          psql -h localhost -U ogserc -d ogserc_incomplete -c 'DROP TABLE media CASCADE'
+          DATABASE_URL=postgres://ogserc:ogserc@localhost:5432/ogserc_incomplete \
+            bash scripts/ci/expect-startup-refusal.sh 90 3201 'Database check failed: Missing tables: media.' \
+            'Refusing to start: the database schema is incomplete'
+      - name: The server refuses to start, without creating it, when the database does not exist
+        run: |
+          DATABASE_URL=postgres://ogserc:ogserc@localhost:5432/ogserc_missing \
+            bash scripts/ci/expect-startup-refusal.sh 90 3202 'Refusing to start: the database named in DATABASE_URL does not exist'
+          created=$(PGPASSWORD=ogserc psql -h localhost -U ogserc -d ogserc -tAc "select count(*) from pg_database where datname = 'ogserc_missing'")
+          if [ "$created" != 0 ]; then echo "::error::The server created the missing database."; exit 1; fi
+      - name: The server refuses to start after retrying an unreachable database
+        run: |
+          DATABASE_URL=postgres://ogserc:ogserc@127.0.0.1:5999/ogserc \
+            bash scripts/ci/expect-startup-refusal.sh 120 3203 'Database not reachable (attempt 5 of 6); retrying in 15s.' \
+            'Refusing to start: the database could not be reached after 6 attempts.'
+      - name: The server waits out a brief database outage
+        run: bash scripts/ci/expect-startup-after-outage.sh 3204
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+      - name: Restart Postgres if the outage step left it stopped
+        if: always()
+        run: |
+          docker start ${{ job.services.postgres.id }} >/dev/null
+          for _ in $(seq 1 30); do pg_isready -h localhost -U ogserc -d ogserc && exit 0; sleep 1; done
+          echo "::error::Postgres did not come back."; exit 1
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       # Sign-in, roles and uploads, on ogserc_e2e with its own server (docs/RUNBOOK.md 3.1).

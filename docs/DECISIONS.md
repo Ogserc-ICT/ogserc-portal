@@ -835,3 +835,44 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Why:**
 - A migration that half-applied, a database restored from an older dump, or `prodMigrations` silently not running would otherwise show up only as errors on pages.
 - Table and migration names catch those cases cheaply. A full schema diff against the Drizzle snapshot would cover column drift, but needs much more code. Revisit if drift is ever seen.
+
+### Part 2: the startup check, the boot-time start, no database creation (2026-10-20)
+
+**Findings in Payload 3.90.2's source:**
+- **Migrations finish before the server checks anything.** `BasePayload.init` (`payload/dist/index.js`) awaits `db.connect()` before it runs `onInit`. The Postgres adapter's `connect()` (`@payloadcms/db-postgres/dist/connect.js`) ends by awaiting `migrate({ migrations: prodMigrations })` when `NODE_ENV` is production. A migration that throws makes Payload call `process.exit(1)` itself (`@payloadcms/drizzle/dist/migrate.js`).
+- **Payload starts lazily,** on the first `getPayload` call, which in a Next.js server means the first request. A failed start clears Payload's cached promise, so every later request starts it again: a new connection pool and another migration attempt each time.
+- **A retried `getPayload` skips `onInit`.** Payload keeps the cache entry from the failed attempt and treats the retry as "already initialised". So a check placed in `onInit` could be skipped after a retry.
+- **Payload creates a missing database.** `connect()` runs `CREATE DATABASE` when the database does not exist (`createDatabase.js`), unless `disableCreateDatabase` is set.
+- **No lock around migrations.** `migrate.js` reads `payload_migrations`, then runs each pending migration in its own transaction. Nothing (no advisory lock, no table lock) stops two servers from doing this at the same time.
+
+**Decision:**
+- **Start at boot** (`src/instrumentation-node.ts`, called from `register()`, production only, skipped during `next build`). Next.js awaits `register()` before the server takes requests, so migrations and the check run before any visitor arrives.
+- **The startup check** (`checkDatabaseAtStartup`, `src/lib/startup.ts`) runs right after `getPayload` resolves, so after `prodMigrations`.
+  - It verifies every table the config defines and every migration record (`verifyDatabaseSchema`, the same check as db:verify).
+  - If anything is missing, it logs one `ERROR` line naming only the missing tables and migrations, and the server exits with code 1.
+  - Then it logs the `SECURITY: there are no user accounts` error if there are none. That was in `onInit` and only appeared on the first request.
+  - It is not in `onInit`, because of the retry finding above.
+- **What happens on failure** (`startWithRetry`, `src/lib/boot.ts`):
+  - **schema incomplete:** exit 1 at once;
+  - **database missing:** exit 1 at once;
+  - **database unreachable** (Payload's "cannot connect to Postgres"): six attempts, with waits of 1, 2, 4, 8 and 15 seconds (about 30 seconds), then exit 1. A brief outage or database restart does not crash the server, and a long one does not keep it hanging;
+  - **anything else:** exit 1 at once.
+
+  The host's restart policy decides what happens after an exit. Each attempt takes at least about 30 seconds, so there is no tight crash loop.
+- **Messages:** every message from the startup code is fixed text plus attempt counts and table or migration names. None repeats an error's message, so none can contain a URL, user name or password. `tests/unit/boot.spec.ts` feeds in errors that do contain a URL, user and password, and checks that they never come out.
+- **`disableCreateDatabase: true`.** A mistyped database name now stops the server ("does not exist"). Before, it would have produced an empty database, run every migration into it, and left first-register open to anyone. Nothing relied on auto-creation: CI's container creates `ogserc`, the workflow creates `ogserc_e2e` with `psql`, docker-compose uses `POSTGRES_DB`, and Neon branches come with their database.
+- **Several instances:** because Payload takes no lock, two instances starting together can both run the same pending migration. One then fails and exits, and a migration that doesn't fail on a second run could apply twice. **Apply migrations in one deploy step before traffic starts** (RUNBOOK Section 3): run `pnpm migrate` from a full checkout of the deployed commit, or start one instance and scale out once it is healthy.
+- **On Vercel,** `register()` runs once per cold start of each server instance. That adds a few small queries to each cold start, and the instance-concurrency rule above applies.
+
+**Tested in CI** (e2e job, throwaway Postgres container only; each step prints the server's output and fails on any `postgres://` in it):
+- **A write in db:verify's read-only session is refused** (`scripts/ci/read-only-probe.ts`). `CREATE TABLE`, `INSERT` and `CREATE DATABASE` must each fail with SQLSTATE 25006, then a normal session confirms nothing was written.
+- **`pnpm build` with `DATABASE_URL` on a port where nothing listens** succeeds, so the build never connects. The same was shown locally on 2026-10-20.
+- **Incomplete database** (all migrations recorded, `media` dropped): the server exits non-zero with `Missing tables: media.` and the incomplete message.
+- **Missing database:** the server exits with the "does not exist" message, and the database was not created.
+- **Unreachable database** (port 5999): the server retries five times and exits with the unreachable message.
+- **Brief outage:** Postgres is stopped, the server starts and reports attempt 1, then Postgres is restarted. The server must report that it started and answer `/api/users/init` (which needs the database). A cleanup step restarts Postgres whatever happens.
+- A step that times out fails with "did not exit within …s" and prints the log.
+
+**Not verified:**
+- Vercel's cold-start behaviour.
+- Whether the boot-time `getPayload` shares its cached instance with the route handlers. Check for one `Database:` log line per server start in the CI server log.

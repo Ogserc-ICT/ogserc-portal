@@ -86,13 +86,39 @@ The database structure only changes through migration files in `src/migrations/`
 ```sh
 pnpm migrate:create describe-the-change   # writes a new file in src/migrations/
 pnpm migrate                              # applies it to your dev database
+pnpm db:verify                            # checks, read-only, that every table and migration is there
 ```
 
 Review the generated file, then commit it with the code change.
 
 **Check what has run:** `pnpm migrate:status`
 
-**In production:** pending migrations run automatically when the server starts. To run them by hand instead (for example before switching traffic), set the production environment variables and run `pnpm migrate`.
+**The database must exist first.** The app never creates a database (`disableCreateDatabase`, D-051): a wrong name in `DATABASE_URL` stops the server instead of producing an empty database that anyone could claim through first-register. Create the database (a Neon branch has one; on Postgres, `createdb`) before the first `pnpm migrate`.
+
+**In production:** when a server starts, before it takes any request, it:
+1. connects to the database and applies pending migrations (Payload `prodMigrations`);
+2. checks that every table the code defines exists and every migration is recorded (the startup check, D-051);
+3. logs `SECURITY: there are no user accounts` if there are none (Section 4).
+
+The startup check is the main production safeguard. If it fails, the server exits with code 1 and logs one of these lines (they name tables and migrations only, never URLs, users or passwords):
+
+| Log line | Meaning and what to do |
+|---|---|
+| `Database check failed: Missing tables: …` / `Migrations not recorded: …`, then `[startup] Refusing to start: the database schema is incomplete` | The database is not what this release expects (a failed or partial migration, or a restore of an older dump). Do not route traffic to it. Restore the backup taken before the migration, or fix the migration, then redeploy. |
+| `[startup] Database not reachable (attempt n of 6); retrying in Xs.` | The database did not answer. The server waits about 30 seconds in all, so a brief outage or a database restart does not stop it. |
+| `[startup] Refusing to start: the database could not be reached after 6 attempts.` | The database stayed unreachable. Check `DATABASE_URL`, the provider's status and network rules. The host's restart policy will start the server again later. |
+| `[startup] Refusing to start: the database named in DATABASE_URL does not exist.` | Wrong database name, or the database was never created. Nothing was created. |
+| `[startup] Refusing to start: Payload failed to start (see the error above).` | Anything else; Payload's own error is logged just before. |
+
+**Several instances starting at once:** Payload 3.90.2 does **not** stop two servers from running the same migration at the same time (no lock; checked in its source, D-051). One of them then fails and exits, and a migration that does not fail on a second run could apply twice. So **apply migrations in one deploy step before traffic starts**: either run `pnpm migrate` from a full checkout of the deployed commit against the production database (the production image has no CLI), or start a single instance first and scale out only once it is healthy. Each later instance's startup check then confirms the result.
+
+**Checking production by hand (optional): `pnpm db:verify`.** The startup check already does this on every start; use db:verify only to look at a production database without starting a server, for example after a restore.
+- It needs a **read-only database role**. Create one at the provider for this purpose and use its connection string, not the app's.
+- Run it from a full checkout of the **deployed** commit, with `NODE_ENV` unset (it refuses production mode, in which Payload would migrate) and any `PAYLOAD_SECRET` of 32 or more characters (it is not used for reading).
+- First run `pnpm db:verify --show-target` and check the printed host and database name; it connects to nothing.
+- It also forces its own session read-only and stops if Postgres does not confirm that.
+- **Never paste production credentials into chat, an issue or a commit.** Set them in your own terminal only, and close it afterwards.
+- What it does not check (column-level drift and more) is listed in D-051.
 
 **Before any production migration:** take a database backup (Section 6).
 
@@ -143,7 +169,7 @@ docker build -t ogserc-portal .
 docker run --env-file .env -p 3000:3000 ogserc-portal
 ```
 
-The container listens on port 3000. Put it behind HTTPS (the host's load balancer, or a reverse proxy such as Caddy or nginx). Migrations run on startup.
+The container listens on port 3000. Put it behind HTTPS (the host's load balancer, or a reverse proxy such as Caddy or nginx). Migrations run on startup, then the startup check verifies the database; the container exits with code 1 if it fails (Section 3). With more than one instance, apply migrations before scaling out (Section 3).
 
 **Local portability check** (production image plus a throwaway local Postgres; requires Docker):
 
@@ -164,7 +190,7 @@ PAYLOAD_SECRET=any-long-random-string docker compose up --build
    ```
 4. **Copy storage files** from the old S3-compatible bucket to the new one *(commands added in step 4)*.
 5. **Update DNS** to point at the new host, and confirm HTTPS works.
-6. Run `pnpm migrate:status` against the new database to confirm it is up to date.
+6. Run `pnpm migrate:status` against the new database to confirm it is up to date, then `pnpm db:verify` (read-only role, Section 3) to confirm every table and migration record is there. The server's startup check repeats this when it starts.
 
 ## 8. Monitoring and incident response *(to be completed in step 13)*
 

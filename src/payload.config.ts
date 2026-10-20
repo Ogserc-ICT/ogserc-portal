@@ -60,6 +60,9 @@ export const portalConfig = ({ withTestCollections }: { withTestCollections: boo
       },
       // Schema changes go through committed migration files, never automatic "push".
       push: false,
+      // A wrong database name must fail, not create an empty database that the migrations then
+      // fill, leaving first-register open to anyone (D-051).
+      disableCreateDatabase: true,
       migrationDir: path.resolve(dirname, 'migrations'),
       prodMigrations: migrations,
     }),
