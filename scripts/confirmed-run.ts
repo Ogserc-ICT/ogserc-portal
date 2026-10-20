@@ -1,4 +1,5 @@
-// Runs a `payload run` script that must confirm itself, for `pnpm migrate` and `pnpm db:verify`.
+// Runs a `payload run` script that must confirm itself, for `pnpm migrate`, `pnpm db:verify` and
+// `pnpm auth:unlock`.
 // `payload run` (and `payload migrate`) can exit with code 0 without running anything (D-047,
 // D-051), so success counts only if the script wrote a fresh confirmation file to
 // DB_SCRIPT_CONFIRM_FILE: host, database, table and migration counts, and the time. One retry; the
@@ -34,11 +35,23 @@ function run(command: string, env: NodeJS.ProcessEnv): Promise<number> {
   })
 }
 
+/** A reader of the confirmation file: a one-line summary, or null if it does not confirm the run. */
+export type ConfirmationReader = (file: string, since: Date) => string | null
+
+export type ConfirmedScriptOptions = {
+  /** Added to the script's environment only (e.g. its input, so it never passes through a shell). */
+  env?: Record<string, string>
+  /** Defaults to readConfirmation (tables and migrations). */
+  read?: ConfirmationReader
+}
+
 /**
  * Loads .env (if any), checks DATABASE_URL, and either prints the target (`--show-target`,
  * connecting to nothing) or runs `script` until it confirms itself. Exits non-zero on failure.
+ * The retry is safe only for idempotent scripts.
  */
-export async function runConfirmedScript(label: string, script: string): Promise<void> {
+export async function runConfirmedScript(label: string, script: string, options: ConfirmedScriptOptions = {}): Promise<void> {
+  const read = options.read ?? readConfirmation
   const fail = (message: string): never => {
     console.error(`[${label}] ${message}`)
     process.exit(1)
@@ -56,12 +69,12 @@ export async function runConfirmedScript(label: string, script: string): Promise
   }
 
   const confirmFile = path.join(os.tmpdir(), `ogserc-${label.replace(/\W/g, '-')}-${process.pid}.json`)
-  const env = { ...process.env, DB_SCRIPT_CONFIRM_FILE: confirmFile }
+  const env = { ...process.env, ...options.env, DB_SCRIPT_CONFIRM_FILE: confirmFile }
   for (let attempt = 1; attempt <= 2; attempt++) {
     rmSync(confirmFile, { force: true })
     const started = new Date()
     const code = await run(`pnpm payload run ${script}`, env)
-    const confirmed = readConfirmation(confirmFile, started)
+    const confirmed = read(confirmFile, started)
     rmSync(confirmFile, { force: true })
     if (code !== 0) fail(`Failed (exit code ${code}).`)
     if (confirmed) {

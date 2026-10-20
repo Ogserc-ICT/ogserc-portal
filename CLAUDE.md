@@ -38,6 +38,7 @@ Do not add new libraries without explaining why and getting approval. Prefer wha
 - `pnpm migrate:create <name>`: create a migration after changing collections (schema push is off; see docs/DECISIONS.md D-008)
 - `pnpm migrate` / `pnpm migrate:status`: apply (and confirm every table and migration is there) / list migrations. Don't use `pnpm payload migrate`, which can exit 0 without applying anything (D-051)
 - `pnpm db:verify`: read-only check that every table and migration is in the database; `--show-target` prints only which database, without connecting
+- `pnpm auth:unlock <email>`: emergency unlock of a locked staff account (RUNBOOK 4.1); run `--show-target` first
 - `pnpm test:unit`: unit tests and the access audit of the Payload config (no database); `pnpm test:e2e:db`: database-backed tests, which empty `TEST_DATABASE_URL` first
 - `pnpm generate:types` and `pnpm generate:importmap`: regenerate Payload types and admin import map after collection changes
 - `pnpm audit --audit-level high`: dependency audit as run in CI

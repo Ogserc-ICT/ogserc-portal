@@ -1,3 +1,6 @@
+import { exec as execCallback } from 'node:child_process'
+import { promisify } from 'node:util'
+
 import { type APIRequestContext, expect, request, test } from '@playwright/test'
 
 import {
@@ -13,6 +16,7 @@ import {
   type TestAccount,
 } from './support/auth'
 import { LOCK_MINUTES, LOGIN_FAILED_MESSAGE, MAX_LOGIN_ATTEMPTS } from '../../src/lib/auth/generic-login-error'
+import { databaseIdentity, describeDatabase } from '../../src/lib/db/identity'
 import { fakeSecret } from '../support/fakes'
 import { runTestDbScript } from './support/db-script'
 
@@ -20,6 +24,8 @@ import { runTestDbScript } from './support/db-script'
 // FR-CMS-05/06, NFR-SEC-02). Every check reads the stored record back as an administrator, because
 // Payload drops a field that access denies without an error.
 test.describe.configure({ mode: 'serial' })
+
+const exec = promisify(execCallback)
 
 type User = { id: string | number; email: string; roles?: string[] } & Record<string, unknown>
 
@@ -368,6 +374,19 @@ test.describe('failed sign-ins and lockout', () => {
     return { label, status, body }
   }
 
+  /** Runs `pnpm auth:unlock` with DATABASE_URL set to the test database, for this process only. */
+  async function runUnlock(args: string[]): Promise<{ code: number; output: string }> {
+    const command = ['pnpm', 'auth:unlock', ...args.map((arg) => JSON.stringify(arg))].join(' ')
+    const env = { ...process.env, DATABASE_URL: process.env.TEST_DATABASE_URL ?? '' }
+    try {
+      const { stdout, stderr } = await exec(command, { env })
+      return { code: 0, output: `${stdout}${stderr}` }
+    } catch (error) {
+      const failed = error as { code?: number; stdout?: string; stderr?: string }
+      return { code: failed.code ?? 1, output: `${failed.stdout ?? ''}${failed.stderr ?? ''}` }
+    }
+  }
+
   async function lockOf(email: string): Promise<{ lockUntil: string | null; loginAttempts: number | null }> {
     return (await runTestDbScript('tests/support/read-lock.ts', [email])) as {
       lockUntil: string | null
@@ -425,6 +444,30 @@ test.describe('failed sign-ins and lockout', () => {
 
     expect((await admin.post('/api/users/unlock', { data: { email: account.email } })).status()).toBe(200)
     expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(200)
+  })
+
+  test('the emergency command pnpm auth:unlock unlocks an account; an unknown email changes nothing', async () => {
+    test.setTimeout(300_000) // two `payload run` processes against the hosted test database
+    const account = await createStaff(admin, 'lockout-cli', ['editor'])
+    for (let n = 1; n <= MAX_LOGIN_ATTEMPTS; n++) await attemptLogin(baseURL, account.email, fakeSecret())
+    expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(401)
+
+    // Never run it until it has shown that it targets the test database.
+    const testDatabase = describeDatabase(databaseIdentity(process.env.TEST_DATABASE_URL))
+    const target = await runUnlock(['--show-target'])
+    expect(target.code, target.output).toBe(0)
+    expect(target.output, 'auth:unlock must target the test database').toContain(`Target: ${testDatabase}.`)
+
+    const unlocked = await runUnlock([account.email.toUpperCase()])
+    expect(unlocked.code, unlocked.output).toBe(0)
+    expect(unlocked.output).toContain(`Confirmed: ${testDatabase}: account unlocked (it was locked`)
+    expect(unlocked.output).not.toMatch(/postgres(ql)?:\/\//)
+    expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(200)
+
+    const unknown = await runUnlock([newAccount('nobody').email])
+    expect(unknown.code, unknown.output).not.toBe(0)
+    expect(unknown.output).toContain('No account with that email address')
+    expect(unknown.output).not.toMatch(/postgres(ql)?:\/\//)
   })
 
   test('a sign-in with a missing password still says which field is missing', async () => {

@@ -67,6 +67,7 @@ Requirements: Node.js 22 (see `.nvmrc`) and pnpm 10. Docker is optional (only fo
 | `pnpm migrate:create <name>` | Create a migration after changing collections |
 | `pnpm migrate:status` | Show which migrations have run |
 | `pnpm db:verify` | Check, read-only, that every table and migration is in the database (`--show-target` prints only which database, without connecting); see `docs/RUNBOOK.md` Section 3 |
+| `pnpm auth:unlock <email>` | Emergency unlock of a staff account locked after failed sign-ins, when no administrator can sign in (`--show-target` first); see `docs/RUNBOOK.md` Section 4.1 |
 | `pnpm generate:types` | Regenerate `src/payload-types.ts` after changing collections |
 | `pnpm generate:importmap` | Regenerate the admin panel's component import map |
 | `pnpm hooks:install` | Use the repository's git hooks (blocks direct pushes to `main`); run once per clone |

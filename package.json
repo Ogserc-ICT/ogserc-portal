@@ -21,6 +21,7 @@
     "migrate:create": "cross-env NODE_OPTIONS=--no-deprecation E2E_TEST_COLLECTIONS=true payload migrate:create",
     "migrate:status": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:status",
     "db:verify": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/db-verify.ts",
+    "auth:unlock": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/auth-unlock.ts",
     "hooks:install": "git config core.hooksPath scripts/git-hooks"
   },
   "engines": {

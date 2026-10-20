@@ -158,6 +158,19 @@ On a brand-new, empty database, `/admin` shows a "create first user" screen that
 - While there are no accounts, a production server logs an error at startup beginning `SECURITY: there are no user accounts`. Treat it as urgent.
 - The first account always becomes an administrator. Only one can be created this way, even if two people submit the screen at the same moment.
 
+### 4.1 Locked accounts
+
+After **5 failed sign-ins in a row**, a staff account is locked for **15 minutes**. The reply is the same for every failed sign-in, so it never says whether an account exists or is locked.
+
+- **Normally:** wait 15 minutes, or ask an administrator to unlock it (Users, open the account, Unlock).
+- **Keep at least two administrators.** Until rate limiting exists (Step 3 plan, commit 4), **anyone who knows an administrator's email address can keep that account locked** by failing to sign in with it, 15 minutes at a time. With only one administrator, nobody could then sign in to unlock it.
+- **Emergency, when no administrator can sign in:** `pnpm auth:unlock <email>` clears the lock with Payload's own unlock (failed attempts back to 0). It changes nothing else.
+  - Run it from a full checkout of the deployed commit, with `DATABASE_URL` set to the target database in your own terminal only, `NODE_ENV` unset (it refuses production mode, in which Payload would migrate), and any `PAYLOAD_SECRET` of 32 or more characters.
+  - **First** run `pnpm auth:unlock --show-target` and check the printed host and database name; it connects to nothing. Without `DATABASE_URL` set in the terminal it reads `.env`, which is normally the development database.
+  - It checks that the live connection is that database, reads the account back to confirm the lock is gone, and prints only the host and database name. An unknown email changes nothing and exits with an error.
+  - Write down who ran it, when, and for which account. The audit log (Step 3 plan, commit 5) will record it once it exists.
+  - If the account keeps getting locked, someone is guessing its password: tell the account holder and look at the server log for the failed sign-ins.
+
 ## 5. Deploying *(to be completed in step 13)*
 
 **`SITE_URL` must be the public `https://` address.** A production server refuses to start if `SITE_URL` is not https (plain `http://` is accepted only for `localhost`, `127.0.0.1` and `[::1]`). On staging or production behind a proxy or load balancer that terminates HTTPS, set `SITE_URL` to the `https://` address visitors use, even though the app itself receives plain http.
