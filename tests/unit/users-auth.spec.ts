@@ -3,6 +3,7 @@ import type { SanitizedConfig } from 'payload'
 
 import { isAdminNotSelf } from '../../src/access'
 import { genericLoginError } from '../../src/lib/auth/generic-login-error'
+import { protectLastAdministrator } from '../../src/lib/auth/last-administrator'
 import { endSessionsOnRoleChange } from '../../src/lib/auth/revoke-sessions'
 import { limitSessionAge } from '../../src/lib/auth/session-cap'
 import { siteOrigin } from '../../src/lib/env'
@@ -33,6 +34,7 @@ for (const variant of ['deployed', 'with test collections']) {
     expect(auth.lockTime).toBe(15 * 60 * 1000)
     expect(users!.hooks.afterError).toContain(genericLoginError)
     expect(users!.hooks.beforeOperation).toContain(limitSessionAge)
+    expect(users!.hooks.beforeOperation).toContain(protectLastAdministrator)
     expect(users!.hooks.afterChange).toContain(endSessionsOnRoleChange)
     expect(users!.access.delete).toBe(isAdminNotSelf)
     expect(users!.hooks.beforeDelete.length).toBeGreaterThan(0)

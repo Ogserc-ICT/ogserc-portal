@@ -9,6 +9,7 @@ import {
 import { fieldCan, isAdmin, isAdminNotSelf, isAdminOrSelf, isStaff, userCan } from '../access'
 import { ROLES } from '../access/roles'
 import { genericLoginError, LOCK_MINUTES, MAX_LOGIN_ATTEMPTS } from '../lib/auth/generic-login-error'
+import { protectLastAdministrator } from '../lib/auth/last-administrator'
 import { endSessionsOnRoleChange } from '../lib/auth/revoke-sessions'
 import { limitSessionAge } from '../lib/auth/session-cap'
 import { lockForTransaction } from '../lib/transaction-lock'
@@ -85,7 +86,7 @@ export const Users: CollectionConfig = {
   },
   hooks: {
     beforeValidate: [firstUserIsAdministrator],
-    beforeOperation: [limitSessionAge],
+    beforeOperation: [limitSessionAge, protectLastAdministrator],
     beforeDelete: [refuseSelfDelete],
     afterChange: [endSessionsOnRoleChange],
     afterError: [genericLoginError],

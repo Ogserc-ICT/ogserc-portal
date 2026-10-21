@@ -59,6 +59,13 @@ export default defineConfig({
     { name: 'media', testMatch: 'media.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'users', testMatch: 'users.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'drafts', testMatch: 'drafts.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
+    // Must run last: it demotes the run's administrator, leaving one administrator the others don't know.
+    {
+      name: 'last-admin',
+      testMatch: 'last-admin.spec.ts',
+      dependencies: ['first-user', 'media', 'users', 'drafts'],
+      use: { ...devices['Desktop Chrome'] },
+    },
   ],
   webServer: {
     // CI tests the production build; locally a dev server with its own build folder, so it never
