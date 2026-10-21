@@ -8,6 +8,7 @@ import {
 
 import { fieldCan, isAdmin, isAdminNotSelf, isAdminOrSelf, isStaff, userCan } from '../access'
 import { ROLES } from '../access/roles'
+import { passwordPolicyOnSave } from '../lib/auth/enforce-password-policy'
 import { genericLoginError, LOCK_MINUTES, MAX_LOGIN_ATTEMPTS } from '../lib/auth/generic-login-error'
 import { protectLastAdministrator } from '../lib/auth/last-administrator'
 import { endSessionsOnRoleChange } from '../lib/auth/revoke-sessions'
@@ -85,7 +86,8 @@ export const Users: CollectionConfig = {
     unlock: isAdmin,
   },
   hooks: {
-    beforeValidate: [firstUserIsAdministrator],
+    // The password policy first, so it never runs while the first-user lock is held.
+    beforeValidate: [passwordPolicyOnSave, firstUserIsAdministrator],
     beforeOperation: [limitSessionAge, protectLastAdministrator],
     beforeDelete: [refuseSelfDelete],
     afterChange: [endSessionsOnRoleChange],

@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import type { SanitizedConfig } from 'payload'
 
 import { isAdminNotSelf } from '../../src/access'
+import { passwordPolicyOnSave } from '../../src/lib/auth/enforce-password-policy'
 import { genericLoginError } from '../../src/lib/auth/generic-login-error'
 import { protectLastAdministrator } from '../../src/lib/auth/last-administrator'
 import { endSessionsOnRoleChange } from '../../src/lib/auth/revoke-sessions'
@@ -38,6 +39,14 @@ for (const variant of ['deployed', 'with test collections']) {
     expect(users!.hooks.afterChange).toContain(endSessionsOnRoleChange)
     expect(users!.access.delete).toBe(isAdminNotSelf)
     expect(users!.hooks.beforeDelete.length).toBeGreaterThan(0)
+  })
+
+  // Every password Payload sets passes through these hooks (D-053). GraphQL would be another way in.
+  test(`password policy hooks, and no GraphQL (${variant})`, () => {
+    const config = configs[variant]!
+    const users = config.collections.find((collection) => String(collection.slug) === 'users')!
+    expect(users.hooks.beforeValidate[0]).toBe(passwordPolicyOnSave)
+    expect(config.graphQL.disable).toBe(true)
   })
 
   test(`serverURL and every CSRF origin are the normalised site origin (${variant})`, () => {

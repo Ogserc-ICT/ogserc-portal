@@ -1,5 +1,8 @@
+import { randomBytes } from 'node:crypto'
+
 import { expect, test } from '@playwright/test'
 
+import { PASSWORD_MESSAGES } from '../../src/lib/auth/password-policy'
 import { asUser, newAccount, saveAdminAccount, sessionCookie, signInToken } from './support/auth'
 
 // Runs on the empty test database (playwright.db.config.ts resets it before the server starts).
@@ -11,6 +14,22 @@ test('the database starts with no users', async ({ request }) => {
   const response = await request.get('/api/users/init')
   expect(response.ok()).toBe(true)
   expect(await response.json()).toMatchObject({ initialized: false })
+})
+
+test('first-register refuses a password that breaks the policy, and creates nobody', async ({ request }) => {
+  // The first account is created through the Local API, so the same policy hook applies (D-053).
+  for (const [password, message] of [
+    [randomBytes(6).toString('hex').slice(0, 11), PASSWORD_MESSAGES.tooShort],
+    [`ogserc${randomBytes(8).toString('hex')}`, PASSWORD_MESSAGES.organisation],
+  ] as const) {
+    const response = await request.post('/api/users/first-register', { data: { ...newAccount('first-weak'), password } })
+    const text = await response.text()
+    expect(response.status(), text.slice(0, 300)).toBe(400)
+    const body = JSON.parse(text) as { errors: { data?: { errors?: { path?: string; message?: string }[] } }[] }
+    expect(body.errors[0]?.data?.errors?.[0]).toEqual(expect.objectContaining({ path: 'password', message }))
+  }
+  const init = await request.get('/api/users/init')
+  expect(await init.json()).toMatchObject({ initialized: false })
 })
 
 test('two simultaneous first-register requests create exactly one administrator', async ({ request, baseURL }) => {

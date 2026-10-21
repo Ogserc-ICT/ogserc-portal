@@ -4,6 +4,7 @@ import { type PostgresAdapter, sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
 import { migrations } from '../migrations'
+import { readCommonPasswords } from './auth/common-passwords'
 import { SchemaIncompleteError } from './boot'
 import type { DatabaseIdentity } from './db/identity'
 import { verifyDatabaseSchema } from './db/verify-schema'
@@ -46,6 +47,8 @@ export async function onPayloadInit(payload: Payload): Promise<void> {
  *   migrations, unless every expected table and migration record exists.
  * - Warns loudly if there are no users: until the first account exists, whoever opens /admin
  *   first can create an administrator.
+ * - Logs an ERROR if the common-passwords list is missing: every password change is then refused
+ *   until it is restored (enforce-password-policy.ts).
  */
 export async function checkDatabaseAtStartup(payload: Payload): Promise<void> {
   const problems = await verifyDatabaseSchema(
@@ -62,6 +65,15 @@ export async function checkDatabaseAtStartup(payload: Payload): Promise<void> {
     payload.logger.error(
       'SECURITY: there are no user accounts. The first person to open /admin can create an ' +
         'administrator. Create the first administrator now (docs/RUNBOOK.md).',
+    )
+  }
+
+  try {
+    readCommonPasswords()
+  } catch {
+    payload.logger.error(
+      'SECURITY: the common-passwords list (data/common-passwords) cannot be read. Every password ' +
+        'change will be refused until the file is restored.',
     )
   }
 }
