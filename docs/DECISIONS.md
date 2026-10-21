@@ -948,3 +948,70 @@ After an upgrade, before merging:
 - read those parts of the new source;
 - rebuild and check `.next/server/chunks` again;
 - confirm in CI that the media and error-details tests pass, with two `Database:` lines per server start in the database test log.
+
+## D-052 Staff sign-in and account safety: sessions, cookies, CSRF, lockout, last administrator (2026-10-21)
+
+Step 3 plan commit 2, in seven code commits plus this one (`f881738`, `407ee4e`, `4b171f6`, `7a0caf7`, `4582f40`, `2f171dd`, `edf077a`, `71fa28e`). Each was tested in CI on the production build. The settings are pinned in the assembled config by `tests/unit/users-auth.spec.ts`.
+
+### What Payload 3.90.2 does (read in its source)
+
+- **Defaults:** `maxLoginAttempts` 5, `lockTime` 10 minutes, `tokenExpiration` 7200 s, sessions on, API keys off, cookie `SameSite=Lax`, HttpOnly always, `Secure` off.
+- **Sessions:** the token check (`auth/strategies/jwt.js`) only looks for the token's session id in the account's `sessions`; it never reads the session's age. Each refresh extends the session again, so an active session never ended.
+- **Password changes** end sessions already: an update that sets a password keeps only the caller's own session (`collections/operations/utilities/update.js`), and reset-password clears all. **A role change ended none.**
+- **Failed sign-ins:** an unknown email or a wrong password gives "The email or password provided is incorrect."; a locked account gives "This user is locked…". Both 401, so the message showed whether an account exists.
+- **CSRF** (`auth/extractJWT.js`): only cookie-authenticated requests are checked. The `Origin` header is compared as a string with the `csrf` list, to which Payload appends `serverURL` as written. Without `Origin`, `Sec-Fetch-Site` must be same-origin, same-site or none. The `Authorization` header is not checked.
+- **`removeTokenFromResponses`** removes the token from REST and Local API login, me, refresh and reset-password. First-register signs in through the Local API login, so it returns no token and an empty cookie too.
+- **Bulk update and delete** process their documents **in parallel** within one shared transaction (`collections/operations/update.js`, `delete.js`), unless the adapter's `bulkOperationsSingleTransaction` is on (it is off). A transaction always exists before `beforeOperation` runs, and `beforeOperation` runs before access is checked.
+- The Local API `unlock` is typed as needing a password but reads only the email (`auth/operations/unlock.js`).
+
+### Decision
+
+| Setting | Value | Why |
+|---|---|---|
+| Token | 1 hour (`tokenExpiration: 3600`) | Short-lived; the admin refreshes it while in use (below). |
+| Absolute session limit | 12 hours from sign-in (`limitSessionAge`, `src/lib/auth/session-cap.ts`) | A refresh is refused (403) unless the new token would end before 12 hours from sign-in, so no token outlives it. The start time is read from the database in the request's transaction. |
+| Token in responses | never (`removeTokenFromResponses: true`) | Only in the HttpOnly cookie, out of reach of page scripts. |
+| API keys | off (`useAPIKey: false`, explicit) | No long-lived credentials for staff. |
+| Cookie | `HttpOnly`, `SameSite=Strict`, `Secure` when `NODE_ENV=production` (unchanged) | The admin is same-origin, so the cookie is never needed cross-site. |
+| CSRF | `csrf: [origin of SITE_URL]`, and `serverURL` the same origin (`siteOrigin`, `src/lib/env.ts`) | Payload compares strings, so a `SITE_URL` with a trailing slash or path would have refused every cookie sign-in. Shown: with the raw value, the same-origin test failed. |
+| `SITE_URL` in production | must be https; plain http only for localhost, 127.0.0.1, [::1] | `Secure` cookies and passwords never sent unencrypted. CI and the Docker check use localhost. |
+| Lockout | 5 failures, 15 minutes | Slows password guessing; an administrator can unlock sooner. |
+| Failed sign-in reply | one fixed 401 body for every failure (`genericLoginError`, an `afterError` hook) | It says nothing about whether the account exists or is locked. Decided by the endpoint (POST `/api/users/login`) and the status (`error.status`), never the error's class or name (D-051). Shown: without it, the locked replies differed. |
+| Emergency unlock | `pnpm auth:unlock <email>` | For when no administrator can sign in. Same guards as `db:verify` (RUNBOOK 4.1). |
+| Role change | ends every session of that account (`endSessionsOnRoleChange`) | The person signs in again under the new roles. Shown: before, the old session still worked. |
+| Self-delete | refused (`isAdminNotSelf` delete access, plus a `beforeDelete` second layer) | Nobody removes themselves by mistake, alone or in a bulk delete. |
+| Last administrator | the whole operation is refused (409) if it would leave none (`protectLastAdministrator`, `src/lib/auth/last-administrator.ts`) | Decided once per operation over **all** its targets, under a transaction-scoped advisory lock, because bulk documents run in parallel and the lock is re-entrant within a session. The signed-in caller is not counted as removed when access is enforced, because Payload already refuses their own role change and deletion. Also applies to trusted code. |
+
+**Last administrator, shown in tests:**
+- Two administrators demoting, or deleting, each other at the same moment: one 200 and one 409 in every one of 5 rounds, and exactly one administrator left.
+- Without the rule, and again with the count but without the lock, the first round returned 200 and 200, leaving none.
+- A REST bulk demote or delete matching every administrator leaves exactly the sender; the same through the Local API with a user leaves exactly that user.
+- Trusted code removing every administrator is refused whole and changes nothing (rather than keeping exactly one: choosing who survives is not the code's job).
+
+### What the admin panel does (observed 2026-10-20, temporary 5-minute token, not committed)
+
+- **Refresh:** only on a page change in the token's last 2 minutes. Typing or scrolling does not count.
+- **Warning:** otherwise a "Stay logged in" dialog opens 1 minute before the end ("Stay logged in" / "Log out").
+- **At the end:** with no answer, it moves to `/admin/logout-inactivity`, then the login page.
+- **First user:** after "create first user" the screen goes to `/admin` and then cleanly to `/admin/login`, with no error; the new administrator signs in. (This corrects the plan, which said first-register would still return a token.)
+
+### Trade-offs and open items
+
+- **Anyone who knows a staff email can lock that account for 15 minutes at a time,** until rate limiting exists (Step 3 plan commit 4). Keep at least two administrators; `pnpm auth:unlock` is the emergency route (RUNBOOK 4.1).
+- **Timing:** unknown and locked accounts are answered faster than a wrong password, because no password hash is computed, so response time can still hint that an account exists. Rate limiting reduces how much can be learned this way; a constant-time reply is not implemented.
+- **Strict cookies:** a link to `/admin` opened from email or chat (a cross-site navigation) arrives without the cookie, so the page shows the login screen until it is reloaded or the person signs in.
+- **Open: unsaved work at sign-out.** The forced page change at the token's end, and the 12-hour limit's sign-out (a refused refresh, which goes straight to the inactivity page with **no** warning), can discard what someone typed in a long form. To be tested with a filled-in form before Step 4, then decide between a longer token (for example 4 hours; the owner leans this way for now), a refresh mechanism, or autosave or draft recovery. Also in STATUS.md.
+- **Unverified:** how the admin panel shows the last-administrator 409 (for example when demoting the last administrator from the edit screen).
+- **Re-test with two-factor authentication:** Strict cookies must be checked again with the 2FA plugin (its verification cookie and redirects, plan commit 6).
+
+### Watch (re-check after every Payload upgrade, including Dependabot PR #17)
+
+This decision relies on Payload 3.90.2 behaviour that a release may change:
+- the CSRF comparison in `extractJWT` and `serverURL` being appended to `csrf`;
+- `afterError` receiving the original error, and the HTTP status being `error.status`;
+- `beforeOperation` receiving `operation` (`update`/`delete` also for by-id), `overrideAccess`, and `args.id` or `args.where`, before access is checked;
+- bulk documents processed in parallel in one transaction;
+- the `sessions` array with `createdAt`, and refresh not checking a session's age;
+- `removeTokenFromResponses` covering the Local API login (and so first-register).
+
+The D-051 boot fix (its own `BasePayload` instance) still applies and has its own list in D-051.

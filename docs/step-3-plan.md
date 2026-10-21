@@ -111,8 +111,15 @@ One migration per commit that changes schema. Existing development accounts with
 must set up 2FA at next login.
 
 ## Commits (each revertible)
-1. Roles, capabilities, access helpers, deny-by-default; explicit Media access.
+1. Roles, capabilities, access helpers, deny-by-default; explicit Media access. **Done** (2a65ad9).
 2. Users hardening (fields, guards, auth options, cookies, CSRF, sessions, lockout message) + migration.
+   **Done** (2026-10-21) in eight commits, no migration needed: f881738 (1-hour token, token only in the cookie, API keys off,
+   SameSite=Strict), 407ee4e (CSRF origin, https in production), 4b171f6 (lockout, one reply for every failed sign-in),
+   7a0caf7 (`pnpm auth:unlock`), 4582f40 (12-hour session limit), 2f171dd (sessions end on a role change), edf077a (no
+   self-delete), 71fa28e (last administrator), plus docs. All green in CI. Details and trade-offs in D-052. Differences from the
+   design above: Secure follows NODE_ENV (not SITE_URL); the locked-account reply is decided by endpoint and status, not by error
+   class; the last-administrator rule runs once per operation in `beforeOperation`, not per document, because bulk documents
+   run in parallel; first-register returns no token.
 3. Password policy (offline list + HIBP) and replacement reset-password endpoint.
 4. Rate limiting + migration.
 5. Audit log + hooks + migration.

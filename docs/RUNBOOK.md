@@ -157,6 +157,8 @@ On a brand-new, empty database, `/admin` shows a "create first user" screen that
 
 - While there are no accounts, a production server logs an error at startup beginning `SECURITY: there are no user accounts`. Treat it as urgent.
 - The first account always becomes an administrator. Only one can be created this way, even if two people submit the screen at the same moment.
+- After the screen creates the account it goes to the login page: sign in with the new account (it does not sign you in by itself).
+- Then create a **second administrator** (Section 4.1). The last administrator can never be demoted or deleted (the change is refused with "At least one administrator must remain"), and nobody can delete their own account.
 
 ### 4.1 Locked accounts
 
