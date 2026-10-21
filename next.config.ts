@@ -27,6 +27,11 @@ const nextConfig: NextConfig = {
   // that test server: production builds and `next start` always use the default `.next`.
   distDir: process.env.E2E_TEST_SERVER === 'true' && process.env.NODE_ENV !== 'production' ? '.next-e2e' : '.next',
   poweredByHeader: false,
+  // The staff password policy reads this list at run time, so the standalone server must carry it,
+  // with its licence (data/common-passwords/SOURCE.md).
+  outputFileTracingIncludes: {
+    '/*': ['data/common-passwords/10k-most-common.txt', 'data/common-passwords/LICENSE'],
+  },
   images: {
     localPatterns: [{ pathname: '/api/media/file/**' }],
     // AVIF first (smallest), WebP for browsers without AVIF (D-034).

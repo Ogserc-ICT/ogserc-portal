@@ -162,5 +162,17 @@ jobs:
       - uses: docker/build-push-action@v7
         with:
           context: .
+          # Loaded into this runner's Docker only, for the check below; never pushed anywhere.
+          load: true
           push: false
           tags: ogserc-portal:ci
+      # The password policy reads the common-passwords list at run time; the image must carry it
+      # unchanged, with its licence (data/common-passwords/SOURCE.md).
+      - name: The image carries the common-passwords list and its licence
+        run: |
+          for file in data/common-passwords/10k-most-common.txt data/common-passwords/LICENSE; do
+            expected=$(sha256sum "$file" | cut -d' ' -f1)
+            actual=$(docker run --rm --entrypoint sha256sum ogserc-portal:ci "/app/$file" | cut -d' ' -f1)
+            echo "$file: expected $expected, image $actual"
+            if [ -z "$actual" ] || [ "$actual" != "$expected" ]; then echo "::error::$file missing or changed in the image"; exit 1; fi
+          done
