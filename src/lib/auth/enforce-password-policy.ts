@@ -1,4 +1,10 @@
-import { APIError, type CollectionBeforeValidateHook, type PayloadRequest, ValidationError } from 'payload'
+import {
+  APIError,
+  type CollectionBeforeOperationHook,
+  type CollectionBeforeValidateHook,
+  type PayloadRequest,
+  ValidationError,
+} from 'payload'
 
 import { readCommonPasswords } from './common-passwords'
 import { passwordProblem } from './password-policy'
@@ -7,7 +13,9 @@ import { passwordProblem } from './password-policy'
 // (D-053). There is no option, context flag or overrideAccess exemption to skip it: trusted
 // server code obeys it too.
 
-export const PASSWORD_CHECK_UNAVAILABLE = 'Passwords cannot be checked right now. Try again later, or ask an administrator.'
+export const BULK_PASSWORD_MESSAGE = 'Set passwords one account at a time.'
+
+export const PASSWORD_CHECK_UNAVAILABLE ='Passwords cannot be checked right now. Try again later, or ask an administrator.'
 
 type Check = {
   password: unknown
@@ -58,4 +66,18 @@ export const passwordPolicyOnSave: CollectionBeforeValidateHook = async ({
   const emails = [(data as { email?: unknown } | undefined)?.email, (originalDoc as { email?: unknown } | undefined)?.email]
   await enforcePasswordPolicy({ password, emails, collection: collection.slug, req })
   return data
+}
+
+/**
+ * beforeOperation on the staff collection: an update by query (bulk) that sets a password is
+ * refused whole (400), before any document changes. One password for many accounts is never
+ * legitimate, and it keeps the policy (and the breach check) to one password per operation.
+ */
+export const refuseBulkPasswordChange: CollectionBeforeOperationHook = ({ args, collection, operation, req }) => {
+  if (operation !== 'update') return args
+  const { id, data } = args as { id?: unknown; data?: { password?: unknown } }
+  if (id === undefined && data?.password) {
+    throw new ValidationError({ collection: collection.slug, errors: [{ message: BULK_PASSWORD_MESSAGE, path: 'password' }] }, req.t)
+  }
+  return args
 }

@@ -3,9 +3,11 @@ import { randomBytes } from 'node:crypto'
 import { APIError, ValidationError } from 'payload'
 
 import {
+  BULK_PASSWORD_MESSAGE,
   enforcePasswordPolicy,
   PASSWORD_CHECK_UNAVAILABLE,
   passwordPolicyOnSave,
+  refuseBulkPasswordChange,
 } from '../../src/lib/auth/enforce-password-policy'
 import { PASSWORD_MESSAGES } from '../../src/lib/auth/password-policy'
 
@@ -102,4 +104,34 @@ test('a missing common-passwords list refuses with 500 and one fixed log line, n
     expect(error.isPublic).toBe(true)
   })
   expect(errors).toEqual(['Common-passwords list could not be read; password refused (data/common-passwords).'])
+})
+
+test.describe('bulk updates', () => {
+  type OperationArgs = Parameters<typeof refuseBulkPasswordChange>[0]
+  const run = (args: Record<string, unknown>, operation = 'update') =>
+    refuseBulkPasswordChange({ args, collection: { slug: 'users' }, operation, req: {} } as unknown as OperationArgs)
+
+  test('an update by query that sets a password is refused whole, whatever the password', () => {
+    for (const password of [strong(), 'x']) {
+      expect(() => run({ where: { roles: { in: ['editor'] } }, data: { password } })).toThrow(ValidationError)
+    }
+    let error: unknown
+    try {
+      run({ where: {}, data: { password: strong() } })
+    } catch (caught) {
+      error = caught
+    }
+    expect(error).toBeInstanceOf(ValidationError)
+    expect((error as ValidationError).status).toBe(400)
+    expect((error as ValidationError).data.errors[0]).toEqual({ message: BULK_PASSWORD_MESSAGE, path: 'password' })
+  })
+
+  test('other updates pass through unchanged', () => {
+    const byId = { id: 3, data: { password: strong() } }
+    expect(run(byId)).toBe(byId)
+    const bulkWithoutPassword = { where: {}, data: { name: 'x' } }
+    expect(run(bulkWithoutPassword)).toBe(bulkWithoutPassword)
+    const create = { data: { password: strong() } }
+    expect(run(create, 'create')).toBe(create)
+  })
 })

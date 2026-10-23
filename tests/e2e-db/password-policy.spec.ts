@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { type APIRequestContext, type APIResponse, expect, test } from '@playwright/test'
 
 import { readCommonPasswords } from '../../src/lib/auth/common-passwords'
+import { BULK_PASSWORD_MESSAGE } from '../../src/lib/auth/enforce-password-policy'
 import { PASSWORD_MESSAGES } from '../../src/lib/auth/password-policy'
 import { attemptLogin, createStaff, loadAdminAccount, newAccount, signIn, type TestAccount } from './support/auth'
 
@@ -139,4 +140,21 @@ test('an email change that access drops still cannot hide the stored email from 
     'stored email still checked',
   )
   expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(200)
+})
+
+test('a bulk update that sets a password is refused whole, and changes no account', async () => {
+  const first = await createStaff(admin, 'pw-bulk-a', ['editor'])
+  const second = await createStaff(admin, 'pw-bulk-b', ['editor'])
+  const where = [first, second].map((account, n) => `where[email][in][${n}]=${encodeURIComponent(account.email)}`).join('&')
+  // A compliant password: the refusal is about setting one password on many accounts, not its strength.
+  const response = await admin.patch(`/api/users?${where}`, { data: { password: random(24) } })
+  const text = await response.text()
+  expect(response.status(), text.slice(0, 300)).toBe(400)
+  const body = JSON.parse(text) as { errors: { data?: { errors?: { path?: string; message?: string }[] } }[] }
+  expect(body.errors[0]?.data?.errors?.[0]).toEqual({ path: 'password', message: BULK_PASSWORD_MESSAGE })
+  for (const account of [first, second]) {
+    expect((await attemptLogin(baseURL, account.email, account.password)).status, account.email).toBe(200)
+  }
+  // Control: the same bulk update without a password still works.
+  expect((await admin.patch(`/api/users?${where}`, { data: { name: '[Test] renamed' } })).status()).toBe(200)
 })
