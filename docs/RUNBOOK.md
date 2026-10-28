@@ -113,6 +113,110 @@ docker run --env-file .env -p 3000:3000 ogserc-portal
 
 The container listens on port 3000. Put it behind HTTPS (the host's load balancer, or a reverse proxy such as Caddy or nginx). Migrations run on startup.
 
+### VPS with Docker Compose (AlmaLinux 8): the OGSERC server (D-054)
+
+`docker-compose.prod.yml` runs three containers: the app, PostgreSQL 17 and Caddy. Caddy is the only one reachable from the internet (ports 80 and 443); it gets and renews the HTTPS certificate from Let's Encrypt and passes requests to the app. The image is built on the server (the build needs no database), so no registry token is stored there. Migrations run when the app starts.
+
+**Preview period.** Until Step 3 is finished (2FA, rate limiting, audit log), `deploy/Caddyfile` returns 404 for `/admin` and `/api`, tells search engines not to index the site, and shortens HSTS to one day for this host only. All three are marked `PREVIEW ONLY` and listed in Section 11.
+
+Commands run on the server over SSH. Never paste passwords, keys or the contents of `.env` into chat, tickets or commits.
+
+**A. Check the server first** (as root). Stop if anything already listens on port 80 or 443 (a control panel, Apache or nginx), or if `sshd` is not on port 22: the later steps assume neither.
+```sh
+cat /etc/almalinux-release; free -h; df -h /
+ss -tlnp | grep -E ':(22|80|443)\b'
+rpm -q podman buildah runc httpd nginx
+getenforce
+```
+
+**B. Updates, swap, firewall, Docker** (as root):
+```sh
+dnf -y update
+dnf -y install git cronie dnf-automatic
+sed -i -E 's/^upgrade_type = .*/upgrade_type = security/; s/^apply_updates = .*/apply_updates = yes/' /etc/dnf/automatic.conf
+systemctl enable --now dnf-automatic.timer crond
+
+# 4 GB of swap, so building the image does not run out of memory on a 4 GB server.
+fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+echo '/swapfile none swap defaults 0 0' >> /etc/fstab
+
+systemctl enable --now firewalld
+firewall-cmd --permanent --add-service=ssh --add-service=http --add-service=https --add-port=443/udp
+firewall-cmd --reload
+
+# Docker CE replaces AlmaLinux's podman, which conflicts with it.
+dnf -y remove podman buildah runc || true
+dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+dnf -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+systemctl enable --now docker
+docker run --rm hello-world
+```
+
+**C. A deploy user** (as root). Membership of the `docker` group is equivalent to root on this server, so give it only to people who run deploys.
+```sh
+useradd -m -s /bin/bash deploy
+usermod -aG docker,wheel deploy
+passwd deploy                      # for sudo; store it in OGSERC's password manager
+mkdir -p /home/deploy/.ssh /opt/ogserc /var/backups/ogserc
+cp ~/.ssh/authorized_keys /home/deploy/.ssh/ 2>/dev/null || true
+chown -R deploy: /home/deploy/.ssh /opt/ogserc /var/backups/ogserc
+chmod 700 /home/deploy/.ssh
+```
+If root has no `authorized_keys` yet, add the deploy user's key from your own computer first (Windows PowerShell): `ssh-keygen -t ed25519`, then
+`type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh deploy@SERVER_IP "cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"`.
+Check that `ssh deploy@SERVER_IP` works without a password before step H.
+
+**D. Get the code** (as `deploy`). The server gets a read-only deploy key for this repository only.
+```sh
+ssh-keygen -t ed25519 -f ~/.ssh/github_deploy -N "" -C "ogserc-vps read-only"
+cat ~/.ssh/github_deploy.pub
+```
+Add the printed public key in GitHub: repository Settings, Deploy keys, Add deploy key, leaving "Allow write access" off. Then:
+```sh
+printf 'Host github.com\n  IdentityFile ~/.ssh/github_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config && chmod 600 ~/.ssh/config
+git clone git@github.com:thekamiyeoladipo/ogserc-portal.git /opt/ogserc
+```
+
+**E. The server's `.env`** (as `deploy`). The secrets are generated on the server and never displayed. Replace the `ACME_EMAIL` value with a shared OGSERC IT mailbox.
+```sh
+cd /opt/ogserc
+umask 077
+cat > .env <<EOF
+POSTGRES_PASSWORD=$(openssl rand -hex 32)
+PAYLOAD_SECRET=$(openssl rand -hex 48)
+SITE_DOMAIN=ogserc.org.ng
+SITE_URL=https://ogserc.org.ng
+ACME_EMAIL=it-mailbox@ogserc.org.ng
+EOF
+nano .env                          # set ACME_EMAIL, then save
+```
+Keep a copy of `.env` in OGSERC's password manager: without `POSTGRES_PASSWORD` and `PAYLOAD_SECRET` a database restore cannot be used.
+
+**F. DNS.** At the domain's DNS provider, create (or change) `A` records for `ogserc.org.ng` and `www.ogserc.org.ng` pointing to the server's IP address. Do not touch `MX`, `TXT` or other records (email). Wait until `nslookup ogserc.org.ng` from your own computer returns the server's IP.
+
+**G. Start and check** (as `deploy`, in `/opt/ogserc`). The first build takes several minutes.
+```sh
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml ps                   # all three "running", db "healthy"
+docker compose -f docker-compose.prod.yml logs --tail 50 app caddy
+curl -sI https://ogserc.org.ng | head -n 1                     # HTTP/2 200
+curl -s -o /dev/null -w '%{http_code}\n' https://ogserc.org.ng/admin   # 404 during the preview
+```
+
+**H. Close password logins** (as root, only after `ssh deploy@SERVER_IP` works with the key). Keep the current session open and test from a second window before closing it.
+```sh
+sed -i -E 's/^#?PasswordAuthentication .*/PasswordAuthentication no/; s/^#?PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config
+sshd -t && systemctl reload sshd
+```
+
+**Updating** (as `deploy`). Deploy only what is merged to `main` with CI green.
+```sh
+cd /opt/ogserc && git pull --ff-only
+docker compose -f docker-compose.prod.yml up -d --build
+docker image prune -f
+```
+**Rolling back:** `git checkout <previous commit>` and run the same `up -d --build`. Migrations only go forward, so after a release that changed the database, restore the backup taken before it (Section 6) instead.
+
 **Local portability check** (production image plus a throwaway local Postgres; requires Docker):
 
 ```sh
@@ -120,6 +224,21 @@ PAYLOAD_SECRET=any-long-random-string docker compose up --build
 ```
 
 ## 6. Backups and restore *(to be completed in step 13)*
+
+**VPS (D-054).** `deploy/backup-db.sh` writes a compressed `pg_dump` to `/var/backups/ogserc` and keeps 14 days. Install it once, as `deploy`, and run it once by hand to check:
+```sh
+(crontab -l 2>/dev/null; echo '15 2 * * * /opt/ogserc/deploy/backup-db.sh >> /var/backups/ogserc/backup.log 2>&1') | crontab -
+/opt/ogserc/deploy/backup-db.sh
+```
+These copies are on the same server, so they do not survive losing it. **Open item:** copy them off the server every day (OGSERC to choose where), and test a restore before launch (step 13).
+
+Restore a dump into the running database (this replaces its contents):
+```sh
+cd /opt/ogserc
+docker compose -f docker-compose.prod.yml stop app
+docker compose -f docker-compose.prod.yml exec -T db pg_restore -U ogserc -d ogserc --clean --if-exists < /var/backups/ogserc/ogserc-YYYYMMDDTHHMMSSZ.dump
+docker compose -f docker-compose.prod.yml start app
+```
 
 ## 7. Moving to another host
 
@@ -244,3 +363,5 @@ Build step 2 added temporary placeholders so OGSERC could review the design befo
 - [ ] Contact section map added (or removed) once the office address is confirmed.
 - [ ] `src/app/(frontend)/design-system/` (the review page) deleted (D-031).
 - [ ] No menu entry in `src/lib/navigation.ts` still has `ready: false`, and `/being-prepared` is removed or unused (D-027).
+- [ ] `deploy/Caddyfile` has no `PREVIEW ONLY` block left (D-054): `/admin` reopened once Step 3 is merged (2FA, rate limiting, audit log); `X-Robots-Tag: noindex` removed at launch; the HSTS override removed once every subdomain of the domain serves HTTPS.
+- [ ] VPS backups copied off the server daily, and a restore tested (Section 6).

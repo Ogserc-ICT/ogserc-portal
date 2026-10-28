@@ -631,3 +631,20 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - **Cause:** axe had started while the section was still fading in (D-039). The colours themselves pass.
 - **Fix, in the tests only:** axe scans that cover scroll-revealed sections first call `waitForSettledPage` (`tests/e2e/support/settle.ts`). It fades in every pending section, restores the scroll position, and waits until every finite animation and transition has finished.
 - **Where it is used:** the back-to-top, homepage and smoke axe tests. The homepage and smoke scans previously skipped below-the-fold sections, which sit at opacity 0 until revealed, so they now check more.
+
+## D-054 First deploy: OGSERC's VPS with Docker Compose and Caddy, as a closed preview (2026-10-28)
+
+(Numbered after D-053 on the Step 3 branch, which is not merged yet, so the numbers do not clash.)
+
+**Decision:** The owner asked to host the site on OGSERC's own VPS (AlmaLinux 8.10, 2 vCPU, 4 GB RAM, 100 GB SSD) at `ogserc.org.ng` before Phase 1 is complete. `docker-compose.prod.yml` runs the app, PostgreSQL 17 and Caddy 2.11.7 on that server. Until Step 3 is merged, `deploy/Caddyfile` closes `/admin` and `/api` (404), sends `X-Robots-Tag: noindex, nofollow`, and shortens HSTS to one day without `includeSubDomains`. The image is built on the server. `deploy/backup-db.sh` keeps 14 days of nightly `pg_dump` files. Steps are in RUNBOOK Sections 5 and 6.
+
+**Why:**
+- **What is deployed is `main`:** the design system and homepage. Staff sign-in is not ready for the internet: 2FA, rate limiting and the audit log are still to come, and the Users hardening (D-052) is on an unmerged branch. Public pages read through Payload's Local API inside the app and nothing public calls `/api`, so closing both paths at the proxy removes the whole staff surface without changing the app.
+- **Caddy** (owner approved): one small config file, HTTPS certificates obtained and renewed automatically, HTTP to HTTPS redirect, HTTP/2 and HTTP/3. nginx with certbot does the same with more configuration and a separate renewal job. Swapping it later only changes this front door.
+- **PostgreSQL on the VPS** instead of a hosted database: no extra cost, plain PostgreSQL (portability rules), and not reachable from the internet (no published port). The cost is that backups and off-server copies are ours to run (open item in RUNBOOK Section 6).
+- **Building on the server:** the build needs no database (the Dockerfile sets placeholders), and pulling from a private registry would put a registry token on the server. 4 GB of swap covers the build's memory peak. If builds become slow or disturb the live site, build in CI and pull instead.
+- **Short HSTS during the preview:** the app sends two years with `includeSubDomains`, which would make browsers refuse plain HTTP on every subdomain of `ogserc.org.ng` (webmail or a control panel, for example) for two years. The full header returns once every subdomain is confirmed to serve HTTPS.
+- **noindex:** content is still placeholder ("[Sample, OGSERC to supply]"), and must not appear in search results as OGSERC's information.
+- **File uploads:** none are possible while `/admin` is closed. The S3-compatible storage adapter still arrives with Step 4 (D-013).
+
+**Not done here:** monitoring, off-server backups, a tested restore and spend limits remain step 13. Vercel stays possible: nothing in this change is VPS-specific inside the app.
