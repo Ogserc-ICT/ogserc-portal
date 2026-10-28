@@ -16,10 +16,15 @@ x-logging: &logging
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        IMAGE_PROCESSING: ${IMAGE_PROCESSING:-on}
     image: ogserc-portal:latest
     restart: unless-stopped
     environment:
+      # "off" on OGSERC's VPS until its CPU can run sharp (D-056). Needed at build and run time.
+      IMAGE_PROCESSING: ${IMAGE_PROCESSING:-on}
       DATABASE_URL: postgres://ogserc:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/ogserc
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:?Set PAYLOAD_SECRET in .env}
       SITE_URL: ${SITE_URL:?Set SITE_URL in .env}

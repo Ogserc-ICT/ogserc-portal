@@ -21,6 +21,9 @@ ENV NEXT_OUTPUT=standalone
 # real values are supplied at run time.
 ENV DATABASE_URL=postgres://build:build@localhost:5432/build \
     PAYLOAD_SECRET=build-time-placeholder-not-a-secret
+# "off" only for a host whose CPU cannot run sharp (D-056). Next.js reads it at build time.
+ARG IMAGE_PROCESSING=on
+ENV IMAGE_PROCESSING=${IMAGE_PROCESSING}
 RUN pnpm build
 
 # 3. Small runtime image, running as a non-root user.

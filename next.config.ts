@@ -24,6 +24,9 @@ const nextConfig: NextConfig = {
   output: process.env.NEXT_OUTPUT === 'standalone' ? 'standalone' : undefined,
   poweredByHeader: false,
   images: {
+    // IMAGE_PROCESSING=off (OGSERC's VPS, D-056): images are served as they are, because the
+    // optimiser needs sharp. Read at build time, so the Docker build receives it as a build arg.
+    unoptimized: process.env.IMAGE_PROCESSING === 'off',
     localPatterns: [{ pathname: '/api/media/file/**' }],
     // AVIF first (smallest), WebP for browsers without AVIF (D-034).
     formats: ['image/avif', 'image/webp'],

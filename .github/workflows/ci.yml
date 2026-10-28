@@ -33,6 +33,43 @@ jobs:
       # Fails only on high or critical vulnerabilities; lower ones are handled by Dependabot.
       - run: pnpm audit --audit-level high
 
+  no-sharp:
+    # OGSERC's VPS cannot run sharp (D-056). With IMAGE_PROCESSING=off and every sharp binary
+    # blocked, the production build must not touch sharp and the homepage must still serve.
+    name: Builds and serves without sharp (VPS workaround)
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_PROCESSING: 'off'
+      NEXT_OUTPUT: standalone
+      DATABASE_URL: postgres://ci:ci@localhost:5432/ci
+      PAYLOAD_SECRET: ci-placeholder-not-a-secret
+      SITE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build with sharp blocked
+        run: |
+          NODE_OPTIONS="--import ./scripts/block-sharp-binaries.mjs --max-old-space-size=8000" \
+            pnpm exec next build 2>&1 | tee build.log
+          if grep -q 'sharp' build.log; then echo "The build tried to load sharp"; exit 1; fi
+      - name: Homepage serves with sharp blocked, images unoptimised
+        run: |
+          cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/
+          cd .next/standalone
+          NODE_OPTIONS="--import ../../scripts/block-sharp-binaries.mjs" PORT=3000 node server.js &
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://localhost:3000/ && break; sleep 1; done
+          curl -sf -o home.html http://localhost:3000/
+          if grep -q '/_next/image' home.html; then echo "Images still go through the optimiser"; exit 1; fi
+          for src in $(grep -oE 'src="/_next/static/media/[^"]+"' home.html | cut -d'"' -f2 | sort -u); do
+            curl -sf -o /dev/null "http://localhost:3000$src" || { echo "Image failed: $src"; exit 1; }
+          done
+          echo "Homepage and its images serve without sharp"
+
   e2e:
     name: Build and end-to-end tests (Playwright + axe)
     runs-on: ubuntu-latest
