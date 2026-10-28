@@ -1,0 +1,8 @@
+# Findings the secret scan (gitleaks) should not report. One fingerprint per line; nothing else
+# (no paths, no rules) is allowed. Every entry needs a reason here.
+
+# Fake JWT used to test log redaction, in tests/unit/test-server.spec.ts line 72 of commit 927454e,
+# which is already pushed (history is not rewritten). Header {"alg":"HS256"}, payload
+# {"id":"12345678"}, and a made-up 15-byte signature; checked on 2026-10-16 not to verify against
+# the real PAYLOAD_SECRET. The test now builds its fake token at run time (tests/support/fakes.ts).
+927454eddead6e4a5dea5ed72ab0479777563b50:tests/unit/test-server.spec.ts:jwt:72
