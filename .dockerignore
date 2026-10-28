@@ -13,3 +13,5 @@ test-results
 Dockerfile
 docker-compose.yml
 .dockerignore
+docker-compose.prod.yml
+deploy
