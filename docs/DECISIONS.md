@@ -102,6 +102,13 @@ At scaffold time:
 - `undici` is forced to 7.29.1 with a pnpm override, because Payload 3.90.2 pins the vulnerable 7.29.0. **Remove the override** once a Payload release ships 7.29.1 or later.
 - Advisory **GHSA-vfj7-8cjw-p6xm** (`braces`, stack exhaustion from deeply nested glob patterns) is ignored in `package.json` (`pnpm.auditConfig.ignoreGhsas`). No patched version exists. It is only reached through the ESLint tooling with patterns we write ourselves, never from the website or user input. **Remove the ignore** when a fix is released.
 
+Update 2026-10-28, before the first deploy to the VPS:
+
+- `next` and `eslint-config-next` upgraded to 16.4.3: 16.4.0 has two critical unauthenticated remote code execution flaws (image optimisation and `use cache`) and a high Server Action denial of service, all fixed in 16.4.1.
+- The `undici` override moves to 7.30.1 (seven advisories in 7.29.x). Payload 3.92.1 ships 7.30.1, so **remove the override** when Payload is upgraded (Dependabot PR #17).
+- `dompurify` is forced to 3.4.17 (Payload admin, through `monaco-editor`, which pins 3.4.15) and `zod` to 4.6.6 (ESLint plugin). Both are patch releases of the same minor. **Remove each override** when the package that pulls it in ships the fix.
+- Advisory **GHSA-834v-8h66-3h79** (`happy-dom` ESM import alias, code execution) is ignored. The fix is in 21.0.4, a major version that `@lexical/headless` (`^20.9.0`) does not accept. The flaw needs JavaScript evaluation, which happy-dom 20 turns off by default (`enableJavaScriptEvaluation: false`), and Lexical creates its window with the defaults (`new Window()`). **Remove the ignore** when Lexical accepts happy-dom 21.
+
 ## D-013 File storage adapter added in build step 4 (2026-10-08)
 
 **Decision:** The S3-compatible storage adapter is wired up with the Media collection in step 4. Step 1 only adds its variables to `.env.example`.
