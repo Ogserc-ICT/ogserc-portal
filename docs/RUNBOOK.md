@@ -129,7 +129,7 @@ rpm -q podman buildah runc httpd nginx
 getenforce
 ```
 
-Also check the swap (`swapon --show`) and the CPU (`grep -cw sse4_2 /proc/cpuinfo`; 0 means the virtual CPU hides x86-64-v2, which the image handles since D-055 but which slows image processing: ask the host to set the CPU type to "host").
+Also check the swap (`swapon --show`) and the CPU: `grep -cw sse4_1 /proc/cpuinfo; grep -cw sse4_2 /proc/cpuinfo`. If either prints 0, the virtual CPU cannot run sharp (image processing) at all, native or WebAssembly (D-056). Ask the host to set the CPU type to "host" or "x86-64-v2"; until then, add `IMAGE_PROCESSING=off` to the server's `.env` (step E), which serves images unoptimised.
 
 **B. Updates, swap, firewall, Docker** (as root). Paste one block at a time and check each for errors. Minimal server images (OGSERC's VPS was one) lack `firewalld` and `needs-restarting`, so both are installed here.
 ```sh
@@ -395,3 +395,4 @@ Build step 2 added temporary placeholders so OGSERC could review the design befo
 - [ ] No menu entry in `src/lib/navigation.ts` still has `ready: false`, and `/being-prepared` is removed or unused (D-027).
 - [ ] `deploy/Caddyfile` has no `PREVIEW ONLY` block left (D-054): `/admin` reopened once Step 3 is merged (2FA, rate limiting, audit log); `X-Robots-Tag: noindex` removed at launch; the HSTS override removed once every subdomain of the domain serves HTTPS.
 - [ ] VPS backups copied off the server daily, and a restore tested (Section 6).
+- [ ] `IMAGE_PROCESSING=off` gone from the VPS's `.env` once its CPU shows `sse4_1` and `sse4_2` (D-056), then the setting, its CI job and `scripts/block-sharp-binaries.mjs` removed from the code, and D-055's `@img/sharp-wasm32` reconsidered.

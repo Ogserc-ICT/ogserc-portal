@@ -651,6 +651,8 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 
 ## D-055 sharp falls back to WebAssembly on CPUs without x86-64-v2 (2026-10-28)
 
+> **Did not fix the VPS: see D-056.** The WebAssembly build also needs a CPU feature (SSE4.1, for WebAssembly SIMD) that the VPS hides.
+
 **Problem:** The first build on OGSERC's VPS failed while collecting page data: `Could not load the "sharp" module using the linuxmusl-x64 runtime. Unsupported CPU: Prebuilt binaries for Linux x64 require v2 microarchitecture`. Since 0.35, sharp's native Linux x64 binary refuses to load on a CPU that does not report x86-64-v2 (SSE4.2, POPCNT, SSSE3, CX16). The VPS's virtual CPU model hides those instructions. Next.js (image optimisation) and Payload (uploads) both load sharp, at build time and at run time, so building elsewhere would not help.
 
 **Decision (owner approved):** Add `@img/sharp-wasm32` 0.35.5, pinned to the same version as `sharp`, as a direct dependency. sharp already tries it when no native binary loads (`dist/sharp.cjs`), so no code changes. On CPUs with x86-64-v2 (CI, developers, most hosts) the native binary still loads first and nothing changes.
@@ -662,3 +664,20 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Cost:** 9 MB in the image. WebAssembly image processing is slower than native, which matters only when an image is first resized (uploads, and the first request for each optimised size; Next.js caches the result). The package is by sharp's author, licensed Apache-2.0, LGPL-3.0-or-later (libvips) and MIT, the same as the native libvips packages already shipped.
 
 **Better fix, still open:** ask the host to change the VM's CPU type to "host" or "x86-64-v2". Then native sharp loads again by itself. Keep the dependency anyway, so the site still runs on any x86 host (portability rules). **Remove it** only if every target host is confirmed to have x86-64-v2.
+
+## D-056 Temporary: the VPS runs without image processing (`IMAGE_PROCESSING=off`) (2026-10-28)
+
+**Problem:** D-055's WebAssembly fallback did not help. The next build on the VPS failed with `WebAssembly.Module(): Wasm SIMD unsupported`: sharp's WebAssembly build needs WebAssembly SIMD, which Node.js provides only on CPUs with SSE4.1. The VPS's virtual CPU hides even that (a generic model such as QEMU's `qemu64`). D-055's check blocked the native binary but ran on a CPU with SIMD, so it could not catch this. No sharp build can run on that CPU as configured, and building sharp from source is not possible on Alpine (libvips 8.17; sharp 0.35.5 needs 8.18.7 or newer). OGSERC has asked Truehost to change the CPU type ("host" or "x86-64-v2"); no answer yet.
+
+**Decision (owner approved, to get the preview up):** A setting, `IMAGE_PROCESSING=off`, set only in the VPS's `.env`:
+- `src/payload.config.ts` imports sharp only when the setting is on (importing it on that CPU throws) and otherwise starts Payload without it. Uploads would keep their original size and get no focal point; no uploads happen while `/admin` is closed (D-054).
+- `next.config.ts` sets `images.unoptimized`, so images are served as they are instead of through the optimiser, which needs sharp. Next.js reads this at build time, so `docker-compose.prod.yml` passes it as a build argument as well as at run time.
+- Everywhere else the setting is unset (on), and nothing changes.
+
+**Cost:** the homepage serves its images at full size: hero photograph 142 KB (JPEG, not AVIF or WebP), wordmark 115 KB, crest 187 KB, instead of small optimised versions. This is against the low-bandwidth goal (NFR performance), acceptable for a closed preview only.
+
+**Side effect:** sharp is now imported when Payload's config loads instead of at module import, so a host where sharp cannot load no longer fails the build: it logs the error and `/admin` and `/api` fail when first used. Normal hosts are unaffected.
+
+**Checked:** `scripts/block-sharp-binaries.mjs` makes every sharp binary fail to load, as on the VPS. With it, a standalone build without the setting logs the VPS's error; with `IMAGE_PROCESSING=off` the build never mentions sharp, and the standalone server serves the homepage and every image without the optimiser. CI repeats this in the "Builds and serves without sharp" job.
+
+**Undo when the CPU is fixed** (RUNBOOK Section 11): check `grep -cw sse4_2 /proc/cpuinfo` is above 0, remove `IMAGE_PROCESSING=off` from the VPS's `.env`, redeploy. Then remove this setting, its CI job and the helper, and decide on D-055's package (`@img/sharp-wasm32`): it helps only on CPUs with SSE4.1 but without x86-64-v2, which are rare, so removing it is likely.
