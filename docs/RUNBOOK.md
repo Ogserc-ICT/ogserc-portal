@@ -129,30 +129,48 @@ rpm -q podman buildah runc httpd nginx
 getenforce
 ```
 
-**B. Updates, swap, firewall, Docker** (as root):
+Also check the swap (`swapon --show`) and the CPU (`grep -cw sse4_2 /proc/cpuinfo`; 0 means the virtual CPU hides x86-64-v2, which the image handles since D-055 but which slows image processing: ask the host to set the CPU type to "host").
+
+**B. Updates, swap, firewall, Docker** (as root). Paste one block at a time and check each for errors. Minimal server images (OGSERC's VPS was one) lack `firewalld` and `needs-restarting`, so both are installed here.
 ```sh
 dnf -y update
-dnf -y install git cronie dnf-automatic
+dnf -y install git cronie dnf-automatic dnf-utils firewalld
 sed -i -E 's/^upgrade_type = .*/upgrade_type = security/; s/^apply_updates = .*/apply_updates = yes/' /etc/dnf/automatic.conf
 systemctl enable --now dnf-automatic.timer crond
-
-# 4 GB of swap, so building the image does not run out of memory on a 4 GB server.
+```
+Swap, **only if `swapon --show` printed nothing** (OGSERC's VPS already had 2 GB at `/swapfile`, which is enough; these lines would break an existing `/swapfile`):
+```sh
 fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
 echo '/swapfile none swap defaults 0 0' >> /etc/fstab
-
+```
+Firewall. firewalld 0.9 refuses services and ports in one command, so they are separate. SSH is allowed from the moment it starts. Cockpit (the web admin panel, port 9090) is closed.
+```sh
 systemctl enable --now firewalld
-firewall-cmd --permanent --add-service=ssh --add-service=http --add-service=https --add-port=443/udp
+firewall-cmd --permanent --add-service=ssh
+firewall-cmd --permanent --add-service=http
+firewall-cmd --permanent --add-service=https
+firewall-cmd --permanent --add-port=443/udp
+firewall-cmd --permanent --remove-service=cockpit
 firewall-cmd --reload
-
+firewall-cmd --list-all            # services: dhcpv6-client http https ssh; ports: 443/udp
+```
+Docker:
+```sh
 # Docker CE replaces AlmaLinux's podman, which conflicts with it.
 dnf -y remove podman buildah runc || true
 dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
 dnf -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 systemctl enable --now docker
 docker run --rm hello-world
+docker compose version
+```
+Restart if the update installed a new kernel (the session drops; log in again after a minute):
+```sh
+needs-restarting -r || reboot
 ```
 
 **C. A deploy user** (as root). Membership of the `docker` group is equivalent to root on this server, so give it only to people who run deploys.
+Run `passwd deploy` on its own line, not inside a pasted block: it reads the next pasted lines as the password. The same goes for `ssh`, which swallows the lines pasted after it.
 ```sh
 useradd -m -s /bin/bash deploy
 usermod -aG docker,wheel deploy
@@ -162,9 +180,19 @@ cp ~/.ssh/authorized_keys /home/deploy/.ssh/ 2>/dev/null || true
 chown -R deploy: /home/deploy/.ssh /opt/ogserc /var/backups/ogserc
 chmod 700 /home/deploy/.ssh
 ```
-If root has no `authorized_keys` yet, add the deploy user's key from your own computer first (Windows PowerShell): `ssh-keygen -t ed25519`, then
+Root's `authorized_keys` may hold only the host's key, not yours (it did on OGSERC's VPS: `ssh deploy@…` asked for the password). Add your own key from your computer (Windows PowerShell): `ssh-keygen -t ed25519` (with a passphrase), then
 `type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh deploy@SERVER_IP "cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"`.
-Check that `ssh deploy@SERVER_IP` works without a password before step H.
+Check that `ssh deploy@SERVER_IP` works without the server password before step H.
+
+**If the repository was already cloned as root** (as on OGSERC's VPS, into `/root/ogserc-portal` with the deploy key `/root/.ssh/github_ogserc`), move both to `deploy` instead of step D, then as `deploy` run `git -C /opt/ogserc config --unset core.sshCommand || true`:
+```sh
+cd ~
+mv /root/.ssh/github_ogserc /root/.ssh/github_ogserc.pub /home/deploy/.ssh/
+printf 'Host github.com\n  IdentityFile ~/.ssh/github_ogserc\n  IdentitiesOnly yes\n' > /home/deploy/.ssh/config
+cp /root/.ssh/known_hosts /home/deploy/.ssh/
+rmdir /opt/ogserc && mv /root/ogserc-portal /opt/ogserc
+chown -R deploy: /home/deploy/.ssh /opt/ogserc && chmod 600 /home/deploy/.ssh/*
+```
 
 **D. Get the code** (as `deploy`). The server gets a read-only deploy key for this repository only.
 ```sh
@@ -188,8 +216,10 @@ SITE_DOMAIN=ogserc.org.ng
 SITE_URL=https://ogserc.org.ng
 ACME_EMAIL=it-mailbox@ogserc.org.ng
 EOF
-nano .env                          # set ACME_EMAIL, then save
+awk -F= '{print $1 ": " length($2) " characters"}' .env   # lengths only, never the values
+git check-ignore -q .env && echo ".env is ignored by git"
 ```
+Set the real mailbox in the `ACME_EMAIL` line before pasting (minimal images have no `nano`; `vi .env` works).
 Keep a copy of `.env` in OGSERC's password manager: without `POSTGRES_PASSWORD` and `PAYLOAD_SECRET` a database restore cannot be used.
 
 **F. DNS.** At the domain's DNS provider, create (or change) `A` records for `ogserc.org.ng` and `www.ogserc.org.ng` pointing to the server's IP address. Do not touch `MX`, `TXT` or other records (email). Wait until `nslookup ogserc.org.ng` from your own computer returns the server's IP.

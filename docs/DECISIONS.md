@@ -648,3 +648,17 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - **File uploads:** none are possible while `/admin` is closed. The S3-compatible storage adapter still arrives with Step 4 (D-013).
 
 **Not done here:** monitoring, off-server backups, a tested restore and spend limits remain step 13. Vercel stays possible: nothing in this change is VPS-specific inside the app.
+
+## D-055 sharp falls back to WebAssembly on CPUs without x86-64-v2 (2026-10-28)
+
+**Problem:** The first build on OGSERC's VPS failed while collecting page data: `Could not load the "sharp" module using the linuxmusl-x64 runtime. Unsupported CPU: Prebuilt binaries for Linux x64 require v2 microarchitecture`. Since 0.35, sharp's native Linux x64 binary refuses to load on a CPU that does not report x86-64-v2 (SSE4.2, POPCNT, SSSE3, CX16). The VPS's virtual CPU model hides those instructions. Next.js (image optimisation) and Payload (uploads) both load sharp, at build time and at run time, so building elsewhere would not help.
+
+**Decision (owner approved):** Add `@img/sharp-wasm32` 0.35.5, pinned to the same version as `sharp`, as a direct dependency. sharp already tries it when no native binary loads (`dist/sharp.cjs`), so no code changes. On CPUs with x86-64-v2 (CI, developers, most hosts) the native binary still loads first and nothing changes.
+
+**Checked:**
+- `scripts/check-sharp-wasm.mjs` blocks every native sharp binary and resizes an image to AVIF and WebP. It passes from the repo and from `.next/standalone` (the bundle the Docker image ships: Next.js traces the package into it), and sharp fails with the VPS's error when the WebAssembly package is blocked too.
+- CI runs the same check inside the built Docker image.
+
+**Cost:** 9 MB in the image. WebAssembly image processing is slower than native, which matters only when an image is first resized (uploads, and the first request for each optimised size; Next.js caches the result). The package is by sharp's author, licensed Apache-2.0, LGPL-3.0-or-later (libvips) and MIT, the same as the native libvips packages already shipped.
+
+**Better fix, still open:** ask the host to change the VM's CPU type to "host" or "x86-64-v2". Then native sharp loads again by itself. Keep the dependency anyway, so the site still runs on any x86 host (portability rules). **Remove it** only if every target host is confirmed to have x86-64-v2.

@@ -122,4 +122,7 @@ jobs:
         with:
           context: .
           push: false
+          load: true
           tags: ogserc-portal:ci
+      - name: Image processing works without native sharp, as on the VPS (D-055)
+        run: docker run -i --rm --entrypoint node ogserc-portal:ci --input-type=module - < scripts/check-sharp-wasm.mjs
