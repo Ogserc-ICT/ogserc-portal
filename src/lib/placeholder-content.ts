@@ -170,13 +170,18 @@ export const contactPage = {
         'Billing disputes, disconnections, metering and other complaints about your electricity service.',
     },
     {
+      name: 'Licensing and registration',
+      email: 'registration@ogserc.org.ng',
+      description: 'Licence applications and registration with the Commission.',
+    },
+    {
       name: 'General enquiries',
       email: contactDetails.email,
       description: 'Questions about the Commission, licensing and regulation.',
     },
   ],
   officeHours: [
-    { days: 'Monday to Friday', hours: '8:30am to 5:00pm' },
+    { days: 'Monday to Friday', hours: '8:00am to 5:00pm' },
     { days: 'Saturday, Sunday and public holidays', hours: 'Closed' },
   ],
 }

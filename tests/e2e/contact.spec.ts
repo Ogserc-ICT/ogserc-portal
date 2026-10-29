@@ -41,7 +41,10 @@ test.describe('Contact page', () => {
     await expect(
       page.getByRole('main').getByRole('link', { name: 'ccu@ogserc.org.ng' }),
     ).toHaveAttribute('href', 'mailto:ccu@ogserc.org.ng')
-    await expect(page.getByText('8:30am to 5:00pm')).toBeVisible()
+    await expect(
+      page.getByRole('main').getByRole('link', { name: 'registration@ogserc.org.ng' }),
+    ).toHaveAttribute('href', 'mailto:registration@ogserc.org.ng')
+    await expect(page.getByText('8:00am to 5:00pm')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Show map' })).toBeVisible()
   })
 
