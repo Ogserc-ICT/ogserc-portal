@@ -109,6 +109,11 @@ Update 2026-10-28, before the first deploy to the VPS:
 - `dompurify` is forced to 3.4.17 (Payload admin, through `monaco-editor`, which pins 3.4.15) and `zod` to 4.6.6 (ESLint plugin). Both are patch releases of the same minor. **Remove each override** when the package that pulls it in ships the fix.
 - Advisory **GHSA-834v-8h66-3h79** (`happy-dom` ESM import alias, code execution) is ignored. The fix is in 21.0.4, a major version that `@lexical/headless` (`^20.9.0`) does not accept. The flaw needs JavaScript evaluation, which happy-dom 20 turns off by default (`enableJavaScriptEvaluation: false`), and Lexical creates its window with the defaults (`new Window()`). **Remove the ignore** when Lexical accepts happy-dom 21.
 
+Update 2026-10-29, two advisories published overnight, both ignored because nothing in the site can reach them:
+
+- **GHSA-c8p4-j97h-3vg8** (`happy-dom` server-side request forgery: `<iframe>` and `<link rel="stylesheet">` in parsed HTML are fetched by default). The fix is in happy-dom 21, which `@lexical/headless` does not accept. happy-dom is only loaded by `@lexical/headless/dom`, which neither Payload's Lexical package (no import of it in `@payloadcms/richtext-lexical/dist`) nor our code uses; the admin editor runs in the browser's own DOM. **Remove the ignore** with the one above. If we ever convert HTML to Lexical on the server, turn off `disableIframePageLoading` and `disableCSSFileLoading` or upgrade first.
+- **GHSA-x8rm-f576-gq67** (`graphql-scalars` regular-expression denial of service in the `PhoneNumber` scalar), through `@payloadcms/graphql`, which pins 1.22.2; the fix is 2.0.1, a major version. GraphQL is turned off in our Payload config (`graphQL.disable`), and the VPS proxy closes `/api` too (D-054). **Remove the ignore** when Payload ships graphql-scalars 2.0.1 or later.
+
 ## D-013 File storage adapter added in build step 4 (2026-10-08)
 
 **Decision:** The S3-compatible storage adapter is wired up with the Media collection in step 4. Step 1 only adds its variables to `.env.example`.
