@@ -126,7 +126,8 @@ export const contactDetails = {
 export const phoneHref = `tel:${contactDetails.phone.replace(/[^+\d]/g, '')}`
 
 export const footer = {
-  summary: "Driving excellence in Ogun State's power sector through transparent oversight and robust regulation.",
+  summary:
+    "Driving excellence in Ogun State's power sector through transparent oversight and robust regulation.",
 }
 
 export type SocialLink = {
@@ -136,8 +137,16 @@ export type SocialLink = {
 }
 
 export const socialLinks: SocialLink[] = [
-  { network: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/company/146906161/' },
-  { network: 'facebook', label: 'Facebook', href: 'https://www.facebook.com/share/1CD7MkwJJj/' },
+  {
+    network: 'linkedin',
+    label: 'LinkedIn',
+    href: 'https://www.linkedin.com/in/ogserc-ogsg-ab701b447/',
+  },
+  {
+    network: 'facebook',
+    label: 'Facebook',
+    href: 'https://www.facebook.com/p/The-Ogun-State-Electricity-Regulatory-Commission-Ogserc-61596175582845/',
+  },
   { network: 'instagram', label: 'Instagram', href: 'https://www.instagram.com/official_ogserc/' },
   { network: 'x', label: 'X', href: 'https://x.com/Ogserc_Official' },
   { network: 'tiktok', label: 'TikTok', href: 'https://www.tiktok.com/@ogserc01' },

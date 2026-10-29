@@ -693,6 +693,6 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 
 **Why:** The site is live as a preview (D-054) and `/admin` stays closed until Step 3 is merged, so staff cannot edit this yet. These are OGSERC's own published details, not invented content. This widens the D-028 exception only for these values. Step 4's seed must move them into the CMS, so the exception still ends at launch.
 
-**Links as supplied, corrected:** LinkedIn was an admin-only URL (`/admin/feed/following/`) and now points to the public company page. TikTok had no `https://`. A tracking parameter was removed from Instagram. The Facebook link is a share link that redirects to the page. Swap in the page's own address when OGSERC has it.
+**Links as supplied, corrected:** the owner replaced the first LinkedIn link (admin-only) and Facebook link (a share link) with the accounts' own addresses. The Facebook address loses its redirect parameters and uses `www` instead of `web`. TikTok had no `https://`. A tracking parameter was removed from Instagram.
 
 **Tests:** the header-and-footer link test fetches only the site's own links and checks email, phone and social links by their form, so it never depends on another site being up.
