@@ -28,6 +28,18 @@ const paths = {
     <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-2.5-11.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14m0 3v.01" />
   ),
   megaphone: <path d="M3 10v4h3l8 4V6L6 10H3Zm14-1a4 4 0 0 1 0 6M7 14l1 6h3l-1-5" />,
+  // Social networks, outline versions of each brand mark in the same stroke style (D-057).
+  linkedin: (
+    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6ZM2 9h4v12H2zM4 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z" />
+  ),
+  facebook: <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3V2Z" />,
+  instagram: (
+    <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm5 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm5.5-1.5h.01" />
+  ),
+  x: <path d="M4 4l11.7 16H20L8.3 4H4Zm0 16 6.8-6.8m2.4-2.4L20 4" />,
+  tiktok: (
+    <path d="M21 8v4a10 10 0 0 1-5-2v4.5a6.5 6.5 0 1 1-8-6.3v4.3a2.5 2.5 0 1 0 4 2V3h4a6 6 0 0 0 5 5Z" />
+  ),
 } as const
 
 export type IconName = keyof typeof paths

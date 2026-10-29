@@ -6,6 +6,9 @@
  * collections exist. Every string here is a clearly marked placeholder. Nothing here is real
  * regulatory content. Build step 4 replaces this file with Payload CMS queries and the seed
  * script (FR-CMS-08). It must not exist at launch (docs/RUNBOOK.md launch checklist).
+ *
+ * Exception within the exception: `contactDetails`, `footer` and `socialLinks` hold real details
+ * supplied by OGSERC (2026-10-29, D-057). The step 4 seed must carry them into the CMS.
  */
 
 import { PENDING_PATH, hrefFor, routes } from '@/lib/navigation'
@@ -109,13 +112,33 @@ export const events: EventItem[] = [1, 2, 3].map((n) => ({
 }))
 
 export const contactDetails = {
-  addressLines: ['[Sample office address, OGSERC to supply]', 'Ogun State, Nigeria'],
-  phone: '[Sample phone number, OGSERC to supply]',
-  email: '[Sample email address, OGSERC to supply]',
-  mapNote: '[Map of the office location, added once OGSERC confirms the address]',
+  addressLines: [
+    'Floors 5 & 6, OPIC Towers',
+    'Central Business District, Oke-Ilewo',
+    'Abeokuta, Ogun State',
+  ],
+  phone: '+234 813 772 0058',
+  email: 'info@ogserc.org.ng',
+  mapNote: '[Map of the office location, to be added]',
 }
 
+/** The phone number as a tel: link (digits and the leading +, no spaces). */
+export const phoneHref = `tel:${contactDetails.phone.replace(/[^+\d]/g, '')}`
+
 export const footer = {
-  summary: "[Sample summary of the Commission's role, OGSERC to supply]",
-  social: '[Social media accounts, OGSERC to supply]',
+  summary: "Driving excellence in Ogun State's power sector through transparent oversight and robust regulation.",
 }
+
+export type SocialLink = {
+  network: 'linkedin' | 'facebook' | 'instagram' | 'x' | 'tiktok'
+  label: string
+  href: string
+}
+
+export const socialLinks: SocialLink[] = [
+  { network: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/company/146906161/' },
+  { network: 'facebook', label: 'Facebook', href: 'https://www.facebook.com/share/1CD7MkwJJj/' },
+  { network: 'instagram', label: 'Instagram', href: 'https://www.instagram.com/official_ogserc/' },
+  { network: 'x', label: 'X', href: 'https://x.com/Ogserc_Official' },
+  { network: 'tiktok', label: 'TikTok', href: 'https://www.tiktok.com/@ogserc01' },
+]

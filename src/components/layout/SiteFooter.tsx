@@ -1,11 +1,13 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
 
 import { Container } from '@/components/ui/Container'
 import { Icon } from '@/components/ui/Icon'
 import { footerQuickLinks, legalLinks } from '@/lib/navigation'
-import { contactDetails, footer } from '@/lib/placeholder-content'
+import { contactDetails, footer, phoneHref, socialLinks } from '@/lib/placeholder-content'
 
+import wordmark from '../../../public/brand/ogserc-wordmark.png'
 import './footer-grid.css'
 
 const footerLink = 'underline-offset-4 hover:underline'
@@ -25,12 +27,30 @@ export function SiteFooter() {
       <FooterPattern />
       <Container className="grid gap-10 py-12 md:grid-cols-3">
         <div>
-          <p className="text-lg font-bold text-white">
+          {/* The green wordmark sits on a white panel: on the dark green it would barely show. */}
+          <div className="inline-block rounded-md bg-white px-4 py-3">
+            <Image src={wordmark} alt="OGSERC" sizes="142px" className="h-8 w-auto" />
+          </div>
+          <p className="mt-4 text-lg font-bold text-white">
             Ogun State Electricity Regulatory Commission
           </p>
           <p className="mt-3">{footer.summary}</p>
-          <p className="mt-6 font-semibold text-white">Follow us</p>
-          <p className="mt-1">{footer.social}</p>
+          <h2 id="footer-social" className="mt-6 font-semibold text-white">
+            Follow us
+          </h2>
+          <ul aria-labelledby="footer-social" className="mt-2 flex flex-wrap gap-2">
+            {socialLinks.map((link) => (
+              <li key={link.network}>
+                <a
+                  href={link.href}
+                  aria-label={`OGSERC on ${link.label}`}
+                  className="flex size-11 items-center justify-center rounded-full bg-green-700 text-white hover:bg-green-500"
+                >
+                  <Icon name={link.network} className="size-5" />
+                </a>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <nav aria-labelledby="footer-quick-links">
@@ -66,11 +86,15 @@ export function SiteFooter() {
             </p>
             <p className="flex gap-3">
               <Icon name="mail" className="mt-0.5 size-5 shrink-0 text-gold-400" />
-              <span>{contactDetails.email}</span>
+              <a href={`mailto:${contactDetails.email}`} className={footerLink}>
+                {contactDetails.email}
+              </a>
             </p>
             <p className="flex gap-3">
               <Icon name="phone" className="mt-0.5 size-5 shrink-0 text-gold-400" />
-              <span>{contactDetails.phone}</span>
+              <a href={phoneHref} className={footerLink}>
+                {contactDetails.phone}
+              </a>
             </p>
           </address>
         </div>

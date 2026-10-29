@@ -686,3 +686,13 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Checked:** `scripts/block-sharp-binaries.mjs` makes every sharp binary fail to load, as on the VPS. With it, a standalone build without the setting logs the VPS's error; with `IMAGE_PROCESSING=off` the build never mentions sharp, and the standalone server serves the homepage and every image without the optimiser. CI repeats this in the "Builds and serves without sharp" job.
 
 **Undo when the CPU is fixed** (RUNBOOK Section 11): check `grep -cw sse4_2 /proc/cpuinfo` is above 0, remove `IMAGE_PROCESSING=off` from the VPS's `.env`, redeploy. Then remove this setting, its CI job and the helper, and decide on D-055's package (`@img/sharp-wasm32`): it helps only on CPUs with SSE4.1 but without x86-64-v2, which are rare, so removing it is likely.
+
+## D-057 Real contact details and social links in the footer before the CMS exists (2026-10-29)
+
+**Decision:** The footer summary, office address, phone, email and five social accounts (LinkedIn, Facebook, Instagram, X, TikTok) supplied by the owner replace their placeholders in `src/lib/placeholder-content.ts`. Email and phone are `mailto:` and `tel:` links in the footer and the homepage contact section. The footer shows the OGSERC wordmark on a white panel, because the green wordmark barely shows on the darkest-green footer. The social icons are outline marks added to `Icon.tsx` in its 24px, 2px-stroke style (shapes follow the common Lucide and Tabler outlines), so no icon library is added. Social links open in the same tab.
+
+**Why:** The site is live as a preview (D-054) and `/admin` stays closed until Step 3 is merged, so staff cannot edit this yet. These are OGSERC's own published details, not invented content. This widens the D-028 exception only for these values. Step 4's seed must move them into the CMS, so the exception still ends at launch.
+
+**Links as supplied, corrected:** LinkedIn was an admin-only URL (`/admin/feed/following/`) and now points to the public company page. TikTok had no `https://`. A tracking parameter was removed from Instagram. The Facebook link is a share link that redirects to the page. Swap in the page's own address when OGSERC has it.
+
+**Tests:** the header-and-footer link test fetches only the site's own links and checks email, phone and social links by their form, so it never depends on another site being up.

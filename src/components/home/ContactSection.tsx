@@ -5,7 +5,7 @@ import { Container } from '@/components/ui/Container'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { hrefFor, routes } from '@/lib/navigation'
-import { contactDetails } from '@/lib/placeholder-content'
+import { contactDetails, phoneHref } from '@/lib/placeholder-content'
 
 function ContactRow({
   icon,
@@ -45,10 +45,17 @@ export function ContactSection() {
               ))}
             </ContactRow>
             <ContactRow icon="phone" label="Phone">
-              {contactDetails.phone}
+              <a href={phoneHref} className="text-green-700 underline underline-offset-4">
+                {contactDetails.phone}
+              </a>
             </ContactRow>
             <ContactRow icon="mail" label="Email">
-              {contactDetails.email}
+              <a
+                href={`mailto:${contactDetails.email}`}
+                className="text-green-700 underline underline-offset-4"
+              >
+                {contactDetails.email}
+              </a>
             </ContactRow>
           </ul>
           <ButtonLink href={hrefFor(routes.contact)} variant="secondary" className="mt-8">
