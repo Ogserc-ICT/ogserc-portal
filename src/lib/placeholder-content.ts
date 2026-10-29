@@ -119,7 +119,13 @@ export const contactDetails = {
   ],
   phone: '+234 813 772 0058',
   email: 'info@ogserc.org.ng',
-  mapNote: '[Map of the office location, to be added]',
+  // OGSERC's Google Maps link (OPIC Tower, 7.1344754, 3.3396073) and its embed address (D-058).
+  map: {
+    place: 'OGSERC head office, OPIC Towers, Abeokuta',
+    linkUrl: 'https://maps.app.goo.gl/CxErwNu1aMirsPyS6',
+    embedUrl:
+      'https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d1000!2d3.3396073!3d7.1344754!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x103a4b87fcddfee9%3A0x5d02fa78ed7c2221!2sOpic%20Tower!5e0!3m2!1sen!2sng!4v1',
+  },
 }
 
 /** The phone number as a tel: link (digits and the leading +, no spaces). */

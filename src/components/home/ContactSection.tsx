@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { ButtonLink } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
 import { Icon, type IconName } from '@/components/ui/Icon'
+import { OfficeMap } from '@/components/ui/OfficeMap'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { hrefFor, routes } from '@/lib/navigation'
 import { contactDetails, phoneHref } from '@/lib/placeholder-content'
@@ -29,7 +30,7 @@ function ContactRow({
   )
 }
 
-/** FR-WEB-02 contact: office, phone, email, map. The map is added once the address is confirmed. */
+/** FR-WEB-02 contact: office, phone, email, map. */
 export function ContactSection() {
   return (
     <section data-reveal aria-labelledby="contact-heading" className="bg-green-50 py-12 sm:py-16">
@@ -63,12 +64,7 @@ export function ContactSection() {
             <Icon name="arrowRight" className="size-5" />
           </ButtonLink>
         </div>
-        <div className="flex aspect-video items-center justify-center rounded-lg border-2 border-dashed border-line-strong bg-white p-6 text-center text-ink-muted lg:aspect-auto">
-          <p className="flex flex-col items-center gap-2">
-            <Icon name="mapPin" className="size-8 text-green-700" />
-            {contactDetails.mapNote}
-          </p>
-        </div>
+        <OfficeMap {...contactDetails.map} className="min-h-72 lg:min-h-0" />
       </Container>
     </section>
   )

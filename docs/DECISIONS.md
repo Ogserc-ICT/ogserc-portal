@@ -698,3 +698,13 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Hero and favicon (same day):** slide 1's headline is OGSERC's tagline "Electricity for all in Ogun State", and its button reads "Learn more", with "about OGSERC" added for screen readers (WCAG 2.4.4), pointing to About Us (the "being prepared" page until About is built). The headlines on slides 2 and 3 were drafted for the owner to match their buttons. The introduction on slide 1 is still a placeholder. The favicon (`src/app/icon.png`) and home-screen icon (`src/app/apple-icon.png`) are the logo's "O" with the Ogun State map, cut from `public/brand/ogserc-logo.png`. At tab size the full wordmark would be unreadable. They are static files, so they need no image processing on the VPS (D-056).
 
 **Tests:** the header-and-footer link test fetches only the site's own links and checks email, phone and social links by their form, so it never depends on another site being up.
+
+## D-058 The office map loads only when the visitor asks (2026-10-29)
+
+**Decision:** The office map (homepage contact section, and the contact page when it is built) is a panel with "Show map" and "Open in Google Maps". Google's embedded map (`www.google.com/maps/embed`, no API key) loads only after "Show map" is pressed, and focus then moves to it. Without JavaScript only the link shows. The link is OGSERC's own Google Maps link. The embed address uses the place it resolves to (OPIC Tower, 7.1344754, 3.3396073). Both are in `placeholder-content.ts` with the other contact details (D-057). Chosen by the owner over an always-loaded map or a link only.
+
+**Why:** an always-loaded Google map adds roughly 1 MB on mobile data and sets Google cookies on every visit (which would need a cookie notice, FR-WEB-06). Loading on request keeps pages light (NFR performance), and nothing goes to Google unless the visitor chooses. No library is needed. The component is a small client component in `src/components/ui/OfficeMap.tsx`.
+
+**Later:** the strict CSP (build step 12, D-011) must allow `frame-src https://www.google.com`. The privacy notice should say that showing the map loads content from Google. If OGSERC prefers the embed address from Google Maps' "Share > Embed a map", replace `embedUrl` only.
+
+**Tests:** `tests/e2e/office-map.spec.ts` checks that no request goes to Google before the click (Google is never reached from tests; the embed is answered locally), that the map appears and takes focus after it, and that only the link shows without JavaScript.
