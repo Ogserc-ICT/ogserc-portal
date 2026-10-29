@@ -1,8 +1,36 @@
 # Project status
 
-Updated 2026-10-29. Branch `feat/step-3-users-roles`, draft PR #16 (stays a draft), plan `docs/step-3-plan.md`.
-Steps 1, 2, 2b merged. Step 3 plan commits 1 and 2 done; commit 3 (password policy) in progress. The site runs on OGSERC's VPS
-as a closed preview of `main` (D-054). Dependabot PRs (Payload group, minor-and-patch group) are open against `main`, untouched.
+Updated 2026-10-29 (evening). Two branches are in progress:
+- **`content/live-content-updates`** (from `main`, **not pushed yet**): a batch of real OGSERC content for the live preview. Deploy it **before 2 November 2026**, when Order OGSERC/ORD/2026/001 takes effect. Paragraph 27 of the Order requires it to be on the website.
+- **`feat/step-3-users-roles`** (this file's branch): draft PR #16, plan `docs/step-3-plan.md`. Steps 1, 2 and 2b are merged. Step 3 plan commits 1 and 2 are done; commit 3 (password policy) is in progress, untouched this evening.
+
+The site runs on OGSERC's VPS as a closed preview of `main` (D-054). The Dependabot PRs against `main` are still untouched.
+
+## Done 2026-10-29 on `content/live-content-updates` (lint, typecheck, build and tests pass locally; CI not yet run)
+| Commit | What |
+|---|---|
+| `04cc25c`, `9cbf668` | Footer: summary, wordmark, address, email and phone links, five social accounts (D-057) |
+| `06cc946` | Favicon and home-screen icon from the logo's "O" |
+| `4755c4f`, `857417a` | Hero: tagline "Electricity for all in Ogun State", Learn more → About, slide 2 and 3 headlines, introduction |
+| `d00b85c` | Office map, loaded from Google only on "Show map" (D-058) |
+| `91a95ca`, `d7b5ba6` | `/contact`: office, departments (`ccu@`, `registration@`, `info@`), hours 8:00am to 5:00pm, form with server validation and invisible spam checks. **No email is sent yet**: the form offers a `mailto:` link (D-059) |
+| `3f16e83` | `incoming/` git-ignored (and Docker-ignored): owner hand-over folder; it holds the Order's scan and Word file, never committed |
+| `07978c2`, `adfd5fe` | Orders & Directives listing and the page for Order OGSERC/ORD/2026/001: signed copy as a 2.5 MB PDF (14.3 MB original kept out of git), full text from the Word file, desktop-only preview (D-060) |
+| `5a75215` | About: "Our Mission" becomes **Vision, Mission & Values**, one page `/about/mission` (D-061) |
+
+Notes: the full local run passed 190 tests. The only failure was the `/admin` smoke test, from dev-server load; it passes alone. The homepage's JavaScript went from 186.0 KB to 186.5 KB gzipped. D-057 to D-061 are on that branch.
+
+## Next steps
+1. **Owner:** push `content/live-content-updates`, open its PR, merge when CI is green, then on the server as `deploy`:
+   `cd /opt/ogserc && git pull --ff-only && docker compose -f docker-compose.prod.yml up -d --build`. Then check from outside: `/contact`, both Orders pages, `/about/mission`, `/icon.png`, and the PDF (`application/pdf`).
+2. Merge `main` into this branch (expect conflicts only in `docs/DECISIONS.md` and `.gitignore`: keep both sides). Then continue Step 3 commit 3 (below).
+
+## Open owner and OGSERC items from the content batch
+- How the contact form sends email: OGSERC's Microsoft 365 (SMTP AUTH on one mailbox) or a sending service. Rate limiting, a configurable inbox and SPF/DKIM/DMARC come with it (D-059).
+- OGSERC to confirm: the slide 2 and 3 headlines, the contact page introduction and department descriptions, and that the office is closed at weekends.
+- Check the desktop PDF preview in a real browser (the test browser has no PDF viewer).
+- LinkedIn is a personal profile (`/in/`); switch it if OGSERC creates a company page.
+- The sitemap wording change (D-061) needs OGSERC's written confirmation at sign-off.
 
 ## Done 2026-10-28 and 29: first deploy (on `main`)
 | Commit | What | CI (owner's report) |
@@ -20,7 +48,7 @@ Firewall: ssh, http, https, 443/udp. Automatic security updates. Backups nightly
 Email stays on Microsoft 365 (only the `A` record points at the VPS). Deploy: merge to `main` with CI green, then
 `ssh deploy@102.203.117.9 "cd /opt/ogserc && git pull --ff-only && docker compose -f docker-compose.prod.yml up -d --build"`.
 
-## Done 2026-10-29 on this branch
+## Done 2026-10-29 on `feat/step-3-users-roles`
 | Commit | What | CI |
 |---|---|---|
 | `0e2d4ab` | Password policy on reset-password (`beforeOperation` hook) and `tests/support/password-probe.ts`: **work in progress, no test calls them yet** | not yet run |
