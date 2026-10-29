@@ -157,3 +157,36 @@ export const socialLinks: SocialLink[] = [
   { network: 'x', label: 'X', href: 'https://x.com/Ogserc_Official' },
   { network: 'tiktok', label: 'TikTok', href: 'https://www.tiktok.com/@ogserc01' },
 ]
+
+/** Contact page (FR-CNT-01). Emails and hours from OGSERC; descriptions drafted (D-059). */
+export const contactPage = {
+  introduction:
+    'Get in touch with the Commission with a question, a complaint or feedback. We are here to help consumers, electricity companies, investors and the public.',
+  departments: [
+    {
+      name: 'Consumer complaints',
+      email: 'ccu@ogserc.org.ng',
+      description:
+        'Billing disputes, disconnections, metering and other complaints about your electricity service.',
+    },
+    {
+      name: 'General enquiries',
+      email: contactDetails.email,
+      description: 'Questions about the Commission, licensing and regulation.',
+    },
+  ],
+  officeHours: [
+    { days: 'Monday to Friday', hours: '8:30am to 5:00pm' },
+    { days: 'Saturday, Sunday and public holidays', hours: 'Closed' },
+  ],
+}
+
+/** Contact form enquiry types, agreed with the owner (D-059). */
+export const enquiryTypes = [
+  'General enquiry',
+  'Consumer complaint',
+  'Licensing',
+  'Tariffs and energy caps',
+  'Media',
+  'Other',
+]

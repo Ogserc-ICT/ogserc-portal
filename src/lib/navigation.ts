@@ -24,7 +24,7 @@ const resolve = (link: SiteLink): ResolvedLink => ({ label: link.label, href: hr
 
 export const routes = {
   about: pending('About Us', '/about'),
-  contact: pending('Contact Us', '/contact'),
+  contact: { label: 'Contact Us', path: '/contact', ready: true },
   licences: pending('Licences', '/licences'),
   faqs: pending('FAQs', '/faqs'),
   search: pending('Search', '/search'),

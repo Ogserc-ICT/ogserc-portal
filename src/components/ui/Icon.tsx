@@ -28,6 +28,8 @@ const paths = {
     <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-2.5-11.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14m0 3v.01" />
   ),
   megaphone: <path d="M3 10v4h3l8 4V6L6 10H3Zm14-1a4 4 0 0 1 0 6M7 14l1 6h3l-1-5" />,
+  send: <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z" />,
+  clock: <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v4l3 2" />,
   // Social networks, outline versions of each brand mark in the same stroke style (D-057).
   linkedin: (
     <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6ZM2 9h4v12H2zM4 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z" />
