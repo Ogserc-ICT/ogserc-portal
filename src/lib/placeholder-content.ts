@@ -195,3 +195,18 @@ export const enquiryTypes = [
   'Media',
   'Other',
 ]
+
+/** Vision, mission and values (PRIDE), as supplied by OGSERC on 2026-10-29 (D-061). */
+export const visionMissionValues = {
+  vision:
+    'A reliable, investable and fair electricity market that powers Ogun State’s homes and industries around the clock.',
+  mission:
+    'To regulate the Ogun State Electricity Market transparently and predictably, licensing capable operators, setting cost-reflective tariffs, enforcing service standards and protecting consumers.',
+  values: [
+    { name: 'Predictability', text: 'Rules published in advance, decisions consistent with them.' },
+    { name: 'Responsiveness', text: 'Consumers and investors get answers within set timelines.' },
+    { name: 'Integrity', text: 'Independent, conflict-free decision-making.' },
+    { name: 'Data', text: 'Decisions grounded in measured performance, not assertion.' },
+    { name: 'Excellence', text: 'A professional workforce held to clear standards.' },
+  ],
+}

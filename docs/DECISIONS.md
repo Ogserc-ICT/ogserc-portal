@@ -745,3 +745,11 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Found in review:** at 360px both pages first scrolled sideways (about 1,400px wide). The hidden screen-reader count in each category pill is positioned absolutely; with no positioned ancestor it escaped the scrolling row. The grid column also grew to fit the row. Fixed with `relative` on the links and `min-w-0` on the columns. A test now checks that neither page scrolls sideways at 360px.
 
 **Later:** the strict CSP (step 12) needs `frame-src 'self'` for the preview. Site search (step 10) should index the full text, which is why the text is kept as data, not only in the PDF.
+
+## D-061 "Our Mission" becomes "Vision, Mission & Values", one page (2026-10-29)
+
+**Decision:** The About OGSERC menu item "Our Mission" (SRS Section 4) is renamed **Vision, Mission & Values** and opens one page at `/about/mission`. The page shows OGSERC's vision, mission and five values (PRIDE: Predictability, Responsiveness, Integrity, Data, Excellence), with anchors `#vision`, `#mission` and `#values`. The owner supplied the wording, and it is used as given, except that each value's description starts with a capital because it stands on its own. The menu keeps four items. The content sits in `placeholder-content.ts` with the other OGSERC-supplied details (D-057), for the step 4 seed.
+
+**Why:** the owner first suggested adding "Our Vision" beside "Our Mission", with both opening the same page. That would put two menu links to one page, which can look like a mistake, and screen-reader users hear two different link names for the same place. One item named for everything on the page avoids both. The three statements are short and read best together.
+
+**Sitemap change note (SRS 2.5):** this changes the wording of the approved Section 4 sitemap; no page was added or removed. OGSERC to confirm in writing with the other sitemap items at sign-off.

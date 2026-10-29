@@ -24,6 +24,8 @@ const resolve = (link: SiteLink): ResolvedLink => ({ label: link.label, href: hr
 
 export const routes = {
   about: pending('About Us', '/about'),
+  // SRS Section 4's "Our Mission", renamed with the owner's agreement (D-061).
+  visionMissionValues: { label: 'Vision, Mission & Values', path: '/about/mission', ready: true },
   contact: { label: 'Contact Us', path: '/contact', ready: true },
   licences: pending('Licences', '/licences'),
   faqs: pending('FAQs', '/faqs'),
@@ -50,7 +52,7 @@ const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
     links: [
       pending('About Us', '/about'),
       pending('Our History', '/about/history'),
-      pending('Our Mission', '/about/mission'),
+      routes.visionMissionValues,
       pending("OGSERC's Structure", '/about/structure'),
     ],
   },
