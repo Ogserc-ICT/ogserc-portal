@@ -32,6 +32,11 @@ export const routes = {
   userProfile: pending('User Profile', '/user-profile'),
   regulatoryInstruments: pending('Regulatory Instruments', '/regulatory-instruments'),
   energyCaps: pending('Energy Caps', '/regulatory-instruments/energy-caps'),
+  ordersAndDirectives: {
+    label: 'Orders & Directives',
+    path: '/regulatory-instruments/orders-and-directives',
+    ready: true,
+  },
   news: pending('News', '/media-center/news'),
   tenders: pending('Tenders', '/media-center/tenders'),
   events: pending('Events', '/media-center/events'),
@@ -59,7 +64,7 @@ const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
       pending('Forms', '/regulatory-instruments/forms'),
       pending('Consultation', '/regulatory-instruments/consultation'),
       pending('Licences', '/regulatory-instruments/licences'),
-      pending('Orders & Directives', '/regulatory-instruments/orders-and-directives'),
+      routes.ordersAndDirectives,
       pending('Codes', '/regulatory-instruments/codes'),
       pending('Manuals', '/regulatory-instruments/manuals'),
       pending('Market Documents', '/regulatory-instruments/market-documents'),
@@ -99,6 +104,13 @@ const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
     ],
   },
 ]
+
+/** The Regulatory Instruments categories, in menu order, for the document pages' sidebar. */
+export const instrumentCategories = (): (ResolvedLink & { path: string })[] => {
+  const found = menuGroups.find((g) => g.id === 'regulatory-instruments')
+  if (!found) throw new Error('Unknown menu group: regulatory-instruments')
+  return found.links.map((link) => ({ ...resolve(link), path: link.path }))
+}
 
 const group = (id: string): MenuEntry => {
   const found = menuGroups.find((g) => g.id === id)

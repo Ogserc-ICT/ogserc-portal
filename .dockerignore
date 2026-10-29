@@ -15,3 +15,6 @@ docker-compose.yml
 .dockerignore
 docker-compose.prod.yml
 deploy
+
+# Files handed over for checking (git-ignored too)
+incoming

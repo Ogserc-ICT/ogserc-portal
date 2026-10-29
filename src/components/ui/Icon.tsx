@@ -28,6 +28,11 @@ const paths = {
     <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-2.5-11.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14m0 3v.01" />
   ),
   megaphone: <path d="M3 10v4h3l8 4V6L6 10H3Zm14-1a4 4 0 0 1 0 6M7 14l1 6h3l-1-5" />,
+  download: <path d="M12 4v11m-5-5 5 5 5-5M5 20h14" />,
+  eye: (
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Zm10-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />
+  ),
+  external: <path d="M14 4h6v6m0-6-9 9M18 14v6H4V6h6" />,
   send: <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z" />,
   clock: <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v4l3 2" />,
   // Social networks, outline versions of each brand mark in the same stroke style (D-057).

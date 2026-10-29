@@ -720,3 +720,28 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Sending (owner's choice: decide later):** no email is sent yet. A valid message gets "the online form cannot send messages yet" and an "Email your message" `mailto:` link that carries the subject and message, so nothing typed is lost. Rate limiting is also deferred: there is nothing to limit until the form sends. **Before sending is switched on**, the sending slice must add rate limiting (CLAUDE.md security rules), a configurable inbox in an environment variable (FR-CNT-02), the confirmation message, and the domain's SPF, DKIM and DMARC (launch checklist item 13). The choice is between OGSERC's Microsoft 365 (SMTP AUTH on one mailbox) and a sending service.
 
 **Measured (D-041):** the homepage's JavaScript went from 186.0 KB to 186.5 KB gzipped with the map component (production build). The contact page adds nothing to the homepage.
+
+## D-060 The first Order, published before the Documents collection exists (2026-10-29)
+
+**Decision:** OGSERC's first Order, *Order on the Commencement of Operations of the Commission and the Mandatory Registration of Licensees and Electricity Operators in Ogun State, 2026* (OGSERC/ORD/2026/001), is published at `/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001`. A listing page (`/regulatory-instruments/orders-and-directives`) shows it as a card. Both follow the reference screenshots the owner supplied, with OGSERC's design system. The owner chose this over waiting for Step 3 and the Documents collection (option A). The documents are listed in `src/lib/documents/catalogue.ts`, a temporary exception like D-028. Its fields follow FR-DOC-02, so step 6 can move each entry into the CMS unchanged. Only non-draft documents are ever listed or served.
+
+**The files:**
+- **Signed copy.** OGSERC's scan is 20 pages, 14.3 MB, with no text layer. The site serves a 150 dpi copy built from the same page images (2.5 MB, checked legible, with the title and language set in the PDF properties) at `public/documents/orders-and-directives/ogserc-ord-2026-001.pdf`. The full-resolution scan is not in the repository: it would add 14 MB to git history for good. It can be offered once object storage exists.
+- **Full text.** It comes from OGSERC's Word file. A conversion script turned it into structured blocks (headings, sub-paragraphs, the definitions list, the schedule tables, the signatories) in `src/lib/documents/text-ogserc-ord-2026-001.ts`. The text was compared with the signed scan: dates, every fee in Schedule 3, the filing email and the wording match. The word count of the page text equals the Word file's, apart from the title lines shown in the page header and Word's formatting codes. Two paragraphs split by page breaks in the Word file (8(5) and 18(5)) are joined. The wording must not be edited by hand; corrections come from OGSERC as a new file.
+- **Not committed.** Neither the Word file nor the original scan is committed. Both stay in the git-ignored `incoming/` folder.
+- **Signatures.** The signed copy shows the signatures of the Chairman/CEO and the Secretary, and initials on every page. The owner confirmed OGSERC is content for it to go online, as paragraph 27 of the Order requires publication on the website. The web text lists the signatories' names and roles, not their signatures.
+
+**Page design and how it differs from the reference:**
+- **Status.** Status uses the SRS set (Published, Superseded, Revoked), not "Active".
+- **No download counts.** These would need visitor tracking (FR-WEB-07 allows only privacy-friendly analytics).
+- **Summary.** The summary is paragraph 1 (Citation) of the Order itself, so nothing is written for it. "Questions?" points to `registration@ogserc.org.ng`, the address paragraph 10(2) gives for filings and enquiries.
+- **PDF preview.** It shows only at 1024px and wider (`PdfPreview.tsx`, with Hide and Show): most phone browsers cannot show a PDF in a page, and a phone should not download 2.5 MB unasked. Phones get Open and Download buttons.
+- **Full text.** It has a Contents list and anchors for each Part, paragraph and Schedule (`#paragraph-10`). Its tables scroll sideways on narrow screens inside a focusable region.
+- **Category sidebar.** It lists the eleven SRS Regulatory Instruments categories from `navigation.ts`, with counts. It is a sideways-scrolling row of pills on phones.
+- **Not yet built.** Filters (FR-DOC-04) and related documents wait for more than one document (step 6).
+
+**Shared pieces:** the dark header band (`PageBand`) and white sidebar cards (`Panel`) are now components, also used by the contact page.
+
+**Found in review:** at 360px both pages first scrolled sideways (about 1,400px wide). The hidden screen-reader count in each category pill is positioned absolutely; with no positioned ancestor it escaped the scrolling row. The grid column also grew to fit the row. Fixed with `relative` on the links and `min-w-0` on the columns. A test now checks that neither page scrolls sideways at 360px.
+
+**Later:** the strict CSP (step 12) needs `frame-src 'self'` for the preview. Site search (step 10) should index the full text, which is why the text is kept as data, not only in the PDF.
