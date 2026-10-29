@@ -233,11 +233,18 @@ curl -sI https://ogserc.org.ng | head -n 1                     # HTTP/2 200
 curl -s -o /dev/null -w '%{http_code}\n' https://ogserc.org.ng/admin   # 404 during the preview
 ```
 
-**H. Close password logins** (as root, only after `ssh deploy@SERVER_IP` works with the key). Keep the current session open and test from a second window before closing it.
+**H. Close password logins** (as `deploy` with `sudo`, only after `ssh deploy@SERVER_IP` works with the key). Keep the current session open and test from a second window before closing it.
 ```sh
-sed -i -E 's/^#?PasswordAuthentication .*/PasswordAuthentication no/; s/^#?PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config
-sshd -t && systemctl reload sshd
+sudo sed -i -E 's/^#?PasswordAuthentication .*/PasswordAuthentication no/; s/^#?PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config
+sudo sshd -t && sudo systemctl restart sshd      # restart: on OGSERC's VPS a reload did not apply it
+sudo sshd -T | grep -Ei "^(passwordauthentication|permitrootlogin)"   # both "no"
 ```
+`sshd -T` reads the files, not the running server, so check from your own computer as well. A login that offers only a password must be refused without `password` in the list of methods:
+```sh
+ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no deploy@SERVER_IP
+# expected: Permission denied (publickey,gssapi-keyex,gssapi-with-mic).
+```
+Existing sessions stay open through the restart.
 
 **Updating** (as `deploy`). Deploy only what is merged to `main` with CI green.
 ```sh
