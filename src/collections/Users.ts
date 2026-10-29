@@ -8,7 +8,7 @@ import {
 
 import { fieldCan, isAdmin, isAdminNotSelf, isAdminOrSelf, isStaff, userCan } from '../access'
 import { ROLES } from '../access/roles'
-import { passwordPolicyOnSave, refuseBulkPasswordChange } from '../lib/auth/enforce-password-policy'
+import { passwordPolicyOnReset, passwordPolicyOnSave, refuseBulkPasswordChange } from '../lib/auth/enforce-password-policy'
 import { genericLoginError, LOCK_MINUTES, MAX_LOGIN_ATTEMPTS } from '../lib/auth/generic-login-error'
 import { protectLastAdministrator } from '../lib/auth/last-administrator'
 import { endSessionsOnRoleChange } from '../lib/auth/revoke-sessions'
@@ -88,7 +88,7 @@ export const Users: CollectionConfig = {
   hooks: {
     // The password policy first, so it never runs while the first-user lock is held.
     beforeValidate: [passwordPolicyOnSave, firstUserIsAdministrator],
-    beforeOperation: [refuseBulkPasswordChange, limitSessionAge, protectLastAdministrator],
+    beforeOperation: [refuseBulkPasswordChange, passwordPolicyOnReset, limitSessionAge, protectLastAdministrator],
     beforeDelete: [refuseSelfDelete],
     afterChange: [endSessionsOnRoleChange],
     afterError: [genericLoginError],

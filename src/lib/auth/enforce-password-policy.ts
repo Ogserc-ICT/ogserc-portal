@@ -81,3 +81,29 @@ export const refuseBulkPasswordChange: CollectionBeforeOperationHook = ({ args, 
   }
   return args
 }
+
+/**
+ * beforeOperation on the staff collection, for reset-password (REST and the Local API's
+ * resetPassword). Payload runs it with the new password in `args.data`, before it hashes anything
+ * (auth/operations/resetPassword.js); its later beforeValidate call comes after the hash is made.
+ *
+ * The account is found with the same query Payload uses next, in the same transaction. With no
+ * valid token this hook does nothing, so Payload's own 403 follows and its reply never depends on
+ * the password. A refusal (400) rolls the transaction back, so the token still works for a retry.
+ */
+export const passwordPolicyOnReset: CollectionBeforeOperationHook = async ({ args, collection, operation, req }) => {
+  if (operation !== 'resetPassword') return args
+  const data = (args as { data?: { token?: unknown; password?: unknown } }).data
+  if (!data || data.token === undefined) return args
+  const user = await req.payload.db.findOne<{ id: number | string; email?: unknown }>({
+    collection: collection.slug,
+    req,
+    where: {
+      resetPasswordExpiration: { greater_than: new Date().toISOString() },
+      resetPasswordToken: { equals: data.token },
+    },
+  })
+  if (!user) return args
+  await enforcePasswordPolicy({ password: data.password, emails: [user.email], collection: collection.slug, req })
+  return args
+}
