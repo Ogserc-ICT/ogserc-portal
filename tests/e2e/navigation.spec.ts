@@ -156,9 +156,29 @@ test.describe('Utility bar, footer, and placeholder pages', () => {
     const hrefs = await page
       .locator('header a[href], footer a[href]')
       .evaluateAll((links) => links.map((a) => a.getAttribute('href') ?? ''))
+    // Site links are fetched; email, phone and social links are only checked for their form,
+    // so the test never depends on another site being reachable.
     for (const href of new Set(hrefs)) {
+      if (/^(mailto:|tel:\+\d+$|https:\/\/)/.test(href)) continue
       const response = await request.get(href)
       expect(response.status(), href).toBe(200)
+    }
+  })
+
+  test('the footer links to email, phone and every social account', async ({ page }) => {
+    await page.goto('/')
+    const footer = page.getByRole('contentinfo')
+    await expect(footer.getByRole('link', { name: 'info@ogserc.org.ng' })).toHaveAttribute(
+      'href',
+      'mailto:info@ogserc.org.ng',
+    )
+    await expect(footer.getByRole('link', { name: '+234 813 772 0058' })).toHaveAttribute(
+      'href',
+      'tel:+2348137720058',
+    )
+    for (const network of ['LinkedIn', 'Facebook', 'Instagram', 'X', 'TikTok']) {
+      const link = footer.getByRole('link', { name: `OGSERC on ${network}`, exact: true })
+      await expect(link).toHaveAttribute('href', /^https:\/\//)
     }
   })
 

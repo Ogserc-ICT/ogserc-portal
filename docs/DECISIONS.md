@@ -686,3 +686,70 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Checked:** `scripts/block-sharp-binaries.mjs` makes every sharp binary fail to load, as on the VPS. With it, a standalone build without the setting logs the VPS's error; with `IMAGE_PROCESSING=off` the build never mentions sharp, and the standalone server serves the homepage and every image without the optimiser. CI repeats this in the "Builds and serves without sharp" job.
 
 **Undo when the CPU is fixed** (RUNBOOK Section 11): check `grep -cw sse4_2 /proc/cpuinfo` is above 0, remove `IMAGE_PROCESSING=off` from the VPS's `.env`, redeploy. Then remove this setting, its CI job and the helper, and decide on D-055's package (`@img/sharp-wasm32`): it helps only on CPUs with SSE4.1 but without x86-64-v2, which are rare, so removing it is likely.
+
+## D-057 Real contact details and social links in the footer before the CMS exists (2026-10-29)
+
+**Decision:** The footer summary, office address, phone, email and five social accounts (LinkedIn, Facebook, Instagram, X, TikTok) supplied by the owner replace their placeholders in `src/lib/placeholder-content.ts`. Email and phone are `mailto:` and `tel:` links in the footer and the homepage contact section. The footer shows the OGSERC wordmark on a white panel, because the green wordmark barely shows on the darkest-green footer. The social icons are outline marks added to `Icon.tsx` in its 24px, 2px-stroke style (shapes follow the common Lucide and Tabler outlines), so no icon library is added. Social links open in the same tab.
+
+**Why:** The site is live as a preview (D-054) and `/admin` stays closed until Step 3 is merged, so staff cannot edit this yet. These are OGSERC's own published details, not invented content. This widens the D-028 exception only for these values. Step 4's seed must move them into the CMS, so the exception still ends at launch.
+
+**Links as supplied, corrected:** the owner replaced the first LinkedIn link (admin-only) and Facebook link (a share link) with the accounts' own addresses. The Facebook address loses its redirect parameters and uses `www` instead of `web`. TikTok had no `https://`. A tracking parameter was removed from Instagram.
+
+**Hero and favicon (same day):** slide 1's headline is OGSERC's tagline "Electricity for all in Ogun State", and its button reads "Learn more", with "about OGSERC" added for screen readers (WCAG 2.4.4), pointing to About Us (the "being prepared" page until About is built). The headlines on slides 2 and 3 were drafted for the owner to match their buttons. The introduction on slide 1 ("Transparent oversight and robust regulation of Ogun State's power sector.") reuses the words of OGSERC's footer summary. The favicon (`src/app/icon.png`) and home-screen icon (`src/app/apple-icon.png`) are the logo's "O" with the Ogun State map, cut from `public/brand/ogserc-logo.png`. At tab size the full wordmark would be unreadable. They are static files, so they need no image processing on the VPS (D-056).
+
+**Tests:** the header-and-footer link test fetches only the site's own links and checks email, phone and social links by their form, so it never depends on another site being up.
+
+## D-058 The office map loads only when the visitor asks (2026-10-29)
+
+**Decision:** The office map (homepage contact section, and the contact page when it is built) is a panel with "Show map" and "Open in Google Maps". Google's embedded map (`www.google.com/maps/embed`, no API key) loads only after "Show map" is pressed, and focus then moves to it. Without JavaScript only the link shows. The link is OGSERC's own Google Maps link. The embed address uses the place it resolves to (OPIC Tower, 7.1344754, 3.3396073). Both are in `placeholder-content.ts` with the other contact details (D-057). Chosen by the owner over an always-loaded map or a link only.
+
+**Why:** an always-loaded Google map adds roughly 1 MB on mobile data and sets Google cookies on every visit (which would need a cookie notice, FR-WEB-06). Loading on request keeps pages light (NFR performance), and nothing goes to Google unless the visitor chooses. No library is needed. The component is a small client component in `src/components/ui/OfficeMap.tsx`.
+
+**Later:** the strict CSP (build step 12, D-011) must allow `frame-src https://www.google.com`. The privacy notice should say that showing the map loads content from Google. If OGSERC prefers the embed address from Google Maps' "Share > Embed a map", replace `embedUrl` only.
+
+**Tests:** `tests/e2e/office-map.spec.ts` checks that no request goes to Google before the click (Google is never reached from tests; the embed is answered locally), that the map appears and takes focus after it, and that only the link shows without JavaScript.
+
+## D-059 Contact page and enquiry form, before email sending exists (2026-10-29)
+
+**Decision:** `/contact` (SRS 6.12) follows the layout the owner chose from a reference screenshot: a dark green header band ("Get in touch", "Contact OGSERC"), then Head office, Department contacts and Office hours cards beside a "Send a message" form, then the office map (D-058). OGSERC supplied the inbox (`info@ogserc.org.ng`), the consumer complaints address (`ccu@ogserc.org.ng`), the licensing and registration address (`registration@ogserc.org.ng`) and the hours (Monday to Friday, 8:00am to 5:00pm). The introduction and department descriptions were drafted and the owner agreed the enquiry types. Weekends and public holidays are shown as closed. No reply time is promised, because none was given. Content sits in `placeholder-content.ts` with D-057's details, for the step 4 seed.
+
+**Form:** a server action (`src/app/(frontend)/contact/actions.ts`) with `useActionState`, so it works without JavaScript (full page load) and with it (focus moves to the result or to a GOV.UK-style error list). Validation is in `src/lib/contact/enquiry.ts` and runs on the server: name, email and message required, formats for email and phone, lengths, enquiry type from the list. Single-line fields have line breaks collapsed, so nothing typed can add an email header later. The browser's own validation is off (`noValidate`) so every visitor sees the same messages. Nothing typed is logged.
+
+**Spam protection (owner's choice: invisible checks, not Cloudflare Turnstile):** a hidden trap field (a bot that fills it is told "sent" and nothing is kept), and a signed timestamp issued with the page (`src/lib/contact/form-token.ts`, an HMAC with a key derived from `PAYLOAD_SECRET`). A form sent within 3 seconds, after 24 hours, or with a changed token is asked to send again, keeping the message. The page therefore renders per request (`connection()`).
+
+**Sending (owner's choice: decide later):** no email is sent yet. A valid message gets "the online form cannot send messages yet" and an "Email your message" `mailto:` link that carries the subject and message, so nothing typed is lost. Rate limiting is also deferred: there is nothing to limit until the form sends. **Before sending is switched on**, the sending slice must add rate limiting (CLAUDE.md security rules), a configurable inbox in an environment variable (FR-CNT-02), the confirmation message, and the domain's SPF, DKIM and DMARC (launch checklist item 13). The choice is between OGSERC's Microsoft 365 (SMTP AUTH on one mailbox) and a sending service.
+
+**Measured (D-041):** the homepage's JavaScript went from 186.0 KB to 186.5 KB gzipped with the map component (production build). The contact page adds nothing to the homepage.
+
+## D-060 The first Order, published before the Documents collection exists (2026-10-29)
+
+**Decision:** OGSERC's first Order, *Order on the Commencement of Operations of the Commission and the Mandatory Registration of Licensees and Electricity Operators in Ogun State, 2026* (OGSERC/ORD/2026/001), is published at `/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001`. A listing page (`/regulatory-instruments/orders-and-directives`) shows it as a card. Both follow the reference screenshots the owner supplied, with OGSERC's design system. The owner chose this over waiting for Step 3 and the Documents collection (option A). The documents are listed in `src/lib/documents/catalogue.ts`, a temporary exception like D-028. Its fields follow FR-DOC-02, so step 6 can move each entry into the CMS unchanged. Only non-draft documents are ever listed or served.
+
+**The files:**
+- **Signed copy.** OGSERC's scan is 20 pages, 14.3 MB, with no text layer. The site serves a 150 dpi copy built from the same page images (2.5 MB, checked legible, with the title and language set in the PDF properties) at `public/documents/orders-and-directives/ogserc-ord-2026-001.pdf`. The full-resolution scan is not in the repository: it would add 14 MB to git history for good. It can be offered once object storage exists.
+- **Full text.** It comes from OGSERC's Word file. A conversion script turned it into structured blocks (headings, sub-paragraphs, the definitions list, the schedule tables, the signatories) in `src/lib/documents/text-ogserc-ord-2026-001.ts`. The text was compared with the signed scan: dates, every fee in Schedule 3, the filing email and the wording match. The word count of the page text equals the Word file's, apart from the title lines shown in the page header and Word's formatting codes. Two paragraphs split by page breaks in the Word file (8(5) and 18(5)) are joined. The wording must not be edited by hand; corrections come from OGSERC as a new file.
+- **Not committed.** Neither the Word file nor the original scan is committed. Both stay in the git-ignored `incoming/` folder.
+- **Signatures.** The signed copy shows the signatures of the Chairman/CEO and the Secretary, and initials on every page. The owner confirmed OGSERC is content for it to go online, as paragraph 27 of the Order requires publication on the website. The web text lists the signatories' names and roles, not their signatures.
+
+**Page design and how it differs from the reference:**
+- **Status.** Status uses the SRS set (Published, Superseded, Revoked), not "Active".
+- **No download counts.** These would need visitor tracking (FR-WEB-07 allows only privacy-friendly analytics).
+- **Summary.** The summary is paragraph 1 (Citation) of the Order itself, so nothing is written for it. "Questions?" points to `registration@ogserc.org.ng`, the address paragraph 10(2) gives for filings and enquiries.
+- **PDF preview.** It shows only at 1024px and wider (`PdfPreview.tsx`, with Hide and Show): most phone browsers cannot show a PDF in a page, and a phone should not download 2.5 MB unasked. Phones get Open and Download buttons.
+- **Full text.** It has a Contents list and anchors for each Part, paragraph and Schedule (`#paragraph-10`). Its tables scroll sideways on narrow screens inside a focusable region.
+- **Category sidebar.** It lists the eleven SRS Regulatory Instruments categories from `navigation.ts`, with counts. It is a sideways-scrolling row of pills on phones.
+- **Not yet built.** Filters (FR-DOC-04) and related documents wait for more than one document (step 6).
+
+**Shared pieces:** the dark header band (`PageBand`) and white sidebar cards (`Panel`) are now components, also used by the contact page.
+
+**Found in review:** at 360px both pages first scrolled sideways (about 1,400px wide). The hidden screen-reader count in each category pill is positioned absolutely; with no positioned ancestor it escaped the scrolling row. The grid column also grew to fit the row. Fixed with `relative` on the links and `min-w-0` on the columns. A test now checks that neither page scrolls sideways at 360px.
+
+**Later:** the strict CSP (step 12) needs `frame-src 'self'` for the preview. Site search (step 10) should index the full text, which is why the text is kept as data, not only in the PDF.
+
+## D-061 "Our Mission" becomes "Vision, Mission & Values", one page (2026-10-29)
+
+**Decision:** The About OGSERC menu item "Our Mission" (SRS Section 4) is renamed **Vision, Mission & Values** and opens one page at `/about/mission`. The page shows OGSERC's vision, mission and five values (PRIDE: Predictability, Responsiveness, Integrity, Data, Excellence), with anchors `#vision`, `#mission` and `#values`. The owner supplied the wording, and it is used as given, except that each value's description starts with a capital because it stands on its own. The menu keeps four items. The content sits in `placeholder-content.ts` with the other OGSERC-supplied details (D-057), for the step 4 seed.
+
+**Why:** the owner first suggested adding "Our Vision" beside "Our Mission", with both opening the same page. That would put two menu links to one page, which can look like a mistake, and screen-reader users hear two different link names for the same place. One item named for everything on the page avoids both. The three statements are short and read best together.
+
+**Sitemap change note (SRS 2.5):** this changes the wording of the approved Section 4 sitemap; no page was added or removed. OGSERC to confirm in writing with the other sitemap items at sign-off.

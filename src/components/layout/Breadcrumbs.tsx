@@ -3,7 +3,7 @@ import Link from 'next/link'
 type Crumb = { label: string; href?: string }
 
 /** FR-WEB-03 breadcrumbs. The last crumb is the current page and is not a link. */
-export function Breadcrumbs({ items }: { items: Crumb[] }) {
+export function Breadcrumbs({ items, onDark = false }: { items: Crumb[]; onDark?: boolean }) {
   const trail: Crumb[] = [{ label: 'Home', href: '/' }, ...items]
   return (
     <nav aria-label="Breadcrumb" className="text-sm">
@@ -13,16 +13,22 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
           return (
             <li key={`${crumb.label}-${i}`} className="flex items-center gap-2">
               {i > 0 ? (
-                <span aria-hidden="true" className="text-ink-muted">
+                <span aria-hidden="true" className={onDark ? 'text-green-100' : 'text-ink-muted'}>
                   /
                 </span>
               ) : null}
               {isCurrent || !crumb.href ? (
-                <span aria-current={isCurrent ? 'page' : undefined} className="text-ink-muted">
+                <span
+                  aria-current={isCurrent ? 'page' : undefined}
+                  className={onDark ? 'text-green-100' : 'text-ink-muted'}
+                >
                   {crumb.label}
                 </span>
               ) : (
-                <Link href={crumb.href} className="text-green-700 underline underline-offset-4">
+                <Link
+                  href={crumb.href}
+                  className={`${onDark ? 'text-white' : 'text-green-700'} underline underline-offset-4`}
+                >
                   {crumb.label}
                 </Link>
               )}

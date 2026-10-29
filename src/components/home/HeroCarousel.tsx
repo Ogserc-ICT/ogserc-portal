@@ -119,6 +119,9 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
               {slide.text ? <p className="mt-4 text-lg text-green-50">{slide.text}</p> : null}
               <ButtonLink href={slide.action.href} className="mt-8">
                 {slide.action.label}
+                {slide.action.context ? (
+                  <span className="sr-only"> {slide.action.context}</span>
+                ) : null}
                 <Icon name="arrowRight" className="size-5" />
               </ButtonLink>
             </div>

@@ -100,7 +100,7 @@ test.describe('Mobile header and drawer', () => {
 
   test('a link in the drawer navigates and closes it', async ({ page }) => {
     await menuButton(page).click()
-    await drawer(page).getByRole('link', { name: 'Contact Us' }).click()
+    await drawer(page).getByRole('link', { name: 'FAQs' }).click()
     await expect(page).toHaveURL(/\/being-prepared$/)
     await expect(drawer(page)).toBeHidden()
   })
