@@ -695,4 +695,6 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 
 **Links as supplied, corrected:** the owner replaced the first LinkedIn link (admin-only) and Facebook link (a share link) with the accounts' own addresses. The Facebook address loses its redirect parameters and uses `www` instead of `web`. TikTok had no `https://`. A tracking parameter was removed from Instagram.
 
+**Hero and favicon (same day):** slide 1's headline is OGSERC's tagline "Electricity for all in Ogun State", and its button reads "Learn more", with "about OGSERC" added for screen readers (WCAG 2.4.4), pointing to About Us (the "being prepared" page until About is built). The headlines on slides 2 and 3 were drafted for the owner to match their buttons. The introduction on slide 1 is still a placeholder. The favicon (`src/app/icon.png`) and home-screen icon (`src/app/apple-icon.png`) are the logo's "O" with the Ogun State map, cut from `public/brand/ogserc-logo.png`. At tab size the full wordmark would be unreadable. They are static files, so they need no image processing on the VPS (D-056).
+
 **Tests:** the header-and-footer link test fetches only the site's own links and checks email, phone and social links by their form, so it never depends on another site being up.

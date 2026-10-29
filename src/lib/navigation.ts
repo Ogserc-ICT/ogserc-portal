@@ -23,6 +23,7 @@ export const hrefFor = (link: SiteLink): string => (link.ready ? link.path : PEN
 const resolve = (link: SiteLink): ResolvedLink => ({ label: link.label, href: hrefFor(link) })
 
 export const routes = {
+  about: pending('About Us', '/about'),
   contact: pending('Contact Us', '/contact'),
   licences: pending('Licences', '/licences'),
   faqs: pending('FAQs', '/faqs'),

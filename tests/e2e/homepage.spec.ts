@@ -40,9 +40,20 @@ test.describe('Homepage', () => {
     const current = hero.locator('[aria-roledescription="slide"]:not([inert])')
     await expect(current).toHaveCount(1)
     await expect(current.getByRole('heading', { level: 2 })).toHaveText(
-      '[Sample tagline, OGSERC to supply]',
+      'Electricity for all in Ogun State',
     )
     await expect(current.getByRole('link')).toHaveCount(1)
+    await expect(current.getByRole('link')).toHaveAccessibleName('Learn more about OGSERC')
+  })
+
+  test('has the OGSERC favicon and home-screen icon', async ({ page, request }) => {
+    for (const rel of ['icon', 'apple-touch-icon']) {
+      const href = await page.locator(`link[rel="${rel}"]`).first().getAttribute('href')
+      expect(href, rel).toBeTruthy()
+      const response = await request.get(href ?? '')
+      expect(response.status(), rel).toBe(200)
+      expect(response.headers()['content-type'], rel).toBe('image/png')
+    }
   })
 
   test('quick services list the five SRS services', async ({ page }) => {
@@ -59,7 +70,9 @@ test.describe('Homepage', () => {
   })
 
   test('shows only clearly marked placeholder content', async ({ page }) => {
-    await expect(page.getByText('[Sample tagline, OGSERC to supply]')).toBeVisible()
+    await expect(
+      page.getByText('[Sample introduction to the Commission, OGSERC to supply]'),
+    ).toBeVisible()
     await expect(page.getByText(/OGSERC to supply/).first()).toBeVisible()
   })
 

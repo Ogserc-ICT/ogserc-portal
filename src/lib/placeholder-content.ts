@@ -34,39 +34,39 @@ export type Tender = {
 }
 export type EventItem = { id: string; name: string; date: string; venue: string; href: string }
 
+// The tagline is OGSERC's (D-057); the introduction is still to come.
 export const hero = {
-  tagline: '[Sample tagline, OGSERC to supply]',
+  tagline: 'Electricity for all in Ogun State',
   introduction: '[Sample introduction to the Commission, OGSERC to supply]',
-  // Proposed wording for the one primary action. OGSERC to confirm.
-  actionLabel: 'How to make a complaint',
 }
 
 export type HeroSlide = {
   id: string
   headline: string
   text?: string
-  action: { label: string; href: string }
+  /** `context` is read by screen readers only, after the label (WCAG 2.4.4 link purpose). */
+  action: { label: string; context?: string; href: string }
 }
 
 /**
  * Hero carousel slides, in the order of the photographs in src/assets/hero/. Slide 1 carries the
- * tagline and introduction. The action wording on slides 2 and 3 is proposed; OGSERC to confirm.
+ * tagline and introduction. The headlines on slides 2 and 3 were drafted for the owner (D-057).
  */
 export const heroSlides: HeroSlide[] = [
   {
     id: 'welcome',
     headline: hero.tagline,
     text: hero.introduction,
-    action: { label: hero.actionLabel, href: hrefFor(routes.consumerComplaint) },
+    action: { label: 'Learn more', context: 'about OGSERC', href: hrefFor(routes.about) },
   },
   {
     id: 'slide-2',
-    headline: '[Sample headline for slide 2, OGSERC to supply]',
+    headline: 'Know the energy caps for your area',
     action: { label: 'View energy caps', href: hrefFor(routes.energyCaps) },
   },
   {
     id: 'slide-3',
-    headline: '[Sample headline for slide 3, OGSERC to supply]',
+    headline: 'Regulations, orders and codes in one place',
     action: { label: 'Browse regulatory instruments', href: hrefFor(routes.regulatoryInstruments) },
   },
 ]
