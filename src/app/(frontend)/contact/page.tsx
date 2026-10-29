@@ -3,10 +3,11 @@ import { connection } from 'next/server'
 import type { ReactNode } from 'react'
 
 import { ContactForm } from '@/components/contact/ContactForm'
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
+import { PageBand } from '@/components/layout/PageBand'
 import { Container } from '@/components/ui/Container'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { OfficeMap } from '@/components/ui/OfficeMap'
+import { Panel } from '@/components/ui/Panel'
 import { issueFormToken } from '@/lib/contact/form-token'
 import { contactDetails, contactPage, enquiryTypes, phoneHref } from '@/lib/placeholder-content'
 
@@ -17,17 +18,6 @@ export const metadata: Metadata = {
 }
 
 const link = 'text-green-700 underline underline-offset-4'
-
-function Panel({ id, title, children }: { id: string; title: ReactNode; children: ReactNode }) {
-  return (
-    <section aria-labelledby={id} className="rounded-lg border border-line bg-white p-6">
-      <h2 id={id} className="border-b border-line pb-4 text-lg font-bold text-green-900">
-        {title}
-      </h2>
-      <div className="mt-5">{children}</div>
-    </section>
-  )
-}
 
 function ContactRow({
   icon,
@@ -59,19 +49,18 @@ export default async function ContactPage() {
 
   return (
     <>
-      <section aria-labelledby="contact-title" className="on-dark bg-green-900 text-white">
-        <Container className="py-8 sm:py-12 lg:pb-16">
-          <Breadcrumbs items={[{ label: 'Contact us' }]} onDark />
-          <p className="mt-10 flex items-center gap-3 text-sm font-semibold tracking-widest text-gold-400 uppercase">
-            <span aria-hidden="true" className="h-px w-8 bg-gold-400" />
-            Get in touch
-          </p>
-          <h1 id="contact-title" className="mt-3 text-4xl font-bold sm:text-5xl">
+      <PageBand
+        breadcrumbs={[{ label: 'Contact us' }]}
+        eyebrow="Get in touch"
+        titleId="contact-title"
+        title={
+          <>
             Contact <span className="text-gold-400">OGSERC</span>
-          </h1>
-          <p className="mt-4 max-w-2xl text-lg text-green-50">{contactPage.introduction}</p>
-        </Container>
-      </section>
+          </>
+        }
+      >
+        <p className="mt-4 max-w-2xl text-lg text-green-50">{contactPage.introduction}</p>
+      </PageBand>
 
       <div className="bg-green-50 py-12 sm:py-16">
         <Container className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
