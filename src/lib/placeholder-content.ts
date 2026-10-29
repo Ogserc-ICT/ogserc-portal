@@ -34,10 +34,10 @@ export type Tender = {
 }
 export type EventItem = { id: string; name: string; date: string; venue: string; href: string }
 
-// The tagline is OGSERC's (D-057); the introduction is still to come.
+// The tagline is OGSERC's; the introduction follows OGSERC's own footer summary (D-057).
 export const hero = {
   tagline: 'Electricity for all in Ogun State',
-  introduction: '[Sample introduction to the Commission, OGSERC to supply]',
+  introduction: "Transparent oversight and robust regulation of Ogun State's power sector.",
 }
 
 export type HeroSlide = {

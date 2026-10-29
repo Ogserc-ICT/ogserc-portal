@@ -70,10 +70,13 @@ test.describe('Homepage', () => {
   })
 
   test('shows only clearly marked placeholder content', async ({ page }) => {
-    await expect(
-      page.getByText('[Sample introduction to the Commission, OGSERC to supply]'),
-    ).toBeVisible()
     await expect(page.getByText(/OGSERC to supply/).first()).toBeVisible()
+  })
+
+  test('the first slide shows the introduction', async ({ page }) => {
+    await expect(
+      page.getByText("Transparent oversight and robust regulation of Ogun State's power sector."),
+    ).toBeVisible()
   })
 
   test('public notices are listed newest first', async ({ page }) => {
