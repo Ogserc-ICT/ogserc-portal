@@ -2,7 +2,6 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import { buildConfig } from 'payload'
-import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
 import { denyByDefault } from './access/deny-by-default'
@@ -27,13 +26,22 @@ function requireEnv(name: string): string {
   return value
 }
 
+// IMAGE_PROCESSING=off starts Payload without sharp, for a host whose CPU cannot run it
+// (OGSERC's VPS, D-056). sharp is imported only when it is used, because importing it on
+// such a CPU throws. Without it, uploads keep their original size and get no focal point.
+async function loadSharp() {
+  if (process.env.IMAGE_PROCESSING === 'off') return undefined
+  return (await import('sharp')).default
+}
+
 /**
  * The assembled config. `withTestCollections` adds the test-only collections (src/collections/test);
  * the default export decides it with testCollectionsEnabled. Exported so the unit tests can audit both.
  * hardenPayloadInternals runs on the finished config, after Payload adds its own collections.
  */
-export const portalConfig = ({ withTestCollections }: { withTestCollections: boolean }) =>
-  buildConfig({
+export const portalConfig = async ({ withTestCollections }: { withTestCollections: boolean }) => {
+  const sharp = await loadSharp()
+  return buildConfig({
     // The normalised origin, so links and the CSRF list never carry a trailing slash or path.
     serverURL: siteOrigin(process.env),
     // Cookie-authenticated requests are accepted only from the site's own origin; requests without
@@ -71,7 +79,7 @@ export const portalConfig = ({ withTestCollections }: { withTestCollections: boo
       migrationDir: path.resolve(dirname, 'migrations'),
       prodMigrations: migrations,
     }),
-    sharp,
+    ...(sharp ? { sharp } : {}),
     // Ceiling for any uploaded file; collections set lower limits (Media: 10 MB images).
     upload: {
       limits: { fileSize: MAX_UPLOAD_BYTES },
@@ -82,5 +90,6 @@ export const portalConfig = ({ withTestCollections }: { withTestCollections: boo
     // collections that plugins add. Keep it last here too, for readers.
     plugins: [queryLimits, denyByDefault],
   }).then(hardenPayloadInternals)
+}
 
 export default portalConfig({ withTestCollections: testCollectionsEnabled(process.env) })

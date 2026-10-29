@@ -102,6 +102,13 @@ At scaffold time:
 - `undici` is forced to 7.29.1 with a pnpm override, because Payload 3.90.2 pins the vulnerable 7.29.0. **Remove the override** once a Payload release ships 7.29.1 or later.
 - Advisory **GHSA-vfj7-8cjw-p6xm** (`braces`, stack exhaustion from deeply nested glob patterns) is ignored in `package.json` (`pnpm.auditConfig.ignoreGhsas`). No patched version exists. It is only reached through the ESLint tooling with patterns we write ourselves, never from the website or user input. **Remove the ignore** when a fix is released.
 
+Update 2026-10-28, before the first deploy to the VPS:
+
+- `next` and `eslint-config-next` upgraded to 16.4.3: 16.4.0 has two critical unauthenticated remote code execution flaws (image optimisation and `use cache`) and a high Server Action denial of service, all fixed in 16.4.1.
+- The `undici` override moves to 7.30.1 (seven advisories in 7.29.x). Payload 3.92.1 ships 7.30.1, so **remove the override** when Payload is upgraded (Dependabot PR #17).
+- `dompurify` is forced to 3.4.17 (Payload admin, through `monaco-editor`, which pins 3.4.15) and `zod` to 4.6.6 (ESLint plugin). Both are patch releases of the same minor. **Remove each override** when the package that pulls it in ships the fix.
+- Advisory **GHSA-834v-8h66-3h79** (`happy-dom` ESM import alias, code execution) is ignored. The fix is in 21.0.4, a major version that `@lexical/headless` (`^20.9.0`) does not accept. The flaw needs JavaScript evaluation, which happy-dom 20 turns off by default (`enableJavaScriptEvaluation: false`), and Lexical creates its window with the defaults (`new Window()`). **Remove the ignore** when Lexical accepts happy-dom 21.
+
 ## D-013 File storage adapter added in build step 4 (2026-10-08)
 
 **Decision:** The S3-compatible storage adapter is wired up with the Media collection in step 4. Step 1 only adds its variables to `.env.example`.
@@ -1015,3 +1022,53 @@ This decision relies on Payload 3.90.2 behaviour that a release may change:
 - `removeTokenFromResponses` covering the Local API login (and so first-register).
 
 The D-051 boot fix (its own `BasePayload` instance) still applies and has its own list in D-051.
+
+## D-054 First deploy: OGSERC's VPS with Docker Compose and Caddy, as a closed preview (2026-10-28)
+
+(Written on `main` while Step 3 was unmerged. D-053 is reserved for the Step 3 password policy, which the code already cites; it is written with that work.)
+
+**Decision:** The owner asked to host the site on OGSERC's own VPS (AlmaLinux 8.10, 2 vCPU, 4 GB RAM, 100 GB SSD) at `ogserc.org.ng` before Phase 1 is complete. `docker-compose.prod.yml` runs the app, PostgreSQL 17 and Caddy 2.11.7 on that server. Until Step 3 is merged, `deploy/Caddyfile` closes `/admin` and `/api` (404), sends `X-Robots-Tag: noindex, nofollow`, and shortens HSTS to one day without `includeSubDomains`. The image is built on the server. `deploy/backup-db.sh` keeps 14 days of nightly `pg_dump` files. Steps are in RUNBOOK Sections 5 and 6.
+
+**Why:**
+- **What is deployed is `main`:** the design system and homepage. Staff sign-in is not ready for the internet: 2FA, rate limiting and the audit log are still to come, and the Users hardening (D-052) is on an unmerged branch. Public pages read through Payload's Local API inside the app and nothing public calls `/api`, so closing both paths at the proxy removes the whole staff surface without changing the app.
+- **Caddy** (owner approved): one small config file, HTTPS certificates obtained and renewed automatically, HTTP to HTTPS redirect, HTTP/2 and HTTP/3. nginx with certbot does the same with more configuration and a separate renewal job. Swapping it later only changes this front door.
+- **PostgreSQL on the VPS** instead of a hosted database: no extra cost, plain PostgreSQL (portability rules), and not reachable from the internet (no published port). The cost is that backups and off-server copies are ours to run (open item in RUNBOOK Section 6).
+- **Building on the server:** the build needs no database (the Dockerfile sets placeholders), and pulling from a private registry would put a registry token on the server. 4 GB of swap covers the build's memory peak. If builds become slow or disturb the live site, build in CI and pull instead.
+- **Short HSTS during the preview:** the app sends two years with `includeSubDomains`, which would make browsers refuse plain HTTP on every subdomain of `ogserc.org.ng` (webmail or a control panel, for example) for two years. The full header returns once every subdomain is confirmed to serve HTTPS.
+- **noindex:** content is still placeholder ("[Sample, OGSERC to supply]"), and must not appear in search results as OGSERC's information.
+- **File uploads:** none are possible while `/admin` is closed. The S3-compatible storage adapter still arrives with Step 4 (D-013).
+
+**Not done here:** monitoring, off-server backups, a tested restore and spend limits remain step 13. Vercel stays possible: nothing in this change is VPS-specific inside the app.
+
+## D-055 sharp falls back to WebAssembly on CPUs without x86-64-v2 (2026-10-28)
+
+> **Did not fix the VPS: see D-056.** The WebAssembly build also needs a CPU feature (SSE4.1, for WebAssembly SIMD) that the VPS hides.
+
+**Problem:** The first build on OGSERC's VPS failed while collecting page data: `Could not load the "sharp" module using the linuxmusl-x64 runtime. Unsupported CPU: Prebuilt binaries for Linux x64 require v2 microarchitecture`. Since 0.35, sharp's native Linux x64 binary refuses to load on a CPU that does not report x86-64-v2 (SSE4.2, POPCNT, SSSE3, CX16). The VPS's virtual CPU model hides those instructions. Next.js (image optimisation) and Payload (uploads) both load sharp, at build time and at run time, so building elsewhere would not help.
+
+**Decision (owner approved):** Add `@img/sharp-wasm32` 0.35.5, pinned to the same version as `sharp`, as a direct dependency. sharp already tries it when no native binary loads (`dist/sharp.cjs`), so no code changes. On CPUs with x86-64-v2 (CI, developers, most hosts) the native binary still loads first and nothing changes.
+
+**Checked:**
+- `scripts/check-sharp-wasm.mjs` blocks every native sharp binary and resizes an image to AVIF and WebP. It passes from the repo and from `.next/standalone` (the bundle the Docker image ships: Next.js traces the package into it), and sharp fails with the VPS's error when the WebAssembly package is blocked too.
+- CI runs the same check inside the built Docker image.
+
+**Cost:** 9 MB in the image. WebAssembly image processing is slower than native, which matters only when an image is first resized (uploads, and the first request for each optimised size; Next.js caches the result). The package is by sharp's author, licensed Apache-2.0, LGPL-3.0-or-later (libvips) and MIT, the same as the native libvips packages already shipped.
+
+**Better fix, still open:** ask the host to change the VM's CPU type to "host" or "x86-64-v2". Then native sharp loads again by itself. Keep the dependency anyway, so the site still runs on any x86 host (portability rules). **Remove it** only if every target host is confirmed to have x86-64-v2.
+
+## D-056 Temporary: the VPS runs without image processing (`IMAGE_PROCESSING=off`) (2026-10-28)
+
+**Problem:** D-055's WebAssembly fallback did not help. The next build on the VPS failed with `WebAssembly.Module(): Wasm SIMD unsupported`: sharp's WebAssembly build needs WebAssembly SIMD, which Node.js provides only on CPUs with SSE4.1. The VPS's virtual CPU hides even that (a generic model such as QEMU's `qemu64`). D-055's check blocked the native binary but ran on a CPU with SIMD, so it could not catch this. No sharp build can run on that CPU as configured, and building sharp from source is not possible on Alpine (libvips 8.17; sharp 0.35.5 needs 8.18.7 or newer). OGSERC has asked Truehost to change the CPU type ("host" or "x86-64-v2"); no answer yet.
+
+**Decision (owner approved, to get the preview up):** A setting, `IMAGE_PROCESSING=off`, set only in the VPS's `.env`:
+- `src/payload.config.ts` imports sharp only when the setting is on (importing it on that CPU throws) and otherwise starts Payload without it. Uploads would keep their original size and get no focal point; no uploads happen while `/admin` is closed (D-054).
+- `next.config.ts` sets `images.unoptimized`, so images are served as they are instead of through the optimiser, which needs sharp. Next.js reads this at build time, so `docker-compose.prod.yml` passes it as a build argument as well as at run time.
+- Everywhere else the setting is unset (on), and nothing changes.
+
+**Cost:** the homepage serves its images at full size: hero photograph 142 KB (JPEG, not AVIF or WebP), wordmark 115 KB, crest 187 KB, instead of small optimised versions. This is against the low-bandwidth goal (NFR performance), acceptable for a closed preview only.
+
+**Side effect:** sharp is now imported when Payload's config loads instead of at module import, so a host where sharp cannot load no longer fails the build: it logs the error and `/admin` and `/api` fail when first used. Normal hosts are unaffected.
+
+**Checked:** `scripts/block-sharp-binaries.mjs` makes every sharp binary fail to load, as on the VPS. With it, a standalone build without the setting logs the VPS's error; with `IMAGE_PROCESSING=off` the build never mentions sharp, and the standalone server serves the homepage and every image without the optimiser. CI repeats this in the "Builds and serves without sharp" job.
+
+**Undo when the CPU is fixed** (RUNBOOK Section 11): check `grep -cw sse4_2 /proc/cpuinfo` is above 0, remove `IMAGE_PROCESSING=off` from the VPS's `.env`, redeploy. Then remove this setting, its CI job and the helper, and decide on D-055's package (`@img/sharp-wasm32`): it helps only on CPUs with SSE4.1 but without x86-64-v2, which are rare, so removing it is likely.

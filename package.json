@@ -36,22 +36,26 @@
       "unrs-resolver"
     ],
     "overrides": {
-      "undici": "7.29.1"
+      "undici": "7.30.1",
+      "dompurify": "3.4.17",
+      "zod": "4.6.6"
     },
     "auditConfig": {
       "ignoreGhsas": [
-        "GHSA-vfj7-8cjw-p6xm"
+        "GHSA-vfj7-8cjw-p6xm",
+        "GHSA-834v-8h66-3h79"
       ]
     }
   },
   "dependencies": {
+    "@img/sharp-wasm32": "0.35.5",
     "@payloadcms/db-postgres": "3.90.2",
     "@payloadcms/next": "3.90.2",
     "@payloadcms/richtext-lexical": "3.90.2",
     "@payloadcms/ui": "3.90.2",
     "cross-env": "10.1.0",
     "graphql": "16.14.2",
-    "next": "16.4.0",
+    "next": "16.4.3",
     "payload": "3.90.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -66,7 +70,7 @@
     "@types/react-dom": "19.3.0",
     "dotenv": "18.0.7",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.4.0",
+    "eslint-config-next": "16.4.3",
     "postcss": "8.5.29",
     "prettier": "3.9.9",
     "tailwindcss": "4.3.3",

@@ -1,0 +1,31 @@
+# Caddy, the HTTPS front door for the VPS deploy (docs/DECISIONS.md D-054, RUNBOOK Section 5).
+# It gets and renews the Let's Encrypt certificate itself. The domain and the contact email for
+# certificate notices come from the server's .env (SITE_DOMAIN, ACME_EMAIL); nothing is hard-coded.
+{
+	email {$ACME_EMAIL}
+}
+
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	# PREVIEW ONLY (RUNBOOK Section 11). Staff sign-in is not finished (Step 3: 2FA, rate limiting,
+	# audit log), so the admin panel and Payload's REST and GraphQL API are closed to everyone.
+	# Public pages read content through Payload's Local API inside the app, never through /api.
+	@staff path /admin /admin/* /api /api/*
+	respond @staff 404
+
+	header {
+		-Server
+		# PREVIEW ONLY: keep placeholder content out of search results.
+		X-Robots-Tag "noindex, nofollow"
+		# PREVIEW ONLY: replaces the app's two-year, includeSubDomains HSTS (next.config.ts) with one
+		# day for this host alone, until every subdomain of the domain is confirmed to serve HTTPS.
+		>Strict-Transport-Security "max-age=86400"
+	}
+
+	reverse_proxy app:3000
+}
