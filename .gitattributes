@@ -7,5 +7,6 @@
 *.webp binary
 *.ico binary
 *.pdf binary
+*.docx binary
 *.woff binary
 *.woff2 binary
