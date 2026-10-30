@@ -763,3 +763,23 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 
 - **Public notices** keeps its section but shows only real notices: the Order's publication on the website (30 October 2026), linking to the Order. The second notice, that the registration forms are available to download, is added when the forms are published, so the site never announces something it does not have yet.
 - **"View all news"** still points to the news page, which step 9 builds (owner's choice).
+
+## D-063 Registration forms as static Word files, before the Documents collection exists (2026-10-30)
+
+**Decision:** The eleven registration forms (REG-01A to REG-01K, Version 2026.1) under the Commencement and Registration Order (OGSERC/ORD/2026/001) are published at `/regulatory-instruments/forms` as static Word files in `public/forms/registration/`, with OGSERC's exact file names. The page shows the Registration Form Selection Guide as text first, then the forms A to K, each with one Word download, then how to submit. The source files are kept unchanged in `docs/source/` (the guide's Word file and its verbatim Markdown text). They are only for the record and the tests; the page does not read them, and Docker leaves `docs/` out of the image.
+
+**Why:** the Order is in force from 2 November 2026 and operators need the forms now. The Documents collection (step 4) does not exist yet. This follows D-060 (the Order as a static PDF).
+
+**Rules, from the owner:**
+- **Two ways to submit, no other:** by hand at the Commission's Registry, or by email to `registration@ogserc.org.ng`. The page never mentions an online portal. Paragraph 24 of the Order says the Commission *may* issue one; that is the Order's own text, on the Order page only.
+- **Word only.** No PDF versions and no preview in this round, on purpose. Both can be added later (a PDF per form, and D-060's desktop preview).
+- **The guide is text on the page only.** No download of the guide, and no Word or PDF version of it on the site. Its wording, amounts and paragraph references are used exactly as in `docs/source/registration-guide.md`, and a test compares the page with that file. Its closing italic line ("Forms are available from…") is left out; the "How to submit" box replaces it.
+- **Link text** uses each form's own title in sentence case (form D: "Generation of 1 MW to below 10 MW"). "Who it is for" uses the guide's wording ("1 MW to less than 10 MW"). Both are OGSERC's.
+- **Sizes** are read from the files when the page is built, never typed in.
+- **Guide table on phones:** below 640px each row shows as a card (the category letter large, then "Who registers", "Form" and "Fee" with small labels). The table keeps its caption (the guide's subtitle), `<th scope>` cells and explicit table roles, because some browsers drop table semantics when rows change display; the header row stays for screen readers only, and the small labels are hidden from them so nothing is read twice. Each form code links to that form's entry (`#reg-01c`). From 640px it is an ordinary table.
+- **Office hours** on the page reuse the contact page's 8:00am to 5:00pm (owner, 2026-10-30).
+- **Registry address** uses the guide's wording, "5th and 6th Floors, OPIC Building, Oke-Ilewo, Abeokuta". The footer's "Floors 5 & 6, OPIC Towers" is also correct (owner); they need not match.
+
+**Exception to lowercase URLs (CLAUDE.md Conventions):** the download addresses keep OGSERC's file names, with capitals and underscores, for example `/forms/registration/OGSERC_Form_REG-01C_Generation_10MW_and_above.docx`. The rule is for page addresses; these are file addresses, and the owner asked for the names unchanged so the downloaded file matches the Registry's copy.
+
+**Step 4:** the forms move into the CMS Documents collection, category Forms. The same public download addresses must keep working, or redirect permanently to the new ones, because they will be shared in emails and letters. `*.docx` is marked binary in `.gitattributes` so git never alters the files.

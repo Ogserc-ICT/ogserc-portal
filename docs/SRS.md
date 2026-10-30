@@ -212,6 +212,7 @@ The developer shall complete a one-time audit of the live LASERC site against th
 - **FR-DOC-03** Each document page shall show a download button, status, and related documents.
 - **FR-DOC-04** Users shall be able to filter lists by category, year, and status, and sort by date.
 - **FR-DOC-05** Superseded documents shall remain accessible and clearly labelled.
+- *Interim note (2026-10-30, D-063):* the registration forms REG-01A to REG-01K are published as Word downloads at `/regulatory-instruments/forms`, after the Registration Form Selection Guide shown as text on the page; in build step 4 they move into the Documents collection (category Forms) and keep their download addresses.
 
 ### 6.3 Draft regulations and consultations (FR-DRAFT)
 - **FR-DRAFT-01** OGSERC shall be able to publish a draft regulation with: consultation notice, consultation deadline, public hearing information, and a link to the final regulation when adopted.
