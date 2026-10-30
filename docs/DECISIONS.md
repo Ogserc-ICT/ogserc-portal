@@ -602,7 +602,8 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - **Footer content:** the footer holds the quick links, contact details and legal links. The button is never visible while any of the footer is on screen, so it cannot cover them, at any width or scroll position. At the bottom of the page the footer's own link takes over.
 - **Hero pause button:** the button appears only after scrolling more than one viewport. That puts its top edge more than one viewport down the document, below the hero, so it can never meet the pause button in the hero's corner.
 - **Main content:** the button does float over main content mid-page, as any floating button does.
-- **Tests:** at 360 and 1280px, a test checks the first scroll position where the button appears (clear of the pause button and of every link and button) and the very bottom of the page.
+- **Tests:** at 360 and 1280px, a test checks the first scroll position where the button appears (clear of the pause button and of every link and button in the header and footer) and the very bottom of the page (the button hidden, nothing covered).
+  - *Changed 2026-10-30 (owner's choice):* the first-position check used to cover every link and button on the page. That depended on whichever content happened to sit under the corner, not on the button, and the taller phone hero (D-062) moved a Latest updates card under it. It now checks what this decision guarantees.
 
 **Focus after scrolling: the skip link.** The skip link is the first focusable element. Moving focus there means the next Tab continues exactly as on a fresh page load: utility bar, logo, menu. The header logo was the other candidate. Focusing it would skip the desktop utility bar (Contact Us, Licences, FAQs, Search).
 

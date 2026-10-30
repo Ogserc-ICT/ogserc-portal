@@ -27,15 +27,22 @@ async function scrollPastFirstScreen(page: Page) {
   await expect(button(page)).toBeVisible()
 }
 
-/** Visible links and buttons (other than the floating button) whose boxes meet the button's box. */
-const overlapsWithButton = (page: Page) =>
-  page.evaluate(() => {
+/**
+ * What D-043 guarantees the button never covers: the hero's pause button and every link and button
+ * in the header and footer. Main content is not included: the button floats over it mid-page, as
+ * any floating button does, so what lies under it depends on the page's content.
+ */
+const NEVER_COVERED = '[data-rotation-control], header a, header button, footer a, footer button'
+
+/** Visible matches of `selector` (other than the floating button) whose boxes meet the button's box. */
+const overlapsWithButton = (page: Page, selector = 'a, button') =>
+  page.evaluate((selector) => {
     const own = document.querySelector('.back-to-top')!
     if (getComputedStyle(own).visibility === 'hidden' || getComputedStyle(own).display === 'none') {
       return []
     }
     const b = own.getBoundingClientRect()
-    return Array.from(document.querySelectorAll<HTMLElement>('a, button'))
+    return Array.from(document.querySelectorAll<HTMLElement>(selector))
       .filter((el) => el !== own && el.checkVisibility({ visibilityProperty: true }))
       .filter((el) => {
         const r = el.getBoundingClientRect()
@@ -48,7 +55,7 @@ const overlapsWithButton = (page: Page) =>
         )
       })
       .map((el) => el.getAttribute('aria-label') ?? el.textContent?.trim() ?? el.tagName)
-  })
+  }, selector)
 
 test.describe('Back to top', () => {
   test.beforeEach(async ({ page }) => {
@@ -165,7 +172,7 @@ test.describe('Back to top', () => {
       const own = await button(page).boundingBox()
       expect(pause && own).toBeTruthy()
       expect(own!.y).toBeGreaterThan(pause!.y + pause!.height)
-      expect(await overlapsWithButton(page)).toEqual([])
+      expect(await overlapsWithButton(page, NEVER_COVERED)).toEqual([])
 
       // At the very bottom the footer is in view: the button gives way to the footer's own link.
       await scrollToY(page, await page.evaluate(() => document.documentElement.scrollHeight))
