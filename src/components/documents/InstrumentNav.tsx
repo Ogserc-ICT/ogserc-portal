@@ -2,7 +2,12 @@ import Link from 'next/link'
 
 import { Icon } from '@/components/ui/Icon'
 import { countInCategory } from '@/lib/documents/catalogue'
+import { registrationForms } from '@/lib/forms/registration'
 import { hrefFor, instrumentCategories, routes } from '@/lib/navigation'
+
+// The forms are static files, not catalogue documents, until build step 4 (D-063).
+const itemCount = (path: string): number =>
+  path === routes.forms.path ? registrationForms.length : countInCategory(path)
 
 /**
  * The Regulatory Instruments categories beside a document list or page. A row of pills that
@@ -22,7 +27,7 @@ export function InstrumentNav({ currentPath }: { currentPath: string }) {
       <ul className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-2 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0">
         {instrumentCategories().map((category) => {
           const current = category.path === currentPath
-          const count = countInCategory(category.path)
+          const count = itemCount(category.path)
           return (
             <li key={category.path} className="shrink-0">
               <Link
