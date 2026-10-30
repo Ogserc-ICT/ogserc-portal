@@ -26,7 +26,11 @@ export function LatestUpdates({ items }: { items: NewsItem[] }) {
         />
         <div
           {...(scrolls
-            ? { role: 'region', 'aria-label': 'Latest updates, scroll sideways for more', tabIndex: 0 }
+            ? {
+                role: 'region',
+                'aria-label': 'Latest updates, scroll sideways for more',
+                tabIndex: 0,
+              }
             : {})}
           className="-mx-4 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:mx-0 lg:scroll-px-0 lg:px-0"
         >

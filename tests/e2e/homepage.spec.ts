@@ -6,12 +6,7 @@ import { waitForSettledPage } from './support/settle'
 const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
 // FR-WEB-02 order, after the hero (which holds the page's only h1, and one h2 per slide).
-const SECTION_HEADINGS = [
-  'Quick services',
-  'Latest updates',
-  'Public notices',
-  'Contact us',
-]
+const SECTION_HEADINGS = ['Quick services', 'Latest updates', 'Public notices', 'Contact us']
 
 test.describe('Homepage', () => {
   test.beforeEach(async ({ page }) => {
@@ -67,8 +62,9 @@ test.describe('Homepage', () => {
     ])
   })
 
-  test('shows only clearly marked placeholder content', async ({ page }) => {
-    await expect(page.getByText(/OGSERC to supply/).first()).toBeVisible()
+  // Every homepage section now holds real OGSERC content (D-062); sample text must not return.
+  test('shows no placeholder content', async ({ page }) => {
+    await expect(page.getByText(/OGSERC to supply|\[Sample/)).toHaveCount(0)
   })
 
   test('the first slide shows the introduction', async ({ page }) => {
@@ -77,12 +73,17 @@ test.describe('Homepage', () => {
     ).toBeVisible()
   })
 
-  test('public notices are listed newest first', async ({ page }) => {
-    const dates = await page
-      .locator('section[aria-labelledby="public-notices-heading"] time')
+  test('public notices are listed newest first, starting with the Order', async ({ page }) => {
+    const section = page.locator('section[aria-labelledby="public-notices-heading"]')
+    const dates = await section
+      .locator('time')
       .evaluateAll((els) => els.map((el) => el.getAttribute('datetime') ?? ''))
-    expect(dates.length).toBeGreaterThan(1)
+    expect(dates.length).toBeGreaterThan(0)
     expect(dates).toEqual([...dates].sort().reverse())
+    await expect(section.getByRole('link', { name: /OGSERC\/ORD\/2026\/001/ })).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
+    )
   })
 
   test('latest updates show the Order, with no scroll region for a single item', async ({
@@ -90,10 +91,9 @@ test.describe('Homepage', () => {
   }) => {
     const section = page.locator('section[aria-labelledby="latest-updates-heading"]')
     await expect(section.getByRole('article')).toHaveCount(1)
-    await expect(section.getByRole('link', { name: /Order on Commencement of Operations/ })).toHaveAttribute(
-      'href',
-      '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
-    )
+    await expect(
+      section.getByRole('link', { name: /Order on Commencement of Operations/ }),
+    ).toHaveAttribute('href', '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001')
     await expect(section.getByRole('region')).toHaveCount(0)
   })
 

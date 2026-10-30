@@ -761,4 +761,5 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - **Tenders** and **Events** are hidden from the homepage until OGSERC has real ones. The components and sample data stay, so bringing them back takes one line each in `page.tsx`. FR-WEB-02 lists both sections, so they must return or be signed off as removed before launch.
 - **Hero** is at least 70% of the small viewport height (`70svh`) on phones, with the slide content centred vertically. From 640px up it keeps its content height. `svh` rather than `vh`, so the hero does not jump when the mobile browser's address bar hides.
 
-**Still sample content:** Public notices. The owner did not ask for it to be removed.
+- **Public notices** keeps its section but shows only real notices: the Order's publication on the website (30 October 2026), linking to the Order. The second notice, that the registration forms are available to download, is added when the forms are published, so the site never announces something it does not have yet.
+- **"View all news"** still points to the news page, which step 9 builds (owner's choice).

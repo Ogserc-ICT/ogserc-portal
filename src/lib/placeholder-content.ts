@@ -87,21 +87,20 @@ export const latestUpdates: NewsItem[] = [
   },
 ]
 
-const noticeCategories: NoticeCategory[] = [
-  'Public notice',
-  'Regulatory notice',
-  'Service announcement',
-  'Consultation notice',
-  'Public notice',
+/**
+ * Homepage public notices: real notices only (owner, 2026-10-30), newest first. Next: the
+ * registration forms are available to download, added when the forms are published.
+ */
+export const notices: Notice[] = [
+  {
+    id: 'ogserc-ord-2026-001-published',
+    title:
+      'Order OGSERC/ORD/2026/001 on commencement of operations and registration is now published',
+    date: '2026-10-30',
+    category: 'Regulatory notice',
+    href: '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
+  },
 ]
-
-export const notices: Notice[] = noticeCategories.map((category, i) => ({
-  id: `notice-${i + 1}`,
-  title: `[Sample ${category.toLowerCase()} title, OGSERC to supply]`,
-  date: `2026-09-${String(28 - i * 5).padStart(2, '0')}`,
-  category,
-  href: PENDING_PATH,
-}))
 
 export const tenders: Tender[] = [1, 2, 3].map((n) => ({
   id: `tender-${n}`,
