@@ -71,13 +71,21 @@ export const heroSlides: HeroSlide[] = [
   },
 ]
 
-export const news: NewsItem[] = [1, 2, 3, 4, 5, 6].map((n) => ({
-  id: `news-${n}`,
-  title: `[Sample news headline ${n}, OGSERC to supply]`,
-  date: `2026-09-${String(30 - n * 3).padStart(2, '0')}`,
-  excerpt: '[Sample summary of the news story, OGSERC to supply]',
-  href: PENDING_PATH,
-}))
+/**
+ * Homepage "Latest updates": real items only (owner, 2026-10-30), newest first. Next: the
+ * registration forms. Build step 9 moves these into the News collection.
+ */
+export const latestUpdates: NewsItem[] = [
+  {
+    id: 'ogserc-ord-2026-001',
+    title:
+      'OGSERC Order on Commencement of Operations and Registration of Licensees and Electricity Operators, 2026',
+    date: '2026-10-26',
+    excerpt:
+      'Order OGSERC/ORD/2026/001 takes effect on 2 November 2026. Read the Order and download the signed copy.',
+    href: '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
+  },
+]
 
 const noticeCategories: NoticeCategory[] = [
   'Public notice',

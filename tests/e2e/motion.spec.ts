@@ -96,7 +96,7 @@ test.describe('Motion', () => {
     const context = await browser.newContext({ javaScriptEnabled: false })
     const page = await context.newPage()
     await page.goto('/')
-    expect(await revealed(page).count()).toBe(6)
+    expect(await revealed(page).count()).toBe(4)
     for (const section of await revealed(page).all()) {
       await expect(section).toHaveCSS('opacity', '1')
     }

@@ -1,29 +1,22 @@
 import { ContactSection } from '@/components/home/ContactSection'
-import { Events } from '@/components/home/Events'
 import { Hero } from '@/components/home/Hero'
 import { LatestUpdates } from '@/components/home/LatestUpdates'
 import { PublicNotices } from '@/components/home/PublicNotices'
 import { QuickServices } from '@/components/home/QuickServices'
-import { Tenders } from '@/components/home/Tenders'
 import { RevealOnScroll } from '@/components/motion/RevealOnScroll'
-import { Container } from '@/components/ui/Container'
-import { events, news, notices, tenders } from '@/lib/placeholder-content'
+import { latestUpdates, notices } from '@/lib/placeholder-content'
 
 // Homepage sections in FR-WEB-02 order. Header and footer come from the layout.
 // Content comes from placeholder-content.ts until build step 4 connects the CMS.
+// Tenders and Events are hidden until OGSERC has real ones (owner, 2026-10-30, D-062); their
+// components stay in src/components/home/ for when they return.
 export default function HomePage() {
   return (
     <>
       <Hero />
       <QuickServices />
-      <LatestUpdates items={news} />
+      <LatestUpdates items={latestUpdates} />
       <PublicNotices items={notices} />
-      <div className="pb-12 sm:pb-16">
-        <Container className="grid gap-12 lg:grid-cols-2 lg:gap-8">
-          <Tenders items={tenders} />
-          <Events items={events} />
-        </Container>
-      </div>
       <ContactSection />
       <RevealOnScroll />
     </>

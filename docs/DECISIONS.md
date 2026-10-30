@@ -753,3 +753,12 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Why:** the owner first suggested adding "Our Vision" beside "Our Mission", with both opening the same page. That would put two menu links to one page, which can look like a mistake, and screen-reader users hear two different link names for the same place. One item named for everything on the page avoids both. The three statements are short and read best together.
 
 **Sitemap change note (SRS 2.5):** this changes the wording of the approved Section 4 sitemap; no page was added or removed. OGSERC to confirm in writing with the other sitemap items at sign-off.
+
+## D-062 Homepage: real updates only, Tenders and Events hidden, taller hero on phones (2026-10-30)
+
+**Decision:** Following the owner's review of the live preview:
+- **Latest updates** shows only real items. The six sample news cards are gone. The one item is Order OGSERC/ORD/2026/001, linking to its page. The registration forms come next. The items sit in `latestUpdates` in `placeholder-content.ts` until the News collection exists (step 9). With a single item, the row has no focusable scroll region (there is nothing to scroll to) and the card fills a phone's width. From two items on, the scroll-snap row (D-030) comes back on its own.
+- **Tenders** and **Events** are hidden from the homepage until OGSERC has real ones. The components and sample data stay, so bringing them back takes one line each in `page.tsx`. FR-WEB-02 lists both sections, so they must return or be signed off as removed before launch.
+- **Hero** is at least 70% of the small viewport height (`70svh`) on phones, with the slide content centred vertically. From 640px up it keeps its content height. `svh` rather than `vh`, so the hero does not jump when the mobile browser's address bar hides.
+
+**Still sample content:** Public notices. The owner did not ask for it to be removed.

@@ -10,8 +10,6 @@ const SECTION_HEADINGS = [
   'Quick services',
   'Latest updates',
   'Public notices',
-  'Tenders',
-  'Events',
   'Contact us',
 ]
 
@@ -87,12 +85,24 @@ test.describe('Homepage', () => {
     expect(dates).toEqual([...dates].sort().reverse())
   })
 
-  test('latest updates scroll with the keyboard (no JavaScript carousel)', async ({ page }) => {
-    const region = page.getByRole('region', { name: /Latest updates, scroll sideways/ })
-    await expect(region).toHaveAttribute('tabindex', '0')
-    await region.focus()
-    await page.keyboard.press('ArrowRight')
-    await expect.poll(() => region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0)
+  test('latest updates show the Order, with no scroll region for a single item', async ({
+    page,
+  }) => {
+    const section = page.locator('section[aria-labelledby="latest-updates-heading"]')
+    await expect(section.getByRole('article')).toHaveCount(1)
+    await expect(section.getByRole('link', { name: /Order on Commencement of Operations/ })).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
+    )
+    await expect(section.getByRole('region')).toHaveCount(0)
+  })
+
+  test('the hero fills most of a phone screen', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile', 'The taller hero applies to phones only')
+    const hero = page.getByRole('region', { name: 'Highlights' })
+    const height = (await hero.boundingBox())?.height ?? 0
+    const viewport = page.viewportSize()?.height ?? 0
+    expect(height).toBeGreaterThanOrEqual(viewport * 0.69)
   })
 
   test('the page does not scroll sideways', async ({ page }) => {
