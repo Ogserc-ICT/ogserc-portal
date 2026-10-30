@@ -762,6 +762,7 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - **Hero** is at least 70% of the small viewport height (`70svh`) on phones, with the slide content centred vertically. From 640px up it keeps its content height. `svh` rather than `vh`, so the hero does not jump when the mobile browser's address bar hides.
 
 - **Public notices** keeps its section but shows only real notices: the Order's publication on the website (30 October 2026), linking to the Order. The second notice, that the registration forms are available to download, is added when the forms are published, so the site never announces something it does not have yet.
+- **Added with the forms (D-063):** a Latest updates card and a Public notice for the registration forms, both linking to `/regulatory-instruments/forms`. With two updates the scroll-snap row is back.
 - **"View all news"** still points to the news page, which step 9 builds (owner's choice).
 
 ## D-063 Registration forms as static Word files, before the Documents collection exists (2026-10-30)

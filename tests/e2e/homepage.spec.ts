@@ -73,28 +73,46 @@ test.describe('Homepage', () => {
     ).toBeVisible()
   })
 
-  test('public notices are listed newest first, starting with the Order', async ({ page }) => {
+  test('public notices are listed newest first: the forms, then the Order', async ({ page }) => {
     const section = page.locator('section[aria-labelledby="public-notices-heading"]')
     const dates = await section
       .locator('time')
       .evaluateAll((els) => els.map((el) => el.getAttribute('datetime') ?? ''))
-    expect(dates.length).toBeGreaterThan(0)
+    expect(dates).toHaveLength(2)
     expect(dates).toEqual([...dates].sort().reverse())
+    await expect(section.getByRole('listitem').first().getByRole('link')).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/forms',
+    )
     await expect(section.getByRole('link', { name: /OGSERC\/ORD\/2026\/001/ })).toHaveAttribute(
       'href',
       '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
     )
   })
 
-  test('latest updates show the Order, with no scroll region for a single item', async ({
-    page,
-  }) => {
+  test('latest updates show the forms, then the Order', async ({ page }) => {
     const section = page.locator('section[aria-labelledby="latest-updates-heading"]')
-    await expect(section.getByRole('article')).toHaveCount(1)
-    await expect(
-      section.getByRole('link', { name: /Order on Commencement of Operations/ }),
-    ).toHaveAttribute('href', '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001')
-    await expect(section.getByRole('region')).toHaveCount(0)
+    const cards = section.getByRole('article')
+    await expect(cards).toHaveCount(2)
+    await expect(cards.nth(0).getByRole('link')).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/forms',
+    )
+    await expect(cards.nth(1).getByRole('link')).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
+    )
+  })
+
+  test('latest updates scroll with the keyboard on phones (no JavaScript carousel)', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile', 'Two cards fit side by side on wider screens')
+    const region = page.getByRole('region', { name: /Latest updates, scroll sideways/ })
+    await expect(region).toHaveAttribute('tabindex', '0')
+    await region.focus()
+    await page.keyboard.press('ArrowRight')
+    await expect.poll(() => region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0)
   })
 
   test('the hero fills most of a phone screen', async ({ page }, testInfo) => {

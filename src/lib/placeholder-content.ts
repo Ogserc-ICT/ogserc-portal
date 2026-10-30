@@ -72,10 +72,18 @@ export const heroSlides: HeroSlide[] = [
 ]
 
 /**
- * Homepage "Latest updates": real items only (owner, 2026-10-30), newest first. Next: the
- * registration forms. Build step 9 moves these into the News collection.
+ * Homepage "Latest updates": real items only (owner, 2026-10-30), newest first. Build step 9
+ * moves these into the News collection.
  */
 export const latestUpdates: NewsItem[] = [
+  {
+    id: 'registration-forms',
+    title: 'Registration forms REG-01A to REG-01K are available to download',
+    date: '2026-10-30',
+    excerpt:
+      'Use the Registration Form Selection Guide to find your form, then download it and submit it at the Registry or by email.',
+    href: hrefFor(routes.forms),
+  },
   {
     id: 'ogserc-ord-2026-001',
     title:
@@ -88,10 +96,18 @@ export const latestUpdates: NewsItem[] = [
 ]
 
 /**
- * Homepage public notices: real notices only (owner, 2026-10-30), newest first. Next: the
- * registration forms are available to download, added when the forms are published.
+ * Homepage public notices: real notices only (owner, 2026-10-30), newest first. Notices on the
+ * same date keep this order, so the latest goes first.
  */
 export const notices: Notice[] = [
+  {
+    id: 'registration-forms-available',
+    title:
+      'Registration forms for licensees and electricity operators are now available to download',
+    date: '2026-10-30',
+    category: 'Public notice',
+    href: hrefFor(routes.forms),
+  },
   {
     id: 'ogserc-ord-2026-001-published',
     title:
