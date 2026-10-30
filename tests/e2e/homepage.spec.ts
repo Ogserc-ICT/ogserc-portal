@@ -6,14 +6,7 @@ import { waitForSettledPage } from './support/settle'
 const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
 // FR-WEB-02 order, after the hero (which holds the page's only h1, and one h2 per slide).
-const SECTION_HEADINGS = [
-  'Quick services',
-  'Latest updates',
-  'Public notices',
-  'Tenders',
-  'Events',
-  'Contact us',
-]
+const SECTION_HEADINGS = ['Quick services', 'Latest updates', 'Public notices', 'Contact us']
 
 test.describe('Homepage', () => {
   test.beforeEach(async ({ page }) => {
@@ -69,8 +62,9 @@ test.describe('Homepage', () => {
     ])
   })
 
-  test('shows only clearly marked placeholder content', async ({ page }) => {
-    await expect(page.getByText(/OGSERC to supply/).first()).toBeVisible()
+  // Every homepage section now holds real OGSERC content (D-062); sample text must not return.
+  test('shows no placeholder content', async ({ page }) => {
+    await expect(page.getByText(/OGSERC to supply|\[Sample/)).toHaveCount(0)
   })
 
   test('the first slide shows the introduction', async ({ page }) => {
@@ -79,20 +73,54 @@ test.describe('Homepage', () => {
     ).toBeVisible()
   })
 
-  test('public notices are listed newest first', async ({ page }) => {
-    const dates = await page
-      .locator('section[aria-labelledby="public-notices-heading"] time')
+  test('public notices are listed newest first: the forms, then the Order', async ({ page }) => {
+    const section = page.locator('section[aria-labelledby="public-notices-heading"]')
+    const dates = await section
+      .locator('time')
       .evaluateAll((els) => els.map((el) => el.getAttribute('datetime') ?? ''))
-    expect(dates.length).toBeGreaterThan(1)
+    expect(dates).toHaveLength(2)
     expect(dates).toEqual([...dates].sort().reverse())
+    await expect(section.getByRole('listitem').first().getByRole('link')).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/forms',
+    )
+    await expect(section.getByRole('link', { name: /OGSERC\/ORD\/2026\/001/ })).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
+    )
   })
 
-  test('latest updates scroll with the keyboard (no JavaScript carousel)', async ({ page }) => {
+  test('latest updates show the forms, then the Order', async ({ page }) => {
+    const section = page.locator('section[aria-labelledby="latest-updates-heading"]')
+    const cards = section.getByRole('article')
+    await expect(cards).toHaveCount(2)
+    await expect(cards.nth(0).getByRole('link')).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/forms',
+    )
+    await expect(cards.nth(1).getByRole('link')).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
+    )
+  })
+
+  test('latest updates scroll with the keyboard on phones (no JavaScript carousel)', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile', 'Two cards fit side by side on wider screens')
     const region = page.getByRole('region', { name: /Latest updates, scroll sideways/ })
     await expect(region).toHaveAttribute('tabindex', '0')
     await region.focus()
     await page.keyboard.press('ArrowRight')
     await expect.poll(() => region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0)
+  })
+
+  test('the hero fills most of a phone screen', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile', 'The taller hero applies to phones only')
+    const hero = page.getByRole('region', { name: 'Highlights' })
+    const height = (await hero.boundingBox())?.height ?? 0
+    const viewport = page.viewportSize()?.height ?? 0
+    expect(height).toBeGreaterThanOrEqual(viewport * 0.69)
   })
 
   test('the page does not scroll sideways', async ({ page }) => {

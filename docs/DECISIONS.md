@@ -602,7 +602,8 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - **Footer content:** the footer holds the quick links, contact details and legal links. The button is never visible while any of the footer is on screen, so it cannot cover them, at any width or scroll position. At the bottom of the page the footer's own link takes over.
 - **Hero pause button:** the button appears only after scrolling more than one viewport. That puts its top edge more than one viewport down the document, below the hero, so it can never meet the pause button in the hero's corner.
 - **Main content:** the button does float over main content mid-page, as any floating button does.
-- **Tests:** at 360 and 1280px, a test checks the first scroll position where the button appears (clear of the pause button and of every link and button) and the very bottom of the page.
+- **Tests:** at 360 and 1280px, a test checks the first scroll position where the button appears (clear of the pause button and of every link and button in the header and footer) and the very bottom of the page (the button hidden, nothing covered).
+  - *Changed 2026-10-30 (owner's choice):* the first-position check used to cover every link and button on the page. That depended on whichever content happened to sit under the corner, not on the button, and the taller phone hero (D-062) moved a Latest updates card under it. It now checks what this decision guarantees.
 
 **Focus after scrolling: the skip link.** The skip link is the first focusable element. Moving focus there means the next Tab continues exactly as on a fresh page load: utility bar, logo, menu. The header logo was the other candidate. Focusing it would skip the desktop utility bar (Contact Us, Licences, FAQs, Search).
 
@@ -753,6 +754,17 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 **Why:** the owner first suggested adding "Our Vision" beside "Our Mission", with both opening the same page. That would put two menu links to one page, which can look like a mistake, and screen-reader users hear two different link names for the same place. One item named for everything on the page avoids both. The three statements are short and read best together.
 
 **Sitemap change note (SRS 2.5):** this changes the wording of the approved Section 4 sitemap; no page was added or removed. OGSERC to confirm in writing with the other sitemap items at sign-off.
+
+## D-062 Homepage: real updates only, Tenders and Events hidden, taller hero on phones (2026-10-30)
+
+**Decision:** Following the owner's review of the live preview:
+- **Latest updates** shows only real items. The six sample news cards are gone. The one item is Order OGSERC/ORD/2026/001, linking to its page. The registration forms come next. The items sit in `latestUpdates` in `placeholder-content.ts` until the News collection exists (step 9). With a single item, the row has no focusable scroll region (there is nothing to scroll to) and the card fills a phone's width. From two items on, the scroll-snap row (D-030) comes back on its own.
+- **Tenders** and **Events** are hidden from the homepage until OGSERC has real ones. The components and sample data stay, so bringing them back takes one line each in `page.tsx`. FR-WEB-02 lists both sections, so they must return or be signed off as removed before launch.
+- **Hero** is at least 70% of the small viewport height (`70svh`) on phones, with the slide content centred vertically. From 640px up it keeps its content height. `svh` rather than `vh`, so the hero does not jump when the mobile browser's address bar hides.
+
+- **Public notices** keeps its section but shows only real notices: the Order's publication on the website (30 October 2026), linking to the Order. The second notice, that the registration forms are available to download, is added when the forms are published, so the site never announces something it does not have yet.
+- **Added with the forms (D-063):** a Latest updates card and a Public notice for the registration forms, both linking to `/regulatory-instruments/forms`. With two updates the scroll-snap row is back.
+- **"View all news"** still points to the news page, which step 9 builds (owner's choice).
 
 ## D-063 Registration forms as static Word files, before the Documents collection exists (2026-10-30)
 

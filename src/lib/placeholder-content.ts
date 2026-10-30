@@ -71,29 +71,52 @@ export const heroSlides: HeroSlide[] = [
   },
 ]
 
-export const news: NewsItem[] = [1, 2, 3, 4, 5, 6].map((n) => ({
-  id: `news-${n}`,
-  title: `[Sample news headline ${n}, OGSERC to supply]`,
-  date: `2026-09-${String(30 - n * 3).padStart(2, '0')}`,
-  excerpt: '[Sample summary of the news story, OGSERC to supply]',
-  href: PENDING_PATH,
-}))
-
-const noticeCategories: NoticeCategory[] = [
-  'Public notice',
-  'Regulatory notice',
-  'Service announcement',
-  'Consultation notice',
-  'Public notice',
+/**
+ * Homepage "Latest updates": real items only (owner, 2026-10-30), newest first. Build step 9
+ * moves these into the News collection.
+ */
+export const latestUpdates: NewsItem[] = [
+  {
+    id: 'registration-forms',
+    title: 'Registration forms REG-01A to REG-01K are available to download',
+    date: '2026-10-30',
+    excerpt:
+      'Use the Registration Form Selection Guide to find your form, then download it and submit it at the Registry or by email.',
+    href: hrefFor(routes.forms),
+  },
+  {
+    id: 'ogserc-ord-2026-001',
+    title:
+      'OGSERC Order on Commencement of Operations and Registration of Licensees and Electricity Operators, 2026',
+    date: '2026-10-26',
+    excerpt:
+      'Order OGSERC/ORD/2026/001 takes effect on 2 November 2026. Read the Order and download the signed copy.',
+    href: '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
+  },
 ]
 
-export const notices: Notice[] = noticeCategories.map((category, i) => ({
-  id: `notice-${i + 1}`,
-  title: `[Sample ${category.toLowerCase()} title, OGSERC to supply]`,
-  date: `2026-09-${String(28 - i * 5).padStart(2, '0')}`,
-  category,
-  href: PENDING_PATH,
-}))
+/**
+ * Homepage public notices: real notices only (owner, 2026-10-30), newest first. Notices on the
+ * same date keep this order, so the latest goes first.
+ */
+export const notices: Notice[] = [
+  {
+    id: 'registration-forms-available',
+    title:
+      'Registration forms for licensees and electricity operators are now available to download',
+    date: '2026-10-30',
+    category: 'Public notice',
+    href: hrefFor(routes.forms),
+  },
+  {
+    id: 'ogserc-ord-2026-001-published',
+    title:
+      'Order OGSERC/ORD/2026/001 on commencement of operations and registration is now published',
+    date: '2026-10-30',
+    category: 'Regulatory notice',
+    href: '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
+  },
+]
 
 export const tenders: Tender[] = [1, 2, 3].map((n) => ({
   id: `tender-${n}`,

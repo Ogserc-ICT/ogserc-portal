@@ -8,8 +8,10 @@ import type { NewsItem } from '@/lib/placeholder-content'
 /**
  * FR-WEB-02 Latest Updates. A CSS scroll-snap row instead of a JavaScript carousel (D-030): it
  * scrolls by swipe, trackpad, or keyboard (the region is focusable), and nothing moves on its own.
+ * A single item has nothing to scroll to, so it gets no scroll region and fills the phone's width.
  */
 export function LatestUpdates({ items }: { items: NewsItem[] }) {
+  const scrolls = items.length > 1
   return (
     <section
       data-reveal
@@ -23,16 +25,20 @@ export function LatestUpdates({ items }: { items: NewsItem[] }) {
           action={{ label: 'View all news', href: hrefFor(routes.news) }}
         />
         <div
-          role="region"
-          aria-label="Latest updates, scroll sideways for more"
-          tabIndex={0}
+          {...(scrolls
+            ? {
+                role: 'region',
+                'aria-label': 'Latest updates, scroll sideways for more',
+                tabIndex: 0,
+              }
+            : {})}
           className="-mx-4 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:mx-0 lg:scroll-px-0 lg:px-0"
         >
           <ul className="flex gap-4 lg:gap-6">
             {byNewestFirst(items).map((item) => (
               <li
                 key={item.id}
-                className="w-[85%] shrink-0 snap-start sm:w-[45%] lg:w-[calc((100%-3rem)/3)]"
+                className={`${scrolls ? 'w-[85%]' : 'w-full'} shrink-0 snap-start sm:w-[45%] lg:w-[calc((100%-3rem)/3)]`}
               >
                 <Card
                   title={item.title}
