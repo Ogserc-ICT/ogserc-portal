@@ -766,6 +766,7 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - **The guide is text on the page only.** No download of the guide, and no Word or PDF version of it on the site. Its wording, amounts and paragraph references are used exactly as in `docs/source/registration-guide.md`, and a test compares the page with that file. Its closing italic line ("Forms are available from…") is left out; the "How to submit" box replaces it.
 - **Link text** uses each form's own title in sentence case (form D: "Generation of 1 MW to below 10 MW"). "Who it is for" uses the guide's wording ("1 MW to less than 10 MW"). Both are OGSERC's.
 - **Sizes** are read from the files when the page is built, never typed in.
+- **Guide table on phones:** below 640px each row shows as a card (the category letter large, then "Who registers", "Form" and "Fee" with small labels). The table keeps its caption (the guide's subtitle), `<th scope>` cells and explicit table roles, because some browsers drop table semantics when rows change display; the header row stays for screen readers only, and the small labels are hidden from them so nothing is read twice. Each form code links to that form's entry (`#reg-01c`). From 640px it is an ordinary table.
 - **Office hours** on the page reuse the contact page's 8:00am to 5:00pm (owner, 2026-10-30).
 - **Registry address** uses the guide's wording, "5th and 6th Floors, OPIC Building, Oke-Ilewo, Abeokuta". The footer's "Floors 5 & 6, OPIC Towers" is also correct (owner); they need not match.
 
