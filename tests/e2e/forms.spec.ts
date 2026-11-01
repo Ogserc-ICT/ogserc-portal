@@ -35,7 +35,10 @@ function guideSource() {
   return { rows, rules }
 }
 
-const formFiles = () => readdirSync(FORMS_DIR).filter((name) => name.endsWith('.docx')).sort()
+const formFiles = () =>
+  readdirSync(FORMS_DIR)
+    .filter((name) => name.endsWith('.docx'))
+    .sort()
 
 test.describe('Forms page', () => {
   test.beforeEach(async ({ page }) => {
@@ -45,13 +48,12 @@ test.describe('Forms page', () => {
   test('the menu links to the page, which has the title and an introduction', async ({ page }) => {
     await expect(page.getByRole('banner').locator(`a[href="${PAGE}"]`).first()).toBeAttached()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Forms')
-    await expect(
-      page.getByRole('link', { name: 'Order OGSERC/ORD/2026/001' }),
-    ).toHaveAttribute('href', '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001')
-    const nav = page.getByRole('navigation', { name: 'Instrument types' })
-    await expect(nav.locator('[aria-current="page"]')).toHaveAccessibleName(
-      'Forms (11 documents)',
+    await expect(page.getByRole('link', { name: 'Order OGSERC/ORD/2026/001' })).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
     )
+    const nav = page.getByRole('navigation', { name: 'Instrument types' })
+    await expect(nav.locator('[aria-current="page"]')).toHaveAccessibleName('Forms (11 documents)')
   })
 
   test('the guide comes before the forms, then how to submit', async ({ page }) => {
@@ -92,9 +94,7 @@ test.describe('Forms page', () => {
     page,
   }) => {
     const { rules } = guideSource()
-    const items = page
-      .getByRole('region', { name: 'REGISTRATION FORM SELECTION GUIDE' })
-      .getByRole('listitem')
+    const items = page.getByRole('list', { name: 'Rules for choosing' }).getByRole('listitem')
     await expect(items).toHaveText(rules)
     const late = page.getByText(/^Late registration:/)
     for (const amount of [
@@ -104,6 +104,32 @@ test.describe('Forms page', () => {
     ]) {
       await expect(late).toContainText(amount)
     }
+  })
+
+  test('the bank accounts sit between the guide table and the rules, in bold', async ({ page }) => {
+    const payment = page.getByRole('region', { name: 'Payment details' })
+    await expect(payment.getByRole('listitem')).toHaveCount(2)
+    for (const text of [
+      'OGUN STATE ELECTRICITY REGULATORY COMMISSION',
+      '1313352257',
+      'Zenith Bank',
+      '0150934805',
+      'Sterling Bank',
+    ]) {
+      const value = payment.getByText(text, { exact: true }).first()
+      await expect(value).toBeVisible()
+      expect(Number(await value.evaluate((el) => getComputedStyle(el).fontWeight))).toBe(700)
+    }
+    await expect(payment.getByRole('link', { name: /public notice/ })).toHaveAttribute(
+      'href',
+      '/media-center/notices/commencement-of-operations-and-mandatory-registration',
+    )
+    const snapshot = await page.getByRole('main').ariaSnapshot()
+    const tableAt = snapshot.indexOf('REG-01K')
+    const paymentAt = snapshot.indexOf('Payment details')
+    const rulesAt = snapshot.indexOf('Rules for choosing')
+    expect(tableAt).toBeLessThan(paymentAt)
+    expect(paymentAt).toBeLessThan(rulesAt)
   })
 
   test('a form code in the guide jumps to that form', async ({ page }) => {
@@ -143,9 +169,7 @@ test.describe('Forms page', () => {
     const hrefs = await page
       .locator('main a[download]')
       .evaluateAll((links) => links.map((a) => a.getAttribute('href') ?? ''))
-    expect(hrefs.map((href) => decodeURIComponent(path.basename(href))).sort()).toEqual(
-      formFiles(),
-    )
+    expect(hrefs.map((href) => decodeURIComponent(path.basename(href))).sort()).toEqual(formFiles())
   })
 
   test('every download returns the Word file', async ({ page, request }) => {
@@ -171,7 +195,9 @@ test.describe('Forms page', () => {
     await expect(box).toContainText('5th and 6th Floors, OPIC Building, Oke-Ilewo, Abeokuta')
     await expect(box).toContainText('8:00am to 5:00pm')
     await expect(box).toContainText('2 November 2026')
-    await expect(box).toContainText('[OGSERC to supply]')
+    // The contact person is hidden until OGSERC names one (D-066).
+    await expect(box).not.toContainText('Contact person')
+    await expect(box).not.toContainText('[OGSERC to supply]')
     await expect(box.getByRole('link', { name: EMAIL })).toHaveAttribute('href', `mailto:${EMAIL}`)
   })
 
@@ -199,9 +225,7 @@ test.describe('Forms page', () => {
     const names = await page
       .getByRole('main')
       .locator('a[href]')
-      .evaluateAll((links) =>
-        links.map((a) => (a.textContent ?? '').replace(/\s+/g, ' ').trim()),
-      )
+      .evaluateAll((links) => links.map((a) => (a.textContent ?? '').replace(/\s+/g, ' ').trim()))
     const duplicates = names.filter((name, i) => names.indexOf(name) !== i)
     expect(duplicates).toEqual([])
   })

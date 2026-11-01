@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 
 import { PageBand } from '@/components/layout/PageBand'
+import { BankAccounts } from '@/components/notices/BankAccounts'
 import { Badge } from '@/components/ui/Badge'
 import { buttonClasses } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
@@ -14,7 +15,6 @@ import type { RegulatoryDocument } from '@/lib/documents/types'
 import { formatDate } from '@/lib/format-date'
 import { routes } from '@/lib/navigation'
 import {
-  type BankAccount,
   type NoticeSection,
   type PublicNotice,
   findNotice,
@@ -73,36 +73,6 @@ function NoticeSectionBody({ section }: { section: NoticeSection }) {
       ) : null}
       {section.outro ? <p>{section.outro}</p> : null}
     </>
-  )
-}
-
-/** One account per card: on a phone a card reads more easily than a five-column table. */
-function AccountCard({ account }: { account: BankAccount }) {
-  const rows: [string, string][] = [
-    ['Account name', account.accountName],
-    ['Account number', account.accountNumber],
-    ['Bank', account.bank],
-    ['Payment description', account.description],
-    ['Amount', account.amount],
-  ]
-  return (
-    <li className="rounded-lg border border-line bg-green-50 p-5">
-      <h3 className="font-bold text-green-900">{account.bank}</h3>
-      <dl className="mt-3 space-y-2 text-base">
-        {rows.map(([label, value]) => (
-          <div key={label} className="grid gap-x-4 sm:grid-cols-[11rem_minmax(0,1fr)]">
-            <dt className="text-sm text-ink-muted sm:text-base">{label}</dt>
-            <dd
-              className={`font-semibold break-words ${
-                label === 'Account number' ? 'text-lg tracking-wider tabular-nums' : ''
-              }`}
-            >
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </li>
   )
 }
 
@@ -188,11 +158,7 @@ export default async function NoticePage({ params }: Props) {
 
             <Section id="payment" heading="Payment details">
               <p>{payment.intro}</p>
-              <ul className="grid gap-4 md:grid-cols-2">
-                {payment.accounts.map((account) => (
-                  <AccountCard key={account.accountNumber} account={account} />
-                ))}
-              </ul>
+              <BankAccounts accounts={payment.accounts} />
             </Section>
 
             <footer className="space-y-2 border-t border-line pt-6">

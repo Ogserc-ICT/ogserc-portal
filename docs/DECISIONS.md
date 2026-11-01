@@ -818,3 +818,11 @@ Every date, deadline, fee, penalty and threshold in the notice was checked again
 **Bank accounts:** published at the owner's request (2026-11-01), digit for digit as in the notice: Zenith Bank 1313352257 (processing fees) and Sterling Bank 0150934805 (administrative charges), each "50% of Applicable Registration Rate". A test checks both numbers, so a later edit cannot change them by accident. They are shown as one card per account rather than a table, because a five-column table does not fit a 360px phone.
 
 **Dates:** the homepage lists sort by the date the notice went on the site (1 November 2026), as the earlier homepage notices do. The notice's own pages show the issue date, 26 October 2026.
+
+## D-066 Forms page: bank accounts before the rules, contact person hidden (2026-11-02)
+
+**Decision:** At the owner's request, the Forms page shows OGSERC's two bank accounts for registration fees in a **Payment details** box inside the selection guide, after the table and before "Rules for choosing". The accounts come from the registration notice's data (D-065), so the two pages always show the same numbers. A shared `BankAccounts` component draws both. The account name, account number and bank are bold, and the number is large, so they are hard to miss. The box has a gold border and links to the notice, so it reads as separate from the guide's own text (Form REG-GUIDE, which stays word for word as OGSERC's source, D-063).
+
+The "Contact person" line in How to submit is hidden until OGSERC names one: `formsSubmission.contactPerson` is `null`, and setting a name shows the line again.
+
+Tests check that the five values are bold (font weight 700), that the box comes between the table and the rules, and that the rules still match the source.

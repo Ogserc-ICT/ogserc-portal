@@ -40,9 +40,12 @@ export type PublicNotice = {
 
 const ACCOUNT_NAME = 'OGUN STATE ELECTRICITY REGULATORY COMMISSION'
 
+/** The notice the Forms page takes its bank accounts from (D-066). */
+export const REGISTRATION_NOTICE_SLUG = 'commencement-of-operations-and-mandatory-registration'
+
 export const publicNotices: PublicNotice[] = [
   {
-    slug: 'commencement-of-operations-and-mandatory-registration',
+    slug: REGISTRATION_NOTICE_SLUG,
     category: 'Public notice',
     title: 'Commencement of Operations and Mandatory Registration of Electricity Operators',
     orderSlug: 'ogserc-ord-2026-001',

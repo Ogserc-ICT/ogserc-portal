@@ -237,7 +237,8 @@ export const formsSubmission = {
   registry: '5th and 6th Floors, OPIC Building, Oke-Ilewo, Abeokuta',
   email: 'registration@ogserc.org.ng',
   officeHours: contactPage.officeHours,
-  contactPerson: '[OGSERC to supply]',
+  // Hidden until OGSERC names one (owner, 2026-11-02, D-066); set a name to show it again.
+  contactPerson: null as string | null,
 }
 
 /** Contact form enquiry types, agreed with the owner (D-059). */
