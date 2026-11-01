@@ -13,6 +13,9 @@
 
 import type { IconName } from '@/components/ui/Icon'
 import { PENDING_PATH, hrefFor, routes } from '@/lib/navigation'
+import { noticeHref, publicNotices } from '@/lib/notices/public-notices'
+
+const [registrationNotice] = publicNotices
 
 /** Categories from SRS FR-NEWS-03. */
 export type NoticeCategory =
@@ -78,6 +81,14 @@ export const heroSlides: HeroSlide[] = [
  */
 export const latestUpdates: NewsItem[] = [
   {
+    id: 'registration-notice',
+    title: 'Public notice: commencement of operations and mandatory registration',
+    date: registrationNotice.postedDate,
+    excerpt:
+      'Who must register, the deadlines (existing operators by 1 January 2027), fees, how to register and the bank accounts for payment.',
+    href: noticeHref(registrationNotice),
+  },
+  {
     id: 'registration-forms',
     title: 'Registration forms REG-01A to REG-01K are available to download',
     date: '2026-10-30',
@@ -101,6 +112,13 @@ export const latestUpdates: NewsItem[] = [
  * same date keep this order, so the latest goes first.
  */
 export const notices: Notice[] = [
+  {
+    id: registrationNotice.slug,
+    title: registrationNotice.title,
+    date: registrationNotice.postedDate,
+    category: registrationNotice.category,
+    href: noticeHref(registrationNotice),
+  },
   {
     id: 'registration-forms-available',
     title:

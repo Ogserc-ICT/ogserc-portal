@@ -17,7 +17,7 @@ const DROPDOWNS: Record<string, number> = {
   'About OGSERC': 4,
   'Regulatory Instruments': 11,
   Mandate: 4,
-  'Media Center': 4,
+  'Media Center': 5, // Public Notices added (D-065)
   Resources: 6,
 }
 

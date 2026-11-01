@@ -45,7 +45,8 @@ export const routes = {
   news: pending('News', '/media-center/news'),
   tenders: pending('Tenders', '/media-center/tenders'),
   events: pending('Events', '/media-center/events'),
-  notices: pending('Public Notices', '/media-center/notices'),
+  // Not in the SRS Section 4 Media Center menu; added with the owner's agreement (D-065).
+  notices: { label: 'Public Notices', path: '/media-center/notices', ready: true },
 } satisfies Record<string, SiteLink>
 
 const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
@@ -86,6 +87,7 @@ const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
     label: 'Media Center',
     links: [
       routes.news,
+      routes.notices,
       routes.tenders,
       routes.events,
       pending('Photos & Videos', '/media-center/photos-and-videos'),

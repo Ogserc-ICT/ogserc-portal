@@ -799,3 +799,22 @@ The text is used as given, except for these changes, all confirmed by the owner 
 **Organogram:** drawn in HTML from the owner's organogram image, not shown as the image. Headings and lists are read by screen readers and by site search, scale to a 360px phone, and need no alt text that could fall out of step. The Office of the Chairman (one of the five divisions in the text) holds the three units the organogram draws beside the Chairman / CEO: Internal Audit, Public Affairs and Stakeholder, and Registry (confirmed by the owner). Unit names are copied as drawn (for example "Engineering Standard", "Finance and Account").
 
 **Still to come (SRS Section 4):** the Structure page is to cover commissioners and management too. The owner has put this on hold (2026-11-01), so no placeholder people are shown until they ask for it.
+
+## D-065 Public Notices in the Media Center menu, and the registration notice (2026-11-01)
+
+**Decision:** Media Center gets a fifth menu item, **Public Notices**, after News, at `/media-center/notices`. It lists OGSERC's notices newest first, and each notice has its own page at `/media-center/notices/<slug>`. The first is OGSERC's public notice "Commencement of Operations and Mandatory Registration of Electricity Operators" (issued at Abeokuta, 26 October 2026, under Order OGSERC/ORD/2026/001). The homepage's Public notices and Latest updates list it first, and its "View all notices" link now opens the list. The notices sit in `src/lib/notices/public-notices.ts` until build step 9 brings the Announcements collection (FR-NEWS-03); the step 4 seed must carry them over.
+
+**Why a menu item:** the owner first asked for the notice under News. The document is a public notice, the homepage already has a Public notices section with a "View all notices" link, and FR-NEWS-03 makes "public notice" a category of its own. Putting notices under News would mix them with news stories. A Public Notices page that only the homepage links to would be hard to find again. The owner chose the menu item.
+
+**Sitemap change note (SRS 2.5):** SRS Section 4's Media Center lists News, Tenders, Events, Photos & Videos. This adds Public Notices. OGSERC to confirm in writing with the other sitemap items at sign-off (see D-061).
+
+**The text is the notice as issued**, except:
+- "license" is spelt "licence", to match the Order and the rest of the site (owner, 2026-11-01). "licensed" and "licensee" are unchanged.
+- The semicolon before the bank details is a colon.
+- The bank details get a heading, "Payment details", so the page's sections can be navigated.
+
+Every date, deadline, fee, penalty and threshold in the notice was checked against the Order's text on the site, and all match. The notice's "transfer of oversight ... on 23 June 2025" matches the Order's recital 4.
+
+**Bank accounts:** published at the owner's request (2026-11-01), digit for digit as in the notice: Zenith Bank 1313352257 (processing fees) and Sterling Bank 0150934805 (administrative charges), each "50% of Applicable Registration Rate". A test checks both numbers, so a later edit cannot change them by accident. They are shown as one card per account rather than a table, because a five-column table does not fit a 360px phone.
+
+**Dates:** the homepage lists sort by the date the notice went on the site (1 November 2026), as the earlier homepage notices do. The notice's own pages show the issue date, 26 October 2026.
