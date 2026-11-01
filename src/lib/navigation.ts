@@ -23,9 +23,11 @@ export const hrefFor = (link: SiteLink): string => (link.ready ? link.path : PEN
 const resolve = (link: SiteLink): ResolvedLink => ({ label: link.label, href: hrefFor(link) })
 
 export const routes = {
-  about: pending('About Us', '/about'),
+  about: { label: 'About Us', path: '/about', ready: true },
+  history: { label: 'Our History', path: '/about/history', ready: true },
   // SRS Section 4's "Our Mission", renamed with the owner's agreement (D-061).
   visionMissionValues: { label: 'Vision, Mission & Values', path: '/about/mission', ready: true },
+  structure: { label: "OGSERC's Structure", path: '/about/structure', ready: true },
   contact: { label: 'Contact Us', path: '/contact', ready: true },
   licences: pending('Licences', '/licences'),
   faqs: pending('FAQs', '/faqs'),
@@ -50,12 +52,7 @@ const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
   {
     id: 'about',
     label: 'About OGSERC',
-    links: [
-      pending('About Us', '/about'),
-      pending('Our History', '/about/history'),
-      routes.visionMissionValues,
-      pending("OGSERC's Structure", '/about/structure'),
-    ],
+    links: [routes.about, routes.history, routes.visionMissionValues, routes.structure],
   },
   {
     id: 'regulatory-instruments',
@@ -108,12 +105,17 @@ const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
   },
 ]
 
-/** The Regulatory Instruments categories, in menu order, for the document pages' sidebar. */
-export const instrumentCategories = (): (ResolvedLink & { path: string })[] => {
-  const found = menuGroups.find((g) => g.id === 'regulatory-instruments')
-  if (!found) throw new Error('Unknown menu group: regulatory-instruments')
+const groupPages = (id: string): (ResolvedLink & { path: string })[] => {
+  const found = menuGroups.find((g) => g.id === id)
+  if (!found) throw new Error(`Unknown menu group: ${id}`)
   return found.links.map((link) => ({ ...resolve(link), path: link.path }))
 }
+
+/** The Regulatory Instruments categories, in menu order, for the document pages' sidebar. */
+export const instrumentCategories = () => groupPages('regulatory-instruments')
+
+/** The About OGSERC pages, in menu order, for the section's own navigation. */
+export const aboutPages = () => groupPages('about')
 
 const group = (id: string): MenuEntry => {
   const found = menuGroups.find((g) => g.id === id)
@@ -147,7 +149,7 @@ export const utilityLinks: ResolvedLink[] = [
 ].map(resolve)
 
 export const footerQuickLinks: ResolvedLink[] = [
-  pending('About Us', '/about'),
+  routes.about,
   pending('Regulatory Framework', '/regulatory-instruments'),
   routes.energyCaps,
   pending('Licences & Permits', '/licences'),

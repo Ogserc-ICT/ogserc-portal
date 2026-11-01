@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 
+import { AboutNav } from '@/components/layout/AboutNav'
 import { PageBand } from '@/components/layout/PageBand'
 import { Container } from '@/components/ui/Container'
 import { Icon, type IconName } from '@/components/ui/Icon'
@@ -51,6 +52,7 @@ export default function VisionMissionValuesPage() {
         titleId="page-title"
         title={page.label}
       />
+      <AboutNav currentPath={page.path} />
 
       <div className="bg-green-50 py-12 sm:py-16">
         <Container className="space-y-12">
