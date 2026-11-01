@@ -8,6 +8,8 @@ const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 // FR-WEB-02 order, after the hero (which holds the page's only h1, and one h2 per slide).
 const SECTION_HEADINGS = ['Quick services', 'Latest updates', 'Public notices', 'Contact us']
 
+const NOTICE_PATH = '/media-center/notices/commencement-of-operations-and-mandatory-registration'
+
 test.describe('Homepage', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
@@ -73,16 +75,21 @@ test.describe('Homepage', () => {
     ).toBeVisible()
   })
 
-  test('public notices are listed newest first: the forms, then the Order', async ({ page }) => {
+  test('public notices are listed newest first: the registration notice, the forms, then the Order', async ({
+    page,
+  }) => {
     const section = page.locator('section[aria-labelledby="public-notices-heading"]')
     const dates = await section
       .locator('time')
       .evaluateAll((els) => els.map((el) => el.getAttribute('datetime') ?? ''))
-    expect(dates).toHaveLength(2)
+    expect(dates).toHaveLength(3)
     expect(dates).toEqual([...dates].sort().reverse())
-    await expect(section.getByRole('listitem').first().getByRole('link')).toHaveAttribute(
+    const links = section.getByRole('listitem').getByRole('link')
+    await expect(links.nth(0)).toHaveAttribute('href', NOTICE_PATH)
+    await expect(links.nth(1)).toHaveAttribute('href', '/regulatory-instruments/forms')
+    await expect(section.getByRole('link', { name: 'View all notices' })).toHaveAttribute(
       'href',
-      '/regulatory-instruments/forms',
+      '/media-center/notices',
     )
     await expect(section.getByRole('link', { name: /OGSERC\/ORD\/2026\/001/ })).toHaveAttribute(
       'href',
@@ -90,15 +97,18 @@ test.describe('Homepage', () => {
     )
   })
 
-  test('latest updates show the forms, then the Order', async ({ page }) => {
+  test('latest updates show the registration notice, the forms, then the Order', async ({
+    page,
+  }) => {
     const section = page.locator('section[aria-labelledby="latest-updates-heading"]')
     const cards = section.getByRole('article')
-    await expect(cards).toHaveCount(2)
-    await expect(cards.nth(0).getByRole('link')).toHaveAttribute(
+    await expect(cards).toHaveCount(3)
+    await expect(cards.nth(0).getByRole('link')).toHaveAttribute('href', NOTICE_PATH)
+    await expect(cards.nth(1).getByRole('link')).toHaveAttribute(
       'href',
       '/regulatory-instruments/forms',
     )
-    await expect(cards.nth(1).getByRole('link')).toHaveAttribute(
+    await expect(cards.nth(2).getByRole('link')).toHaveAttribute(
       'href',
       '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
     )

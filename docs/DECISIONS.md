@@ -799,3 +799,40 @@ The text is used as given, except for these changes, all confirmed by the owner 
 **Organogram:** drawn in HTML from the owner's organogram image, not shown as the image. Headings and lists are read by screen readers and by site search, scale to a 360px phone, and need no alt text that could fall out of step. The Office of the Chairman (one of the five divisions in the text) holds the three units the organogram draws beside the Chairman / CEO: Internal Audit, Public Affairs and Stakeholder, and Registry (confirmed by the owner). Unit names are copied as drawn (for example "Engineering Standard", "Finance and Account").
 
 **Still to come (SRS Section 4):** the Structure page is to cover commissioners and management too. The owner has put this on hold (2026-11-01), so no placeholder people are shown until they ask for it.
+
+## D-065 Public Notices in the Media Center menu, and the registration notice (2026-11-01)
+
+**Decision:** Media Center gets a fifth menu item, **Public Notices**, after News, at `/media-center/notices`. It lists OGSERC's notices newest first, and each notice has its own page at `/media-center/notices/<slug>`. The first is OGSERC's public notice "Commencement of Operations and Mandatory Registration of Electricity Operators" (issued at Abeokuta, 26 October 2026, under Order OGSERC/ORD/2026/001). The homepage's Public notices and Latest updates list it first, and its "View all notices" link now opens the list. The notices sit in `src/lib/notices/public-notices.ts` until build step 9 brings the Announcements collection (FR-NEWS-03); the step 4 seed must carry them over.
+
+**Why a menu item:** the owner first asked for the notice under News. The document is a public notice, the homepage already has a Public notices section with a "View all notices" link, and FR-NEWS-03 makes "public notice" a category of its own. Putting notices under News would mix them with news stories. A Public Notices page that only the homepage links to would be hard to find again. The owner chose the menu item.
+
+**Sitemap change note (SRS 2.5):** SRS Section 4's Media Center lists News, Tenders, Events, Photos & Videos. This adds Public Notices. OGSERC to confirm in writing with the other sitemap items at sign-off (see D-061).
+
+**The text is the notice as issued**, except:
+- "license" is spelt "licence", to match the Order and the rest of the site (owner, 2026-11-01). "licensed" and "licensee" are unchanged.
+- The semicolon before the bank details is a colon.
+- The bank details get a heading, "Payment details", so the page's sections can be navigated.
+
+Every date, deadline, fee, penalty and threshold in the notice was checked against the Order's text on the site, and all match. The notice's "transfer of oversight ... on 23 June 2025" matches the Order's recital 4.
+
+**Bank accounts:** published at the owner's request (2026-11-01), digit for digit as in the notice: Zenith Bank 1313352257 (processing fees) and Sterling Bank 0150934805 (administrative charges), each "50% of Applicable Registration Rate". A test checks both numbers, so a later edit cannot change them by accident. They are shown as one card per account rather than a table, because a five-column table does not fit a 360px phone.
+
+**Dates:** the homepage lists sort by the date the notice went on the site (1 November 2026), as the earlier homepage notices do. The notice's own pages show the issue date, 26 October 2026.
+
+## D-066 Forms page: bank accounts before the rules, contact person hidden (2026-11-02)
+
+**Decision:** At the owner's request, the Forms page shows OGSERC's two bank accounts for registration fees in a **Payment details** box inside the selection guide, after the table and before "Rules for choosing". The accounts come from the registration notice's data (D-065), so the two pages always show the same numbers. A shared `BankAccounts` component draws both. The account name, account number and bank are bold, and the number is large, so they are hard to miss. The box has a gold border and links to the notice, so it reads as separate from the guide's own text (Form REG-GUIDE, which stays word for word as OGSERC's source, D-063).
+
+The "Contact person" line in How to submit is hidden until OGSERC names one: `formsSubmission.contactPerson` is `null`, and setting a name shows the line again.
+
+Tests check that the five values are bold (font weight 700), that the box comes between the table and the rules, and that the rules still match the source.
+
+## D-067 Resources > Downloads lists every file on the site (2026-11-02)
+
+**Decision:** `/resources/downloads` lists every document and form the site offers, to download, grouped by document type. Today that is Forms (REG-01A to REG-01K, Word) and Orders & Directives (Order OGSERC/ORD/2026/001, signed PDF). Each entry shows its reference or form code, file type and size, and its date and status (documents) or version (forms). It links to its own page: the document page, or the form's entry on the Forms page.
+
+**How it stays complete:** the page has no list of its own. `src/lib/downloads.ts` reads the documents catalogue and the registration forms, the same data their pages use, and groups them by the Regulatory Instruments categories in menu order, leaving empty groups out. A new document added to the catalogue appears under its category on both its category page and Downloads, with nothing else to update. In build step 4 both sources move into the Documents collection, and the page reads that instead (FR-CMS-02 lists Downloads as a CMS section).
+
+**Categories** are the Regulatory Instruments menu's (Rules & Regulations, Energy Caps, Guidelines, Forms, …, Orders & Directives), so a document has the same type everywhere on the site. A test compares the page's downloads with every PDF, Word and Excel file under `public/documents` and `public/forms`, so a file published elsewhere but missing here fails the build.
+
+**Accessibility:** each Download button's accessible name names the file ("Download REG-01C (Generation of 10 MW or more), Word, 406 KB"), starting with its visible text, so the twelve buttons are told apart by screen readers and voice control.

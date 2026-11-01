@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 import { InstrumentNav } from '@/components/documents/InstrumentNav'
 import { PageBand } from '@/components/layout/PageBand'
+import { BankAccounts } from '@/components/notices/BankAccounts'
 import { Container } from '@/components/ui/Container'
 import { Icon } from '@/components/ui/Icon'
 import { buttonClasses } from '@/components/ui/Button'
@@ -18,6 +19,7 @@ import {
   registrationGuide,
 } from '@/lib/forms/registration'
 import { hrefFor, routes } from '@/lib/navigation'
+import { REGISTRATION_NOTICE_SLUG, findNotice, noticeHref } from '@/lib/notices/public-notices'
 import { formsSubmission } from '@/lib/placeholder-content'
 
 const category = routes.forms
@@ -152,12 +154,46 @@ function SelectionGuide() {
         </tbody>
       </table>
 
-      <h3 className="mt-8 text-lg font-bold text-green-900">{registrationGuide.rulesTitle}</h3>
-      <ul className="mt-3 list-disc space-y-2 pl-5">
+      <PaymentDetails />
+
+      <h3 id="rules-title" className="mt-8 text-lg font-bold text-green-900">
+        {registrationGuide.rulesTitle}
+      </h3>
+      <ul aria-labelledby="rules-title" className="mt-3 list-disc space-y-2 pl-5">
         {registrationGuide.rules.map((rule) => (
           <li key={rule}>{rule}</li>
         ))}
       </ul>
+    </section>
+  )
+}
+
+/**
+ * The bank accounts from the registration notice, set apart from the guide's own text (it is not
+ * part of Form REG-GUIDE) and placed before the rules at the owner's request (D-066).
+ */
+function PaymentDetails() {
+  const notice = findNotice(REGISTRATION_NOTICE_SLUG)
+  if (!notice) throw new Error(`Missing notice ${REGISTRATION_NOTICE_SLUG}`)
+  return (
+    <section
+      aria-labelledby="payment-details"
+      className="mt-8 rounded-lg border-2 border-gold-400 bg-green-50 p-4 sm:p-6"
+    >
+      <h3 id="payment-details" className="text-xl font-bold text-green-900">
+        Payment details
+      </h3>
+      <p className="mt-2 mb-4">
+        From OGSERC&apos;s{' '}
+        <Link
+          href={noticeHref(notice)}
+          className="font-semibold text-green-700 underline underline-offset-4"
+        >
+          public notice of {formatDate(notice.issuedDate)}
+        </Link>
+        :
+      </p>
+      <BankAccounts accounts={notice.payment.accounts} />
     </section>
   )
 }
@@ -270,8 +306,12 @@ function HowToSubmit({ effectiveDate }: { effectiveDate?: string }) {
             </dd>
           </>
         ) : null}
-        <dt className="text-ink-muted">Contact person</dt>
-        <dd>{contactPerson}</dd>
+        {contactPerson ? (
+          <>
+            <dt className="text-ink-muted">Contact person</dt>
+            <dd>{contactPerson}</dd>
+          </>
+        ) : null}
       </dl>
     </section>
   )
