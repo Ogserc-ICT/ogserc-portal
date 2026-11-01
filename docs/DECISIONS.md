@@ -790,12 +790,12 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 
 **Decision:** The remaining three About OGSERC pages go live with text the owner supplied on 2026-11-01: `/about` (About Us), `/about/history` (Our History) and `/about/structure` (OGSERC's Structure). The text sits in `placeholder-content.ts` (`aboutUs`, `ourHistory`, `ogsercStructure`) beside the vision and mission (D-061), for the step 4 seed. All four About pages share a row of section links under the page band (`AboutNav`), so a visitor can move between them without reopening the menu.
 
-The text is used as given, except:
+The text is used as given, except for these changes, all confirmed by the owner on 2026-11-01:
 - **Typo:** "Executive Chaiman" is corrected to "Executive Chairman".
-- **Division name:** the text lists "Legal, Licensing, Consumer and Consumer Affairs"; the organogram says "Legal, Licensing and Consumer Affairs". The page uses the organogram's name. OGSERC to confirm.
-- **Short titles on "What we do"** (Licensing, Tariffs, The Ogun State Electricity Market, Performance, Consumer protection, Regulations, codes and standards) are ours, drawn from each item so the cards can be scanned. OGSERC can change them.
+- **Division name:** the text lists "Legal, Licensing, Consumer and Consumer Affairs"; the organogram says "Legal, Licensing and Consumer Affairs". The page uses the organogram's name.
+- **Short titles on "What we do"** (Licensing, Tariffs, The Ogun State Electricity Market, Performance, Consumer protection, Regulations, codes and standards) are ours, drawn from each item so the cards can be scanned. OGSERC can still change them.
 - **Key dates** on Our History repeat the dates already in the text, as a timeline. Nothing is added.
 
-**Organogram:** drawn in HTML from the owner's organogram image, not shown as the image. Headings and lists are read by screen readers and by site search, scale to a 360px phone, and need no alt text that could fall out of step. The Office of the Chairman (one of the five divisions in the text) holds the three units the organogram draws beside the Chairman / CEO: Internal Audit, Public Affairs and Stakeholder, and Registry. OGSERC to confirm. Unit names are copied as drawn (for example "Engineering Standard", "Finance and Account").
+**Organogram:** drawn in HTML from the owner's organogram image, not shown as the image. Headings and lists are read by screen readers and by site search, scale to a 360px phone, and need no alt text that could fall out of step. The Office of the Chairman (one of the five divisions in the text) holds the three units the organogram draws beside the Chairman / CEO: Internal Audit, Public Affairs and Stakeholder, and Registry (confirmed by the owner). Unit names are copied as drawn (for example "Engineering Standard", "Finance and Account").
 
-**Still to come (SRS Section 4):** the Structure page is to cover commissioners and management too. Names and photos are not supplied yet, so no placeholder people are shown.
+**Still to come (SRS Section 4):** the Structure page is to cover commissioners and management too. The owner has put this on hold (2026-11-01), so no placeholder people are shown until they ask for it.
