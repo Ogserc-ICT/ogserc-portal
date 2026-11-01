@@ -42,6 +42,7 @@ export const routes = {
     path: '/regulatory-instruments/orders-and-directives',
     ready: true,
   },
+  downloads: { label: 'Downloads', path: '/resources/downloads', ready: true },
   news: pending('News', '/media-center/news'),
   tenders: pending('Tenders', '/media-center/tenders'),
   events: pending('Events', '/media-center/events'),
@@ -97,7 +98,7 @@ const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
     id: 'resources',
     label: 'Resources',
     links: [
-      pending('Downloads', '/resources/downloads'),
+      routes.downloads,
       pending('Reports & Publications', '/resources/reports-and-publications'),
       pending('Statistics', '/resources/statistics'),
       pending('Tariff & Metering Information', '/resources/tariff-and-metering'),

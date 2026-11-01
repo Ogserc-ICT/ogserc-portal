@@ -826,3 +826,13 @@ Every date, deadline, fee, penalty and threshold in the notice was checked again
 The "Contact person" line in How to submit is hidden until OGSERC names one: `formsSubmission.contactPerson` is `null`, and setting a name shows the line again.
 
 Tests check that the five values are bold (font weight 700), that the box comes between the table and the rules, and that the rules still match the source.
+
+## D-067 Resources > Downloads lists every file on the site (2026-11-02)
+
+**Decision:** `/resources/downloads` lists every document and form the site offers, to download, grouped by document type. Today that is Forms (REG-01A to REG-01K, Word) and Orders & Directives (Order OGSERC/ORD/2026/001, signed PDF). Each entry shows its reference or form code, file type and size, and its date and status (documents) or version (forms). It links to its own page: the document page, or the form's entry on the Forms page.
+
+**How it stays complete:** the page has no list of its own. `src/lib/downloads.ts` reads the documents catalogue and the registration forms, the same data their pages use, and groups them by the Regulatory Instruments categories in menu order, leaving empty groups out. A new document added to the catalogue appears under its category on both its category page and Downloads, with nothing else to update. In build step 4 both sources move into the Documents collection, and the page reads that instead (FR-CMS-02 lists Downloads as a CMS section).
+
+**Categories** are the Regulatory Instruments menu's (Rules & Regulations, Energy Caps, Guidelines, Forms, …, Orders & Directives), so a document has the same type everywhere on the site. A test compares the page's downloads with every PDF, Word and Excel file under `public/documents` and `public/forms`, so a file published elsewhere but missing here fails the build.
+
+**Accessibility:** each Download button's accessible name names the file ("Download REG-01C (Generation of 10 MW or more), Word, 406 KB"), starting with its visible text, so the twelve buttons are told apart by screen readers and voice control.
