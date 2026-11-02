@@ -836,3 +836,11 @@ Tests check that the five values are bold (font weight 700), that the box comes 
 **Categories** are the Regulatory Instruments menu's (Rules & Regulations, Energy Caps, Guidelines, Forms, …, Orders & Directives), so a document has the same type everywhere on the site. A test compares the page's downloads with every PDF, Word and Excel file under `public/documents` and `public/forms`, so a file published elsewhere but missing here fails the build.
 
 **Accessibility:** each Download button's accessible name names the file ("Download REG-01C (Generation of 10 MW or more), Word, 406 KB"), starting with its visible text, so the twelve buttons are told apart by screen readers and voice control.
+
+## D-068 Media Center > News lists the Latest updates, before the News collection exists (2026-11-02)
+
+**Decision:** `/media-center/news` is live. It lists every item in the homepage's Latest updates (`latestUpdates` in `placeholder-content.ts`), newest first, as cards in a grid: today the registration notice (D-065), the registration forms and Order OGSERC/ORD/2026/001. Each card links to the item's own page. The menu's News item and the homepage's "View all news" link now open it.
+
+**Why:** after the registration notice went live under Public Notices, the owner noticed that News still showed "This section is being prepared". The notice was first meant for News. The Latest updates items are already the site's news (the comment on `latestUpdates` says build step 9 moves them into the News collection), so News shows them rather than repeating them in a second list. The registration notice therefore appears on both News and Public Notices; it has one page, under Public Notices.
+
+**Adding news until step 9:** add an entry to `latestUpdates`. It appears on the homepage and on News. In build step 9 the page reads the News collection instead (FR-NEWS-01: author, category, featured image, attachments), and the branded image placeholder gives way to real photographs.

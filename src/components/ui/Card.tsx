@@ -7,7 +7,7 @@ type CardProps = {
   title: string
   href: string
   /** Heading level for the title, so cards fit the page outline. */
-  headingLevel?: 'h3' | 'h4'
+  headingLevel?: 'h2' | 'h3' | 'h4'
   meta?: ReactNode
   media?: ReactNode
   children?: ReactNode

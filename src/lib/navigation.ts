@@ -43,7 +43,8 @@ export const routes = {
     ready: true,
   },
   downloads: { label: 'Downloads', path: '/resources/downloads', ready: true },
-  news: pending('News', '/media-center/news'),
+  // Lists the homepage's Latest updates until the News collection exists (D-068).
+  news: { label: 'News', path: '/media-center/news', ready: true },
   tenders: pending('Tenders', '/media-center/tenders'),
   events: pending('Events', '/media-center/events'),
   // Not in the SRS Section 4 Media Center menu; added with the owner's agreement (D-065).
