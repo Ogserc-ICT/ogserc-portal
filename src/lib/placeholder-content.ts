@@ -11,8 +11,11 @@
  * supplied by OGSERC (2026-10-29, D-057). The step 4 seed must carry them into the CMS.
  */
 
+import type { StaticImageData } from 'next/image'
+
 import type { IconName } from '@/components/ui/Icon'
 import { PENDING_PATH, hrefFor, routes } from '@/lib/navigation'
+import { articleHref, newsArticles } from '@/lib/news/news-articles'
 import { noticeHref, publicNotices } from '@/lib/notices/public-notices'
 
 const [registrationNotice] = publicNotices
@@ -21,7 +24,15 @@ const [registrationNotice] = publicNotices
 export type NoticeCategory =
   'Public notice' | 'Regulatory notice' | 'Service announcement' | 'Consultation notice'
 
-export type NewsItem = { id: string; title: string; date: string; excerpt: string; href: string }
+export type NewsItem = {
+  id: string
+  title: string
+  date: string
+  excerpt: string
+  href: string
+  /** A photograph for the card; items without one show the branded placeholder. */
+  image?: StaticImageData
+}
 export type Notice = {
   id: string
   title: string
@@ -80,6 +91,14 @@ export const heroSlides: HeroSlide[] = [
  * moves these into the News collection.
  */
 export const latestUpdates: NewsItem[] = [
+  ...newsArticles.map((article) => ({
+    id: article.slug,
+    title: article.title,
+    date: article.date,
+    excerpt: article.excerpt,
+    href: articleHref(article),
+    image: article.photos[0]?.thumb,
+  })),
   {
     id: 'registration-notice',
     title: 'Public notice: commencement of operations and mandatory registration',
