@@ -76,18 +76,22 @@ test.describe('Homepage', () => {
     ).toBeVisible()
   })
 
-  test('public notices are listed newest first: the registration notice, the forms, then the Order', async ({
+  test('public notices are listed newest first: Order 002, the registration notice, the forms, then Order 001', async ({
     page,
   }) => {
     const section = page.locator('section[aria-labelledby="public-notices-heading"]')
     const dates = await section
       .locator('time')
       .evaluateAll((els) => els.map((el) => el.getAttribute('datetime') ?? ''))
-    expect(dates).toHaveLength(3)
+    expect(dates).toHaveLength(4)
     expect(dates).toEqual([...dates].sort().reverse())
     const links = section.getByRole('listitem').getByRole('link')
-    await expect(links.nth(0)).toHaveAttribute('href', NOTICE_PATH)
-    await expect(links.nth(1)).toHaveAttribute('href', '/regulatory-instruments/forms')
+    await expect(links.nth(0)).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-002',
+    )
+    await expect(links.nth(1)).toHaveAttribute('href', NOTICE_PATH)
+    await expect(links.nth(2)).toHaveAttribute('href', '/regulatory-instruments/forms')
     await expect(section.getByRole('link', { name: 'View all notices' })).toHaveAttribute(
       'href',
       '/media-center/notices',
@@ -98,19 +102,23 @@ test.describe('Homepage', () => {
     )
   })
 
-  test('latest updates show the NERC visit, the registration notice, the forms, then the Order', async ({
+  test('latest updates show the NERC visit, Order 002, the registration notice, the forms, then Order 001', async ({
     page,
   }) => {
     const section = page.locator('section[aria-labelledby="latest-updates-heading"]')
     const cards = section.getByRole('article')
-    await expect(cards).toHaveCount(4)
+    await expect(cards).toHaveCount(5)
     await expect(cards.nth(0).getByRole('link')).toHaveAttribute('href', STORY_PATH)
-    await expect(cards.nth(1).getByRole('link')).toHaveAttribute('href', NOTICE_PATH)
-    await expect(cards.nth(2).getByRole('link')).toHaveAttribute(
+    await expect(cards.nth(1).getByRole('link')).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-002',
+    )
+    await expect(cards.nth(2).getByRole('link')).toHaveAttribute('href', NOTICE_PATH)
+    await expect(cards.nth(3).getByRole('link')).toHaveAttribute(
       'href',
       '/regulatory-instruments/forms',
     )
-    await expect(cards.nth(3).getByRole('link')).toHaveAttribute(
+    await expect(cards.nth(4).getByRole('link')).toHaveAttribute(
       'href',
       '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
     )
