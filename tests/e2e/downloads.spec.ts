@@ -38,7 +38,7 @@ test.describe('Downloads page', () => {
     await expect(page.getByRole('region', { name: 'Forms' }).getByRole('article')).toHaveCount(11)
     await expect(
       page.getByRole('region', { name: 'Orders & Directives' }).getByRole('article'),
-    ).toHaveCount(1)
+    ).toHaveCount(2)
   })
 
   test('offers every document and form file on the site, once each', async ({ page }) => {
@@ -49,7 +49,7 @@ test.describe('Downloads page', () => {
   })
 
   test('every download returns its file', async ({ page, request }) => {
-    // Twelve files through the dev server; HEAD checks each one without downloading it.
+    // Thirteen files through the dev server; HEAD checks each one without downloading it.
     test.setTimeout(120_000)
     const hrefs = await page
       .locator('main a[download]')
@@ -61,7 +61,10 @@ test.describe('Downloads page', () => {
   })
 
   test('the Order shows its status and links to its page', async ({ page }) => {
-    const order = page.getByRole('region', { name: 'Orders & Directives' }).getByRole('article')
+    const order = page
+      .getByRole('region', { name: 'Orders & Directives' })
+      .getByRole('article')
+      .filter({ hasText: 'OGSERC/ORD/2026/001' })
     await expect(order).toContainText('OGSERC/ORD/2026/001')
     await expect(order).toContainText('Published')
     await expect(order.getByRole('link').first()).toHaveAttribute(

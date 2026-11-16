@@ -1,4 +1,5 @@
 import { textOgsercOrd2026001 } from './text-ogserc-ord-2026-001'
+import { textOgsercOrd2026002 } from './text-ogserc-ord-2026-002'
 import type { RegulatoryDocument } from './types'
 
 /**
@@ -35,6 +36,31 @@ const documents: RegulatoryDocument[] = [
     },
     related: [],
     tags: ['commencement', 'registration', 'licensees', 'operators'],
+  },
+  {
+    slug: 'ogserc-ord-2026-002',
+    title:
+      'Order on the Transitional Adoption of NERC Regulatory Instruments in the Ogun State Electricity Market',
+    categoryPath: '/regulatory-instruments/orders-and-directives',
+    typeLabel: 'Order',
+    reference: 'OGSERC/ORD/2026/002',
+    // "Dated at Abeokuta this 2nd day of November 2026" (page 9); paragraph 2 sets 3 November.
+    publicationDate: '2026-11-02',
+    effectiveDate: '2026-11-03',
+    // Paragraph 1 (Citation) of the Order.
+    description:
+      'This Order may be cited as the OGSERC (Transitional Adoption of NERC Regulatory Instruments) Order, 2026.',
+    status: 'published',
+    file: {
+      href: '/documents/orders-and-directives/ogserc-ord-2026-002.pdf',
+      downloadName: 'OGSERC-ORD-2026-002.pdf',
+      sizeBytes: 3_355_192,
+      pages: 11,
+      description: 'Signed copy, scanned',
+    },
+    text: textOgsercOrd2026002,
+    related: [],
+    tags: ['transition', 'nerc', 'adopted instruments', 'tariffs', 'licences'],
   },
 ]
 

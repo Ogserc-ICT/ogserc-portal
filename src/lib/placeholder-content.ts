@@ -100,6 +100,14 @@ export const latestUpdates: NewsItem[] = [
     image: article.photos[0]?.thumb,
   })),
   {
+    id: 'ogserc-ord-2026-002',
+    title: 'OGSERC (Transitional Adoption of NERC Regulatory Instruments) Order, 2026',
+    date: '2026-11-02',
+    excerpt:
+      'Order OGSERC/ORD/2026/002 takes effect on 3 November 2026. Read the Order and download the signed copy.',
+    href: '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-002',
+  },
+  {
     id: 'registration-notice',
     title: 'Public notice: commencement of operations and mandatory registration',
     date: registrationNotice.postedDate,
@@ -131,6 +139,14 @@ export const latestUpdates: NewsItem[] = [
  * same date keep this order, so the latest goes first.
  */
 export const notices: Notice[] = [
+  {
+    // Dated with the Order (D-070), as the list shows each item's own date.
+    id: 'ogserc-ord-2026-002-published',
+    title: 'Order OGSERC/ORD/2026/002 on the transitional adoption of NERC regulatory instruments',
+    date: '2026-11-02',
+    category: 'Regulatory notice',
+    href: '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-002',
+  },
   {
     id: registrationNotice.slug,
     title: registrationNotice.title,

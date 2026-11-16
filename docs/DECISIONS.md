@@ -854,3 +854,16 @@ Tests check that the five values are bold (font weight 700), that the box comes 
 **Gallery:** each thumbnail is a link to the full-size photo, so without JavaScript it simply opens the image. With JavaScript it opens a viewer: a native modal `<dialog>` like the menu drawer (D-036), with previous and next buttons, arrow keys, Escape, a close button, a click outside the photo to close, Tab kept inside, page scroll locked and focus returned to the thumbnail. It fades in with `@starting-style`, and the fade is skipped for reduced motion. Its CSS is in `globals.css` (D-041). The client JavaScript loads only on story pages.
 
 **Adding a story until step 9:** put the photos through the same resize (full and `-thumb`), add them under `src/assets/news/<slug>/`, and add an entry to `newsArticles`. The step 4 seed must carry the stories and their photos into the CMS.
+
+## D-070 Order OGSERC/ORD/2026/002, the transitional adoption of NERC instruments (2026-11-16)
+
+**Decision:** OGSERC's second Order, *Order on the Transitional Adoption of NERC Regulatory Instruments in the Ogun State Electricity Market* (OGSERC/ORD/2026/002), is published at `/regulatory-instruments/orders-and-directives/ogserc-ord-2026-002`, beside Order 001 and in the same way (D-060). It should have gone up with Order 001; the owner supplied the signed copy on 2026-11-16.
+
+**Dates come from the signed copy.** It was made on 2 November 2026 ("Dated at Abeokuta this 2nd day of November 2026", page 9), and paragraph 2 says it takes effect on 3 November 2026. The owner first asked for 26 October and 2 November, to match Order 001. They agreed 3 November once paragraph 2 was pointed out, but still wanted 26 October as the date made. The site shows 2 November because the signed instrument on the same page says so, and the site must not show a regulatory instrument as published before it was signed. If OGSERC issues a corrected signed copy, the dates follow it.
+
+**The files:**
+- **Signed copy.** OGSERC's scan (HP Scan, 11 pages at 200 dpi, 3.4 MB, no text layer) is served as supplied. Unlike Order 001 it was small enough not to need a reduced copy.
+- **Full text.** No Word file was supplied, so the text was typed from the scan and checked against it page by page. It keeps the Order's own spelling and slips as signed: "license", "regularization", "allow a state set up" (recital B), "Option B:" in paragraph 12(4), paragraph 17(2) ending at item (e) with "; or", and Schedule 1's note that "The Check column is for the legal team and is removed before signature". Schedule headings use Order 001's form ("Schedule 1: Adopted instruments" with "(Section 5)" beneath), so they get `#schedule-1` anchors and a Contents link. If OGSERC supplies the Word file, compare the text against it.
+- **No "Questions?" box.** The Order names no address for enquiries.
+
+**Homepage and News (owner, 2026-11-16):** Order 002 is a Latest update (so it is also on News) and a homepage public notice. Both are dated 2 November 2026, the Order's own date, as Order 001's update carries 26 October. The notice is worded as the Order's title, not "is now published", because the date shown is the Order's date, not the day it went online.
