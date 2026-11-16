@@ -9,6 +9,7 @@ const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 const SECTION_HEADINGS = ['Quick services', 'Latest updates', 'Public notices', 'Contact us']
 
 const NOTICE_PATH = '/media-center/notices/commencement-of-operations-and-mandatory-registration'
+const STORY_PATH = '/media-center/news/ogserc-visits-nerc'
 
 test.describe('Homepage', () => {
   test.beforeEach(async ({ page }) => {
@@ -97,18 +98,19 @@ test.describe('Homepage', () => {
     )
   })
 
-  test('latest updates show the registration notice, the forms, then the Order', async ({
+  test('latest updates show the NERC visit, the registration notice, the forms, then the Order', async ({
     page,
   }) => {
     const section = page.locator('section[aria-labelledby="latest-updates-heading"]')
     const cards = section.getByRole('article')
-    await expect(cards).toHaveCount(3)
-    await expect(cards.nth(0).getByRole('link')).toHaveAttribute('href', NOTICE_PATH)
-    await expect(cards.nth(1).getByRole('link')).toHaveAttribute(
+    await expect(cards).toHaveCount(4)
+    await expect(cards.nth(0).getByRole('link')).toHaveAttribute('href', STORY_PATH)
+    await expect(cards.nth(1).getByRole('link')).toHaveAttribute('href', NOTICE_PATH)
+    await expect(cards.nth(2).getByRole('link')).toHaveAttribute(
       'href',
       '/regulatory-instruments/forms',
     )
-    await expect(cards.nth(2).getByRole('link')).toHaveAttribute(
+    await expect(cards.nth(3).getByRole('link')).toHaveAttribute(
       'href',
       '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
     )

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 import { PageBand } from '@/components/layout/PageBand'
-import { Card, ImagePlaceholder } from '@/components/ui/Card'
+import { Card, CardMedia } from '@/components/ui/Card'
 import { Container } from '@/components/ui/Container'
 import { byNewestFirst, formatDate } from '@/lib/format-date'
 import { routes } from '@/lib/navigation'
@@ -41,7 +41,7 @@ export default function NewsPage() {
                   title={item.title}
                   href={item.href}
                   headingLevel="h2"
-                  media={<ImagePlaceholder />}
+                  media={<CardMedia image={item.image} />}
                   meta={<time dateTime={item.date}>{formatDate(item.date)}</time>}
                 >
                   {item.excerpt}

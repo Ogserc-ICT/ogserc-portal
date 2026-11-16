@@ -1,4 +1,4 @@
-import { Card, ImagePlaceholder } from '@/components/ui/Card'
+import { Card, CardMedia } from '@/components/ui/Card'
 import { Container } from '@/components/ui/Container'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { byNewestFirst, formatDate } from '@/lib/format-date'
@@ -43,7 +43,7 @@ export function LatestUpdates({ items }: { items: NewsItem[] }) {
                 <Card
                   title={item.title}
                   href={item.href}
-                  media={<ImagePlaceholder />}
+                  media={<CardMedia image={item.image} />}
                   meta={<time dateTime={item.date}>{formatDate(item.date)}</time>}
                 >
                   {item.excerpt}

@@ -6,26 +6,28 @@ import { expect, test } from '@playwright/test'
 const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 const PAGE = '/media-center/news'
 const NOTICE_PATH = '/media-center/notices/commencement-of-operations-and-mandatory-registration'
+const STORY_PATH = '/media-center/news/ogserc-visits-nerc'
 
 test.describe('News page', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(PAGE)
   })
 
-  test('lists the updates newest first, the registration notice on top', async ({ page }) => {
+  test('lists the updates newest first, the NERC visit on top', async ({ page }) => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('News')
     const cards = page.getByRole('main').getByRole('article')
-    await expect(cards).toHaveCount(3)
+    await expect(cards).toHaveCount(4)
+    await expect(cards.nth(0).getByRole('link')).toHaveAttribute('href', STORY_PATH)
     const dates = await cards
       .locator('time')
       .evaluateAll((els) => els.map((el) => el.getAttribute('datetime') ?? ''))
     expect(dates).toEqual([...dates].sort().reverse())
-    await expect(cards.nth(0).getByRole('link')).toHaveAttribute('href', NOTICE_PATH)
-    await expect(cards.nth(1).getByRole('link')).toHaveAttribute(
+    await expect(cards.nth(1).getByRole('link')).toHaveAttribute('href', NOTICE_PATH)
+    await expect(cards.nth(2).getByRole('link')).toHaveAttribute(
       'href',
       '/regulatory-instruments/forms',
     )
-    await expect(cards.nth(2).getByRole('link')).toHaveAttribute(
+    await expect(cards.nth(3).getByRole('link')).toHaveAttribute(
       'href',
       '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
     )
