@@ -1,5 +1,5 @@
 /**
- * Site structure from SRS Section 4: utility bar, seven-item main menu, footer links.
+ * Site structure from SRS Section 4: utility bar, main menu (six items, D-075), footer links.
  *
  * Each link records the page's final URL and whether that page exists yet. Links to pages that are
  * not built yet go to the shared "This section is being prepared" page. When a later build step
@@ -33,7 +33,6 @@ export const routes = {
   faqs: pending('FAQs', '/faqs'),
   search: pending('Search', '/search'),
   consumerComplaint: pending('Consumer Complaint', '/consumer-complaint'),
-  userProfile: pending('User Profile', '/user-profile'),
   regulatoryInstruments: pending('Regulatory Instruments', '/regulatory-instruments'),
   energyCaps: pending('Energy Caps', '/regulatory-instruments/energy-caps'),
   forms: { label: 'Forms', path: '/regulatory-instruments/forms', ready: true },
@@ -139,15 +138,17 @@ const single = (id: string, link: SiteLink): MenuEntry => ({
   href: hrefFor(link),
 })
 
-/** The seven main-menu items, in SRS Section 4 order. */
+/**
+ * The six main-menu items. SRS Section 4's order, except that User Profile is dropped and Consumer
+ * Complaint, which leads to the same portal, moves to the end (owner, D-075).
+ */
 export const mainMenu: MenuEntry[] = [
   group('about'),
   group('regulatory-instruments'),
   group('mandate'),
-  single('consumer-complaint', routes.consumerComplaint),
   group('media-center'),
   group('resources'),
-  single('user-profile', routes.userProfile),
+  single('consumer-complaint', routes.consumerComplaint),
 ]
 
 export const utilityLinks: ResolvedLink[] = [

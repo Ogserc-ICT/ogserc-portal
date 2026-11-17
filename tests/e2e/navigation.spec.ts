@@ -3,15 +3,15 @@ import { expect, test, type Page } from '@playwright/test'
 
 const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
-// SRS Section 4: the seven main-menu items, and how many links each dropdown holds.
+// SRS Section 4's main menu without User Profile, Consumer Complaint last (D-075), and how many
+// links each dropdown holds.
 const MENU_ITEMS = [
   'About OGSERC',
   'Regulatory Instruments',
   'Mandate',
-  'Consumer Complaint',
   'Media Center',
   'Resources',
-  'User Profile',
+  'Consumer Complaint',
 ]
 const DROPDOWNS: Record<string, number> = {
   'About OGSERC': 4,
@@ -197,7 +197,7 @@ test.describe('Main menu on desktop', () => {
     await page.goto('/')
   })
 
-  test('shows the seven SRS menu items and no Menu button', async ({ page }) => {
+  test('shows the six menu items and no Menu button', async ({ page }) => {
     const items = mainNav(page).locator(':scope > ul > li > :first-child')
     await expect(items).toHaveText(MENU_ITEMS)
     await expect(menuButton(page)).toBeHidden()
@@ -287,7 +287,7 @@ test.describe('Main menu on mobile (360px)', () => {
     await expect(page.getByRole('navigation', { name: 'Utility' })).toHaveCount(0)
   })
 
-  test('the drawer lists the seven items and expands a section', async ({ page }) => {
+  test('the drawer lists the six items and expands a section', async ({ page }) => {
     await menuButton(page).click()
     const drawer = page.getByRole('dialog', { name: 'Menu' })
     await expect(drawer).toBeVisible()

@@ -895,3 +895,13 @@ Tests check that the five values are bold (font weight 700), that the box comes 
 **Decision:** `next` and `eslint-config-next` go from 16.4.3 to 16.4.6, the latest patch release. 16.4.3 is affected by GHSA-mfr8-8qww-v76h (moderate): information disclosure across root params when a `'use cache'` function is called through `unstable_cache()`. It is fixed in 16.4.5. The site does not use `unstable_cache`, but Next.js 16.4.3 stopped `next dev` and `next build` with a security notice that only a retry got past. That would break CI and deploys, so the upgrade could not wait.
 
 **Checked:** Payload 3.90.2 accepts Next.js `>=16.3.3 <17.0.0`. Lint, typecheck, build (no security notice) and the full Playwright suite against the production build pass. `pnpm audit` no longer lists the advisory. No code changes were needed.
+
+## D-075 Main menu: User Profile removed, Consumer Complaint last (2026-11-17)
+
+**Decision (owner):** the main menu has six items: About OGSERC, Regulatory Instruments, Mandate, Media Center, Resources, Consumer Complaint. **User Profile** is removed, because it and Consumer Complaint lead to the same consumer complaint portal; Consumer Complaint stays and moves to the end. Its link still goes to "This section is being prepared" until the Consumer Complaint page is built.
+
+**Scope:** online complaint submission, tracking and user accounts are Phase 2 (SRS Section 5). In Phase 1 the Consumer Complaint page gives information only (how to complain, what to include, contacts), per CLAUDE.md. The portal is to be planned with the owner before any Phase 2 work starts.
+
+**Layout:** with six items the menu bar has more room at 1024px; the overflow and wide-fallback-font tests (D-032) still run against it.
+
+**Sitemap change note (SRS 2.5):** SRS Section 4 lists seven main-menu items, with Consumer Complaint fourth and User Profile seventh. OGSERC to confirm in writing with the other sitemap items at sign-off (see D-061).

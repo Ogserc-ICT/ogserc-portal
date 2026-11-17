@@ -7,7 +7,7 @@ import { LabelWithChevron, PanelLink } from '@/components/layout/menu-parts'
 import type { MenuEntry } from '@/lib/navigation'
 
 /**
- * Desktop main menu (lg and up), seven items from SRS Section 4. WAI-ARIA disclosure pattern:
+ * Desktop main menu (lg and up), six items (SRS Section 4, D-075). WAI-ARIA disclosure pattern:
  * each dropdown is a button with aria-expanded that shows or hides a list of ordinary links (D-026).
  *
  * Dropdowns open on click, Enter or Space, and also on mouse hover where the device supports it
