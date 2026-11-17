@@ -38,6 +38,17 @@ export type DocumentFile = {
   description: string
 }
 
+export type Consultation = {
+  /** ISO date: the last day for written comments. */
+  closingDate: string
+  hearing?: { date: string; place: string }
+  email: string
+  /** Where comments may be delivered by hand. */
+  address: string
+  /** The subject line the paper asks respondents to use. */
+  subjectLine?: string
+}
+
 export type RegulatoryDocument = {
   slug: string
   title: string
@@ -56,6 +67,8 @@ export type RegulatoryDocument = {
   text?: DocumentBlock[]
   /** Where questions about the document go, as the document itself says. */
   enquiries?: { email: string; note: string }
+  /** A document published for comment (FR-DRAFT-01, FR-DRAFT-02), as the consultation paper sets out. */
+  consultation?: Consultation
   /** Slugs of related documents. */
   related: string[]
   tags: string[]

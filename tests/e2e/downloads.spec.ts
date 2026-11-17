@@ -33,9 +33,13 @@ test.describe('Downloads page', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Downloads')
     await expect(page.getByRole('main').locator('section > h2')).toHaveText([
       'Forms',
+      'Consultation',
       'Orders & Directives',
     ])
     await expect(page.getByRole('region', { name: 'Forms' }).getByRole('article')).toHaveCount(11)
+    await expect(
+      page.getByRole('region', { name: 'Consultation' }).getByRole('article'),
+    ).toHaveCount(2)
     await expect(
       page.getByRole('region', { name: 'Orders & Directives' }).getByRole('article'),
     ).toHaveCount(2)
@@ -49,7 +53,7 @@ test.describe('Downloads page', () => {
   })
 
   test('every download returns its file', async ({ page, request }) => {
-    // Thirteen files through the dev server; HEAD checks each one without downloading it.
+    // Fifteen files through the dev server; HEAD checks each one without downloading it.
     test.setTimeout(120_000)
     const hrefs = await page
       .locator('main a[download]')
