@@ -1,6 +1,15 @@
 import { textOgsercOrd2026001 } from './text-ogserc-ord-2026-001'
 import { textOgsercOrd2026002 } from './text-ogserc-ord-2026-002'
-import type { RegulatoryDocument } from './types'
+import type { Consultation, RegulatoryDocument } from './types'
+
+// Consultation paper OGSERC/CP/2026/001: document control table, "How to respond" and "Hearing".
+const CP_2026_001: Consultation = {
+  closingDate: '2026-11-30',
+  hearing: { date: '2026-12-03', place: 'Abeokuta' },
+  email: 'info@ogserc.org.ng',
+  address: 'The Secretary to the Commission, OGSERC, Floor 5, OPIC Towers, Oke-Ilewo, Abeokuta',
+  subjectLine: 'Response to CP/2026/001: Regularization of Distribution in the Areas',
+}
 
 /**
  * TEMPORARY EXCEPTION, like placeholder-content.ts (D-028, D-060): documents published before the
@@ -62,6 +71,57 @@ const documents: RegulatoryDocument[] = [
     related: [],
     tags: ['transition', 'nerc', 'adopted instruments', 'tariffs', 'licences'],
   },
+  // D-071: the consultation paper and the draft Order it consults on, published together.
+  {
+    slug: 'ogserc-cp-2026-001',
+    title:
+      'Regularization of Unlicensed Electricity Distribution in the Sagamu Interchange, Ota and Agbara Areas, and Gas Supply for Embedded Generation',
+    categoryPath: '/regulatory-instruments/consultation',
+    typeLabel: 'Consultation paper',
+    reference: 'OGSERC/CP/2026/001',
+    // Cover page: "Date of issue: 16 November 2026".
+    publicationDate: '2026-11-16',
+    // Cover page, under the title.
+    description:
+      'On the proposed OGSERC (Establishment of the Ogun State Grid and the Ogun Electricity Market) Order, 2026. Issued for public consultation. Comments are invited from all stakeholders.',
+    status: 'published',
+    file: {
+      href: '/documents/consultation/ogserc-cp-2026-001.pdf',
+      downloadName: 'OGSERC-CP-2026-001.pdf',
+      sizeBytes: 1_024_513,
+      pages: 24,
+      description: 'Consultation paper, version 2026.2',
+    },
+    consultation: CP_2026_001,
+    related: ['draft-order-state-grid-and-ogem'],
+    tags: ['consultation', 'state grid', 'ogem', 'industrial distribution zones', 'gas'],
+  },
+  {
+    slug: 'draft-order-state-grid-and-ogem',
+    title:
+      'Order on the Establishment of the Ogun State Grid and the Ogun Electricity Market, Gas Supply for Embedded Generation Connected to the State Grid, and the Regularisation of Unlicensed Distribution and Third-Party Investment in Industrial Distribution Zones in Ogun State',
+    categoryPath: '/regulatory-instruments/consultation',
+    typeLabel: 'Draft Order',
+    // As printed on the cover: the draft leaves the number blank. The consultation paper calls it
+    // Order No. OGSERC/ORD/2026/003; use that once OGSERC confirms it.
+    reference: 'OGSERC/ORD/2026/[] (draft)',
+    // Cover page: "Date of publication of draft: 16 November 2026".
+    publicationDate: '2026-11-16',
+    // Cover page, under the title.
+    description:
+      'Published in draft with Consultation Paper OGSERC/CP/2026/[]. Not yet made by the Commission; no legal effect.',
+    status: 'published',
+    file: {
+      href: '/documents/consultation/draft-order-state-grid-and-ogem.pdf',
+      downloadName: 'OGSERC-Draft-Order-State-Grid-and-OGEM.pdf',
+      sizeBytes: 1_258_465,
+      pages: 63,
+      description: 'Draft Order for consultation, version 2026.1',
+    },
+    consultation: CP_2026_001,
+    related: ['ogserc-cp-2026-001'],
+    tags: ['draft', 'consultation', 'state grid', 'ogem', 'industrial distribution zones', 'gas'],
+  },
 ]
 
 /** Documents the public may see: never drafts (CLAUDE.md security rules). */
@@ -75,6 +135,10 @@ export const documentsInCategory = (categoryPath: string): RegulatoryDocument[] 
 
 export const findDocument = (categoryPath: string, slug: string): RegulatoryDocument | undefined =>
   publicDocuments.find((doc) => doc.categoryPath === categoryPath && doc.slug === slug)
+
+/** The related documents that are public, in the order given. */
+export const relatedDocuments = (doc: RegulatoryDocument): RegulatoryDocument[] =>
+  doc.related.flatMap((slug) => publicDocuments.filter((other) => other.slug === slug))
 
 export const countInCategory = (categoryPath: string): number =>
   publicDocuments.filter((doc) => doc.categoryPath === categoryPath).length

@@ -867,3 +867,21 @@ Tests check that the five values are bold (font weight 700), that the box comes 
 - **No "Questions?" box.** The Order names no address for enquiries.
 
 **Homepage and News (owner, 2026-11-16):** Order 002 is a Latest update (so it is also on News) and a homepage public notice. Both are dated 2 November 2026, the Order's own date, as Order 001's update carries 26 October. The notice is worded as the Order's title, not "is now published", because the date shown is the Order's date, not the day it went online.
+
+## D-071 Consultation: paper OGSERC/CP/2026/001 and the draft State Grid and OGEM Order (2026-11-17)
+
+**Decision:** Regulatory Instruments > Consultation is built (`/regulatory-instruments/consultation`) and lists OGSERC's first consultation: Consultation paper OGSERC/CP/2026/001, *Regularization of Unlicensed Electricity Distribution in the Sagamu Interchange, Ota and Agbara Areas, and Gas Supply for Embedded Generation*, and the draft Order it consults on, *Order on the Establishment of the Ogun State Grid and the Ogun Electricity Market, Gas Supply for Embedded Generation Connected to the State Grid, and the Regularisation of Unlicensed Distribution and Third-Party Investment in Industrial Distribution Zones in Ogun State*. Each has its own page. They sit in `catalogue.ts` like the Orders (D-060), and Downloads picks them up.
+
+**Consultation details (FR-DRAFT-01, FR-DRAFT-02).** Documents can now carry a `consultation` field: closing date, hearing, email, hand-delivery address and subject line. A document with one shows a "Have your say" panel first in its sidebar, and a "Comments by" badge on its card and page. The email link pre-fills the paper's subject line. Comments go by email or by hand only; there is no online form (Phase 2). The badge states the closing date, not "open" or "closed", because the pages are static and a computed state would go out of date.
+
+**Taken from the documents, not supplied separately.** The owner said there was no consultation date, but the paper gives one: issued 16 November 2026, responses by 30 November 2026, hearing in Abeokuta on 3 December 2026 (cover, document control table, "How to respond", Section 13). The site shows those. The owner gave `info@ogserc.org.ng` for comments, which matches the paper.
+
+**Status of the draft.** The draft Order is listed with status Published: in FR-DOC-02 and the CMS, "draft" means not yet public, and drafts are never served (D-060). It shows as a draft through its type ("Draft Order"), its reference, and its own cover wording as the summary: "Not yet made by the Commission; no legal effect."
+
+**Shown as printed.** The draft's cover leaves its numbers blank ("OGSERC/ORD/2026/[] (draft)", "Consultation Paper OGSERC/CP/2026/[]"), and the site shows them that way. The paper calls it Order No. OGSERC/ORD/2026/003, and the draft's paragraph B.1 names CP/2026/001. Update the reference once OGSERC confirms the number.
+
+**Files.** Both are Word exports with a text layer (24 and 63 pages, 1.0 and 1.3 MB), served as supplied. No full text is typed into the site this time: site search (step 10) can index the PDFs' text layer.
+
+**Shared pieces.** The Orders listing and document page are now `DocumentCategoryPage` and `DocumentDetail`, used by both categories. Document pages now show related documents (FR-DOC-03), and the paper and the draft link to each other.
+
+**Raised with the owner, not changed:** the paper is version 2026.2 and the draft 2026.1. Article 47.3 of the draft gives `info@ogserc.gov.ng` (not `.org.ng`). The paper's recovery terms differ between sections: 42 instalments after a six-month moratorium (summary, Q12 "48 months"), but 60 months with 54 instalments in Section 6. Its compensation look-back reads "[6] years" in Section 6 and "5-year" in Q9. Some bracketed blanks remain ("[60] days", "[60] months"). Section 2 has a slip: "It particularly from five groups". Corrections come from OGSERC as new files.
