@@ -10,7 +10,7 @@ import type { MenuEntry, ResolvedLink } from '@/lib/navigation'
 import './drawer.css'
 
 /**
- * Below lg: a Menu button that opens a drawer from the left holding the seven main-menu items and
+ * Below lg: a Menu button that opens a drawer from the left holding the six main-menu items and
  * the utility links (D-036). The drawer is a native modal <dialog>: showModal() makes the rest of
  * the page inert, Escape fires the dialog's own cancel event, and the browser's top layer keeps it
  * above everything. This component adds the rest: Tab wraps inside the drawer, a click on the

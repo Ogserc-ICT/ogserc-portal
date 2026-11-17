@@ -914,6 +914,16 @@ Tests check that the five values are bold (font weight 700), that the box comes 
 
 **SRS change note (SRS 2.5):** FR-WEB-06 and SRS Section 4's footer list Privacy Policy, Terms of Service, Cookie Notice, Accessibility Statement and Sitemap. This keeps the first two. OGSERC to confirm in writing with the other sitemap items at sign-off (see D-061).
 
+## D-075 Main menu: User Profile removed, Consumer Complaint last (2026-11-17)
+
+**Decision (owner):** the main menu has six items: About OGSERC, Regulatory Instruments, Mandate, Media Center, Resources, Consumer Complaint. **User Profile** is removed, because it and Consumer Complaint lead to the same consumer complaint portal; Consumer Complaint stays and moves to the end. Its link still goes to "This section is being prepared" until the Consumer Complaint page is built.
+
+**Scope:** online complaint submission, tracking and user accounts are Phase 2 (SRS Section 5). In Phase 1 the Consumer Complaint page gives information only (how to complain, what to include, contacts), per CLAUDE.md. The portal is to be planned with the owner before any Phase 2 work starts.
+
+**Layout:** with six items the menu bar has more room at 1024px; the overflow and wide-fallback-font tests (D-032) still run against it.
+
+**Sitemap change note (SRS 2.5):** SRS Section 4 lists seven main-menu items, with Consumer Complaint fourth and User Profile seventh. OGSERC to confirm in writing with the other sitemap items at sign-off (see D-061).
+
 ## D-076 Audit: GHSA-fc5q-39xc-vjpf (picomatch) ignored until a fix exists (2026-11-17)
 
 **Decision:** advisory **GHSA-fc5q-39xc-vjpf** (`picomatch` <=4.0.7, high: a crafted glob pattern with repeated extglobs can make matching very slow, ReDoS) is added to `pnpm.auditConfig.ignoreGhsas` in `package.json`, as GHSA-vfj7-8cjw-p6xm (`braces`) was at scaffold time. Published on 2026-11-17, it turned the CI audit red on every branch, `main` included.
