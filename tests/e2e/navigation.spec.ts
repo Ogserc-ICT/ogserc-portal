@@ -139,16 +139,10 @@ test.describe('Utility bar, footer, and placeholder pages', () => {
     )
   })
 
-  test('footer has the legal page links (FR-WEB-06)', async ({ page }) => {
+  test('footer has the legal page links (FR-WEB-06, D-074)', async ({ page }) => {
     await page.goto('/')
     const legal = page.getByRole('navigation', { name: 'Legal' })
-    await expect(legal.getByRole('link')).toHaveText([
-      'Privacy Policy',
-      'Terms of Service',
-      'Cookie Notice',
-      'Accessibility Statement',
-      'Sitemap',
-    ])
+    await expect(legal.getByRole('link')).toHaveText(['Privacy Policy', 'Terms of Service'])
   })
 
   test('every link in the header and footer resolves', async ({ page, request }) => {
