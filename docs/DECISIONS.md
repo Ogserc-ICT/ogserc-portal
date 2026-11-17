@@ -896,6 +896,24 @@ Tests check that the five values are bold (font weight 700), that the box comes 
 
 **Checked:** Payload 3.90.2 accepts Next.js `>=16.3.3 <17.0.0`. Lint, typecheck, build (no security notice) and the full Playwright suite against the production build pass. `pnpm audit` no longer lists the advisory. No code changes were needed.
 
+## D-073 A consultation's documents appear together on each of their pages (2026-11-17)
+
+**Decision (owner, 2026-11-17):** the paper and the draft Order work together, so each page now has a "Documents in this consultation" section showing both files, the page's own document first: what each one is, its reference and file details, Open and Download, and a link to the other's page. Before, the homepage card led to the paper's page, where the draft Order showed only in the sidebar's Related documents. The sidebar panel stays (FR-DOC-03). A document belongs to a consultation when it carries the same `consultation` details (`consultationDocuments` in `catalogue.ts`).
+
+**Previews start closed on consultation pages (owner).** Showing two inline PDFs at once would download 2.3 MB before anyone asked. On these pages each preview starts closed and loads its PDF only when "Show preview" is first pressed. Orders keep their preview open, as before (D-060). With two files on a page, the Open, Download and preview buttons name their file for screen readers (for example "Show preview of Draft Order for consultation, version 2026.1"), and each preview has its own id.
+
+## D-074 Legal pages: Privacy Policy and Terms of Service only (2026-11-17)
+
+**Decision:** The footer's legal links are **Privacy Policy** (`/privacy-policy`) and **Terms of Service** (`/terms-of-service`). At the owner's request, the Cookie Notice, Accessibility Statement and Sitemap links are removed. Both pages carry OGSERC's text as the owner supplied it on 2026-11-17, word for word, in `src/lib/legal/legal-pages.ts` until build step 4 moves them into the Pages collection (the seed must carry them over). One `LegalPageView` component draws both: title band, "Last updated", then numbered sections. The contact sections link the address from `contactDetails`, so it stays in step with the footer.
+
+**Cookies:** FR-WEB-06 asks for a cookie notice only if non-essential cookies are used. Today none are: analytics is to be cookie-free (FR-WEB-07) and the Google map loads only when a visitor asks for it (D-058). The owner chose to cover cookies as a section of the Privacy Policy rather than a page of its own. OGSERC's text has no cookies section yet, so section 7 "Cookies" shows "[Sample, OGSERC to supply]" and the supplied "Contact Us" becomes section 8. That placeholder must be replaced before launch.
+
+**Accessibility and Sitemap:** dropping the Accessibility Statement removes a page, not the commitment: the site still meets WCAG 2.1 AA (NFR, every page tested with axe). Dropping the human-readable Sitemap link does not affect `sitemap.xml` for search engines (build step 11).
+
+**For OGSERC's legal advisers to review (not changed on the site):** the text describes features that come in Phase 2 (accounts and login details, complaints, petitions, uploads), and the Privacy Policy does not yet mention the Nigeria Data Protection Act 2023, a retention period, or the other NDPA rights (access, deletion, objection, complaint to the NDPC), which NFR-SEC-19 and the SRS's privacy requirements expect to be confirmed with them.
+
+**SRS change note (SRS 2.5):** FR-WEB-06 and SRS Section 4's footer list Privacy Policy, Terms of Service, Cookie Notice, Accessibility Statement and Sitemap. This keeps the first two. OGSERC to confirm in writing with the other sitemap items at sign-off (see D-061).
+
 ## D-075 Main menu: User Profile removed, Consumer Complaint last (2026-11-17)
 
 **Decision (owner):** the main menu has six items: About OGSERC, Regulatory Instruments, Mandate, Media Center, Resources, Consumer Complaint. **User Profile** is removed, because it and Consumer Complaint lead to the same consumer complaint portal; Consumer Complaint stays and moves to the end. Its link still goes to "This section is being prepared" until the Consumer Complaint page is built.
@@ -905,3 +923,11 @@ Tests check that the five values are bold (font weight 700), that the box comes 
 **Layout:** with six items the menu bar has more room at 1024px; the overflow and wide-fallback-font tests (D-032) still run against it.
 
 **Sitemap change note (SRS 2.5):** SRS Section 4 lists seven main-menu items, with Consumer Complaint fourth and User Profile seventh. OGSERC to confirm in writing with the other sitemap items at sign-off (see D-061).
+
+## D-076 Audit: GHSA-fc5q-39xc-vjpf (picomatch) ignored until a fix exists (2026-11-17)
+
+**Decision:** advisory **GHSA-fc5q-39xc-vjpf** (`picomatch` <=4.0.7, high: a crafted glob pattern with repeated extglobs can make matching very slow, ReDoS) is added to `pnpm.auditConfig.ignoreGhsas` in `package.json`, as GHSA-vfj7-8cjw-p6xm (`braces`) was at scaffold time. Published on 2026-11-17, it turned the CI audit red on every branch, `main` included.
+
+**Why ignoring is safe for now:** no patched version exists (`patched: <0.0.0`), so no update or override can fix it. `picomatch` is reached through ESLint (`eslint-config-next`), `sass`'s file watcher (`chokidar`) and Payload's type generator (`json-schema-to-typescript`). All of these match glob patterns written in our config and code. No visitor input, form field or URL ever becomes a glob pattern, so the website cannot be slowed down this way.
+
+**Remove the ignore** as soon as a fixed `picomatch` is released, and update the packages that bring it in (or add a pnpm override).

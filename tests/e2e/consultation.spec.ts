@@ -92,6 +92,49 @@ test.describe('Consultation documents', () => {
     ).toHaveAttribute('href', PAPER)
   })
 
+  // D-073: the paper and the draft work together, so each page offers both files.
+  for (const [path, other, otherTitle] of [
+    [PAPER, DRAFT, DRAFT_TITLE],
+    [DRAFT, PAPER, PAPER_TITLE],
+  ] as const) {
+    test(`${path} offers both documents, this one first`, async ({ page }) => {
+      await page.goto(path)
+      const files = page.getByRole('region', { name: 'Documents in this consultation' })
+      const items = files.getByRole('listitem')
+      await expect(items).toHaveCount(2)
+      await expect(items.nth(0)).toContainText('(this page)')
+      await expect(items.nth(1).getByRole('link', { name: otherTitle })).toHaveAttribute(
+        'href',
+        other,
+      )
+      const downloads = await files
+        .locator('a[download]')
+        .evaluateAll((links) => links.map((a) => a.getAttribute('href')))
+      expect([...downloads].sort()).toEqual([DRAFT_PDF, PAPER_PDF])
+    })
+  }
+
+  test('previews start closed and load only when opened', async ({ page }, testInfo) => {
+    await page.goto(PAPER)
+    const frames = page.locator('iframe[id^="pdf-preview-"]')
+    if (testInfo.project.name === 'mobile') {
+      await expect(frames).toHaveCount(0)
+      return
+    }
+    await expect(frames).toHaveCount(2)
+    for (const frame of await frames.all()) {
+      await expect(frame).toBeHidden()
+      await expect(frame).not.toHaveAttribute('src')
+    }
+    const show = page.getByRole('button', { name: 'Show preview of Draft Order for consultation' })
+    await expect(show).toHaveAttribute('aria-expanded', 'false')
+    await show.click()
+    const draftFrame = page.locator('iframe#pdf-preview-draft-order-state-grid-and-ogem')
+    await expect(draftFrame).toBeVisible()
+    await expect(draftFrame).toHaveAttribute('src', DRAFT_PDF)
+    await expect(page.locator('iframe#pdf-preview-ogserc-cp-2026-001')).toBeHidden()
+  })
+
   test('both PDFs are served as PDFs', async ({ request }) => {
     for (const href of [PAPER_PDF, DRAFT_PDF]) {
       const response = await request.get(href)
