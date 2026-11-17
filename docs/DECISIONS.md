@@ -901,3 +901,11 @@ Tests check that the five values are bold (font weight 700), that the box comes 
 **Decision (owner, 2026-11-17):** the paper and the draft Order work together, so each page now has a "Documents in this consultation" section showing both files, the page's own document first: what each one is, its reference and file details, Open and Download, and a link to the other's page. Before, the homepage card led to the paper's page, where the draft Order showed only in the sidebar's Related documents. The sidebar panel stays (FR-DOC-03). A document belongs to a consultation when it carries the same `consultation` details (`consultationDocuments` in `catalogue.ts`).
 
 **Previews start closed on consultation pages (owner).** Showing two inline PDFs at once would download 2.3 MB before anyone asked. On these pages each preview starts closed and loads its PDF only when "Show preview" is first pressed. Orders keep their preview open, as before (D-060). With two files on a page, the Open, Download and preview buttons name their file for screen readers (for example "Show preview of Draft Order for consultation, version 2026.1"), and each preview has its own id.
+
+## D-076 Audit: GHSA-fc5q-39xc-vjpf (picomatch) ignored until a fix exists (2026-11-17)
+
+**Decision:** advisory **GHSA-fc5q-39xc-vjpf** (`picomatch` <=4.0.7, high: a crafted glob pattern with repeated extglobs can make matching very slow, ReDoS) is added to `pnpm.auditConfig.ignoreGhsas` in `package.json`, as GHSA-vfj7-8cjw-p6xm (`braces`) was at scaffold time. Published on 2026-11-17, it turned the CI audit red on every branch, `main` included.
+
+**Why ignoring is safe for now:** no patched version exists (`patched: <0.0.0`), so no update or override can fix it. `picomatch` is reached through ESLint (`eslint-config-next`), `sass`'s file watcher (`chokidar`) and Payload's type generator (`json-schema-to-typescript`). All of these match glob patterns written in our config and code. No visitor input, form field or URL ever becomes a glob pattern, so the website cannot be slowed down this way.
+
+**Remove the ignore** as soon as a fixed `picomatch` is released, and update the packages that bring it in (or add a pnpm override).
