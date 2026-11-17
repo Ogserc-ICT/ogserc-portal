@@ -13,6 +13,7 @@
 
 import type { StaticImageData } from 'next/image'
 
+import consultationCard from '@/assets/updates/consultation-cp-2026-001.jpg'
 import type { IconName } from '@/components/ui/Icon'
 import { PENDING_PATH, hrefFor, routes } from '@/lib/navigation'
 import { articleHref, newsArticles } from '@/lib/news/news-articles'
@@ -100,6 +101,16 @@ export const latestUpdates: NewsItem[] = [
     image: article.photos[0]?.thumb,
   })),
   {
+    id: 'ogserc-cp-2026-001',
+    title: 'Have your say: proposed Order on the Ogun State Grid and the Ogun Electricity Market',
+    date: '2026-11-16',
+    excerpt:
+      'Consultation paper OGSERC/CP/2026/001 and the draft Order are open for comment until 30 November 2026. Read them and send your comments to info@ogserc.org.ng.',
+    href: '/regulatory-instruments/consultation/ogserc-cp-2026-001',
+    // Made from hero photo 2 and the two documents' cover pages (D-071).
+    image: consultationCard,
+  },
+  {
     id: 'ogserc-ord-2026-002',
     title: 'OGSERC (Transitional Adoption of NERC Regulatory Instruments) Order, 2026',
     date: '2026-11-02',
@@ -139,6 +150,14 @@ export const latestUpdates: NewsItem[] = [
  * same date keep this order, so the latest goes first.
  */
 export const notices: Notice[] = [
+  {
+    id: 'ogserc-cp-2026-001-consultation',
+    title:
+      'Consultation on the proposed Order on the Ogun State Grid and the Ogun Electricity Market: comments by 30 November 2026',
+    date: '2026-11-16',
+    category: 'Consultation notice',
+    href: '/regulatory-instruments/consultation/ogserc-cp-2026-001',
+  },
   {
     // Dated with the Order (D-070), as the list shows each item's own date.
     id: 'ogserc-ord-2026-002-published',

@@ -81,7 +81,7 @@ test.describe('Consultation documents', () => {
     await expect(page.getByText('Not yet made by the Commission; no legal effect.')).toBeVisible()
     const details = page.getByRole('region', { name: 'Document details' })
     await expect(details.getByText('Draft Order', { exact: true })).toBeVisible()
-    await expect(details.getByText('OGSERC/ORD/2026/[] (draft)')).toBeVisible()
+    await expect(details.getByText('OGSERC/ORD/2026/[●] (draft)')).toBeVisible()
     await expect(page.getByRole('region', { name: 'Have your say' })).toContainText(
       '30 November 2026',
     )

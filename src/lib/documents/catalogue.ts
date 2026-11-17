@@ -104,17 +104,18 @@ const documents: RegulatoryDocument[] = [
     typeLabel: 'Draft Order',
     // As printed on the cover: the draft leaves the number blank. The consultation paper calls it
     // Order No. OGSERC/ORD/2026/003; use that once OGSERC confirms it.
-    reference: 'OGSERC/ORD/2026/[] (draft)',
+    reference: 'OGSERC/ORD/2026/[●] (draft)',
     // Cover page: "Date of publication of draft: 16 November 2026".
     publicationDate: '2026-11-16',
     // Cover page, under the title.
     description:
-      'Published in draft with Consultation Paper OGSERC/CP/2026/[]. Not yet made by the Commission; no legal effect.',
+      'Published in draft with Consultation Paper OGSERC/CP/2026/[●]. Not yet made by the Commission; no legal effect.',
     status: 'published',
     file: {
       href: '/documents/consultation/draft-order-state-grid-and-ogem.pdf',
       downloadName: 'OGSERC-Draft-Order-State-Grid-and-OGEM.pdf',
-      sizeBytes: 1_258_465,
+      // OGSERC's file with Article 47.3's email corrected to .org.ng at the owner's request (D-071).
+      sizeBytes: 1_263_976,
       pages: 63,
       description: 'Draft Order for consultation, version 2026.1',
     },
