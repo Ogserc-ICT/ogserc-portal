@@ -867,3 +867,9 @@ Tests check that the five values are bold (font weight 700), that the box comes 
 - **No "Questions?" box.** The Order names no address for enquiries.
 
 **Homepage and News (owner, 2026-11-16):** Order 002 is a Latest update (so it is also on News) and a homepage public notice. Both are dated 2 November 2026, the Order's own date, as Order 001's update carries 26 October. The notice is worded as the Order's title, not "is now published", because the date shown is the Order's date, not the day it went online.
+
+## D-072 Next.js 16.4.3 to 16.4.6 for GHSA-mfr8-8qww-v76h (2026-11-17)
+
+**Decision:** `next` and `eslint-config-next` go from 16.4.3 to 16.4.6, the latest patch release. 16.4.3 is affected by GHSA-mfr8-8qww-v76h (moderate): information disclosure across root params when a `'use cache'` function is called through `unstable_cache()`. It is fixed in 16.4.5. The site does not use `unstable_cache`, but Next.js 16.4.3 stopped `next dev` and `next build` with a security notice that only a retry got past. That would break CI and deploys, so the upgrade could not wait.
+
+**Checked:** Payload 3.90.2 accepts Next.js `>=16.3.3 <17.0.0`. Lint, typecheck, build (no security notice) and the full Playwright suite against the production build pass. `pnpm audit` no longer lists the advisory. No code changes were needed.
