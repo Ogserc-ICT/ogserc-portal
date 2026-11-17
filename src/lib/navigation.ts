@@ -37,6 +37,11 @@ export const routes = {
   regulatoryInstruments: pending('Regulatory Instruments', '/regulatory-instruments'),
   energyCaps: pending('Energy Caps', '/regulatory-instruments/energy-caps'),
   forms: { label: 'Forms', path: '/regulatory-instruments/forms', ready: true },
+  consultation: {
+    label: 'Consultation',
+    path: '/regulatory-instruments/consultation',
+    ready: true,
+  },
   ordersAndDirectives: {
     label: 'Orders & Directives',
     path: '/regulatory-instruments/orders-and-directives',
@@ -65,7 +70,7 @@ const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
       routes.energyCaps,
       pending('Guidelines', '/regulatory-instruments/guidelines'),
       routes.forms,
-      pending('Consultation', '/regulatory-instruments/consultation'),
+      routes.consultation,
       pending('Licences', '/regulatory-instruments/licences'),
       routes.ordersAndDirectives,
       pending('Codes', '/regulatory-instruments/codes'),

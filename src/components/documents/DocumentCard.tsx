@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { StatusBadge } from '@/components/documents/StatusBadge'
+import { Badge } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
 import { documentHref, fileSummary } from '@/lib/documents/catalogue'
 import type { RegulatoryDocument } from '@/lib/documents/types'
@@ -27,7 +28,13 @@ export function DocumentCard({ doc }: { doc: RegulatoryDocument }) {
             {formatDate(doc.publicationDate)}
           </time>
           <StatusBadge status={doc.status} />
+          {doc.consultation ? (
+            <Badge tone="gold">Comments by {formatDate(doc.consultation.closingDate)}</Badge>
+          ) : null}
         </p>
+        {doc.consultation ? (
+          <p className="mt-2 text-sm font-semibold text-ink-muted">{doc.typeLabel}</p>
+        ) : null}
         <h2 className="mt-2 text-lg leading-snug font-bold text-green-900">
           <Link href={href} className="underline-offset-4 hover:underline">
             {doc.title}

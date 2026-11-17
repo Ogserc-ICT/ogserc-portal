@@ -13,25 +13,29 @@ test.describe('News page', () => {
     await page.goto(PAGE)
   })
 
-  test('lists the updates newest first, the NERC visit on top', async ({ page }) => {
+  test('lists the updates newest first, the consultation on top', async ({ page }) => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('News')
     const cards = page.getByRole('main').getByRole('article')
-    await expect(cards).toHaveCount(5)
-    await expect(cards.nth(0).getByRole('link')).toHaveAttribute('href', STORY_PATH)
+    await expect(cards).toHaveCount(6)
+    await expect(cards.nth(0).getByRole('link')).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/consultation/ogserc-cp-2026-001',
+    )
     const dates = await cards
       .locator('time')
       .evaluateAll((els) => els.map((el) => el.getAttribute('datetime') ?? ''))
     expect(dates).toEqual([...dates].sort().reverse())
-    await expect(cards.nth(1).getByRole('link')).toHaveAttribute(
+    await expect(cards.nth(1).getByRole('link')).toHaveAttribute('href', STORY_PATH)
+    await expect(cards.nth(2).getByRole('link')).toHaveAttribute(
       'href',
       '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-002',
     )
-    await expect(cards.nth(2).getByRole('link')).toHaveAttribute('href', NOTICE_PATH)
-    await expect(cards.nth(3).getByRole('link')).toHaveAttribute(
+    await expect(cards.nth(3).getByRole('link')).toHaveAttribute('href', NOTICE_PATH)
+    await expect(cards.nth(4).getByRole('link')).toHaveAttribute(
       'href',
       '/regulatory-instruments/forms',
     )
-    await expect(cards.nth(4).getByRole('link')).toHaveAttribute(
+    await expect(cards.nth(5).getByRole('link')).toHaveAttribute(
       'href',
       '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
     )
