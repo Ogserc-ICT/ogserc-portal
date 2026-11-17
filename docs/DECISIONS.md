@@ -913,3 +913,11 @@ Tests check that the five values are bold (font weight 700), that the box comes 
 **For OGSERC's legal advisers to review (not changed on the site):** the text describes features that come in Phase 2 (accounts and login details, complaints, petitions, uploads), and the Privacy Policy does not yet mention the Nigeria Data Protection Act 2023, a retention period, or the other NDPA rights (access, deletion, objection, complaint to the NDPC), which NFR-SEC-19 and the SRS's privacy requirements expect to be confirmed with them.
 
 **SRS change note (SRS 2.5):** FR-WEB-06 and SRS Section 4's footer list Privacy Policy, Terms of Service, Cookie Notice, Accessibility Statement and Sitemap. This keeps the first two. OGSERC to confirm in writing with the other sitemap items at sign-off (see D-061).
+
+## D-076 Audit: GHSA-fc5q-39xc-vjpf (picomatch) ignored until a fix exists (2026-11-17)
+
+**Decision:** advisory **GHSA-fc5q-39xc-vjpf** (`picomatch` <=4.0.7, high: a crafted glob pattern with repeated extglobs can make matching very slow, ReDoS) is added to `pnpm.auditConfig.ignoreGhsas` in `package.json`, as GHSA-vfj7-8cjw-p6xm (`braces`) was at scaffold time. Published on 2026-11-17, it turned the CI audit red on every branch, `main` included.
+
+**Why ignoring is safe for now:** no patched version exists (`patched: <0.0.0`), so no update or override can fix it. `picomatch` is reached through ESLint (`eslint-config-next`), `sass`'s file watcher (`chokidar`) and Payload's type generator (`json-schema-to-typescript`). All of these match glob patterns written in our config and code. No visitor input, form field or URL ever becomes a glob pattern, so the website cannot be slowed down this way.
+
+**Remove the ignore** as soon as a fixed `picomatch` is released, and update the packages that bring it in (or add a pnpm override).
