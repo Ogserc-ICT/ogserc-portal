@@ -896,6 +896,12 @@ Tests check that the five values are bold (font weight 700), that the box comes 
 
 **Checked:** Payload 3.90.2 accepts Next.js `>=16.3.3 <17.0.0`. Lint, typecheck, build (no security notice) and the full Playwright suite against the production build pass. `pnpm audit` no longer lists the advisory. No code changes were needed.
 
+## D-073 A consultation's documents appear together on each of their pages (2026-11-17)
+
+**Decision (owner, 2026-11-17):** the paper and the draft Order work together, so each page now has a "Documents in this consultation" section showing both files, the page's own document first: what each one is, its reference and file details, Open and Download, and a link to the other's page. Before, the homepage card led to the paper's page, where the draft Order showed only in the sidebar's Related documents. The sidebar panel stays (FR-DOC-03). A document belongs to a consultation when it carries the same `consultation` details (`consultationDocuments` in `catalogue.ts`).
+
+**Previews start closed on consultation pages (owner).** Showing two inline PDFs at once would download 2.3 MB before anyone asked. On these pages each preview starts closed and loads its PDF only when "Show preview" is first pressed. Orders keep their preview open, as before (D-060). With two files on a page, the Open, Download and preview buttons name their file for screen readers (for example "Show preview of Draft Order for consultation, version 2026.1"), and each preview has its own id.
+
 ## D-074 Legal pages: Privacy Policy and Terms of Service only (2026-11-17)
 
 **Decision:** The footer's legal links are **Privacy Policy** (`/privacy-policy`) and **Terms of Service** (`/terms-of-service`). At the owner's request, the Cookie Notice, Accessibility Statement and Sitemap links are removed. Both pages carry OGSERC's text as the owner supplied it on 2026-11-17, word for word, in `src/lib/legal/legal-pages.ts` until build step 4 moves them into the Pages collection (the seed must carry them over). One `LegalPageView` component draws both: title band, "Last updated", then numbered sections. The contact sections link the address from `contactDetails`, so it stays in step with the footer.
