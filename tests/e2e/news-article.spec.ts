@@ -67,7 +67,10 @@ test.describe('News story', () => {
     const closed = await new AxeBuilder({ page }).withTags(WCAG_21_AA).analyze()
     expect(closed.violations).toEqual([])
     await page.getByRole('region', { name: 'Photos' }).getByRole('link').first().click()
-    await expect(page.getByRole('dialog')).toBeVisible()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    // The viewer fades in over 200ms; mid-fade, axe measures its text against the white page.
+    await expect(dialog).toHaveCSS('opacity', '1')
     const open = await new AxeBuilder({ page }).withTags(WCAG_21_AA).analyze()
     expect(open.violations).toEqual([])
   })
