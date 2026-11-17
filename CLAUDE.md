@@ -117,7 +117,7 @@ The site must be movable to any host that runs Node.js or Docker (a VPS, Railway
 6. If a requirement is ambiguous or conflicts with the SRS, ask instead of guessing.
 7. Work on a branch and open a pull request for each slice; do not commit directly to `main`. Every CI check (lint, typecheck, dependency audit, build, Playwright with axe accessibility, secret scan, Docker build) must be green before merging. GitHub does not enforce this on the current plan, so it is a rule to follow, not a setting (see docs/RUNBOOK.md Section 2).
 8. Record important technical choices and the reasons in `docs/DECISIONS.md`.
-9. Include privacy-friendly analytics, a legal-pages footer (Privacy, Terms, Cookies, Accessibility, Sitemap), and PDF text extraction for search, as specified in the SRS.
+9. Include privacy-friendly analytics, a legal-pages footer (Privacy Policy and Terms of Service; cookies are a section of the Privacy Policy, docs/DECISIONS.md D-074), and PDF text extraction for search, as specified in the SRS.
 
 ## Build order (Phase 1)
 

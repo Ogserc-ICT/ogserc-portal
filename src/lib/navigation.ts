@@ -6,6 +6,8 @@
  * creates a page, set `ready: true` on its entry (docs/DECISIONS.md D-027).
  */
 
+import { privacyPolicy, termsOfService } from '@/lib/legal/legal-pages'
+
 export const PENDING_PATH = '/being-prepared'
 
 type SiteLink = { label: string; path: string; ready: boolean }
@@ -166,11 +168,11 @@ export const footerQuickLinks: ResolvedLink[] = [
   pending('News & Updates', '/media-center/news'),
 ].map(resolve)
 
-/** FR-WEB-06 legal pages. */
-export const legalLinks: ResolvedLink[] = [
-  pending('Privacy Policy', '/privacy'),
-  pending('Terms of Service', '/terms'),
-  pending('Cookie Notice', '/cookies'),
-  pending('Accessibility Statement', '/accessibility'),
-  pending('Sitemap', '/sitemap'),
-].map(resolve)
+/**
+ * FR-WEB-06 legal pages. The owner dropped the Cookie Notice, Accessibility Statement and Sitemap
+ * links; cookies are a section of the Privacy Policy (D-074).
+ */
+export const legalLinks: ResolvedLink[] = [privacyPolicy, termsOfService].map((page) => ({
+  label: page.title,
+  href: page.path,
+}))
