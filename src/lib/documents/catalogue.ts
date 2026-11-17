@@ -141,6 +141,20 @@ export const findDocument = (categoryPath: string, slug: string): RegulatoryDocu
 export const relatedDocuments = (doc: RegulatoryDocument): RegulatoryDocument[] =>
   doc.related.flatMap((slug) => publicDocuments.filter((other) => other.slug === slug))
 
+/**
+ * Every public document in the same consultation as this one (a paper and the draft it consults
+ * on), this one first and the others in catalogue order. Empty when the document is not out for
+ * consultation.
+ */
+export const consultationDocuments = (doc: RegulatoryDocument): RegulatoryDocument[] => {
+  if (!doc.consultation) return []
+  // Documents in one consultation share one Consultation object (CP_2026_001 above).
+  const others = publicDocuments.filter(
+    (other) => other !== doc && other.consultation === doc.consultation,
+  )
+  return [doc, ...others]
+}
+
 export const countInCategory = (categoryPath: string): number =>
   publicDocuments.filter((doc) => doc.categoryPath === categoryPath).length
 

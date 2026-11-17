@@ -12,7 +12,12 @@ import { buttonClasses } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
 import { Icon } from '@/components/ui/Icon'
 import { Panel } from '@/components/ui/Panel'
-import { documentHref, fileSummary, relatedDocuments } from '@/lib/documents/catalogue'
+import {
+  consultationDocuments,
+  documentHref,
+  fileSummary,
+  relatedDocuments,
+} from '@/lib/documents/catalogue'
 import type { RegulatoryDocument } from '@/lib/documents/types'
 import { formatDate } from '@/lib/format-date'
 import { hrefFor, routes } from '@/lib/navigation'
@@ -74,6 +79,119 @@ function Related({ doc }: { doc: RegulatoryDocument }) {
   )
 }
 
+function FileHeader({ doc, heading }: { doc: RegulatoryDocument; heading: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="mt-0.5 shrink-0 rounded bg-danger px-2 py-1 text-xs font-bold text-white">
+          PDF
+        </span>
+        <div className="min-w-0">{heading}</div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <a href={doc.file.href} className={buttonClasses('outline')}>
+          <Icon name="external" className="size-4" />
+          Open<span className="sr-only"> {doc.file.description}</span>
+        </a>
+        <a
+          href={doc.file.href}
+          download={doc.file.downloadName}
+          className={buttonClasses('secondary')}
+        >
+          <Icon name="download" className="size-4" />
+          Download<span className="sr-only"> {doc.file.description}</span>
+        </a>
+      </div>
+    </div>
+  )
+}
+
+/** The document's PDF, with its preview open (D-060). */
+function SingleFile({ doc }: { doc: RegulatoryDocument }) {
+  return (
+    <section
+      aria-labelledby="document-file"
+      className="overflow-hidden rounded-lg border border-line bg-white"
+    >
+      <FileHeader
+        doc={doc}
+        heading={
+          <>
+            <h2 id="document-file" className="font-semibold text-green-900">
+              {doc.file.description}
+            </h2>
+            <p className="text-sm text-ink-muted">{fileSummary(doc)}</p>
+          </>
+        }
+      />
+      <PdfPreview href={doc.file.href} title={doc.title} />
+    </section>
+  )
+}
+
+/**
+ * A consultation's documents work together, so each one's page offers all of them (D-073). Two
+ * previews would load two large PDFs, so they start closed.
+ */
+function ConsultationFiles({
+  docs,
+  current,
+}: {
+  docs: RegulatoryDocument[]
+  current: RegulatoryDocument
+}) {
+  return (
+    <section
+      aria-labelledby="consultation-documents"
+      className="rounded-lg border border-line bg-white p-4 sm:p-5"
+    >
+      <h2 id="consultation-documents" className="text-xl font-bold text-green-900">
+        Documents in this consultation
+      </h2>
+      <p className="mt-1 text-sm text-ink-muted">
+        This consultation has {docs.length} documents. Read them together before you comment.
+      </p>
+      <ul className="mt-4 space-y-4">
+        {docs.map((doc) => (
+          <li key={doc.slug} className="overflow-hidden rounded-lg border border-line">
+            <FileHeader
+              doc={doc}
+              heading={
+                <>
+                  <h3 className="font-semibold text-green-900">
+                    {doc.typeLabel}
+                    {doc === current ? (
+                      <span className="ml-2 text-sm font-normal text-ink-muted">(this page)</span>
+                    ) : null}
+                  </h3>
+                  {doc === current ? null : (
+                    <Link
+                      href={documentHref(doc)}
+                      className="mt-1 block text-sm font-semibold text-green-700 underline underline-offset-4"
+                    >
+                      {doc.title}
+                    </Link>
+                  )}
+                  <p className="mt-1 text-sm text-ink-muted">
+                    {doc.reference} · {doc.file.description} · {fileSummary(doc)}
+                  </p>
+                </>
+              }
+            />
+            <PdfPreview
+              href={doc.file.href}
+              title={doc.title}
+              id={`pdf-preview-${doc.slug}`}
+              label={doc.file.description}
+              initiallyShown={false}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 /** A document's own page (FR-DOC-03): status, details, the file, its full text and related documents. */
 export function DocumentDetail({ doc, category }: { doc: RegulatoryDocument; category: Category }) {
   return (
@@ -113,39 +231,11 @@ export function DocumentDetail({ doc, category }: { doc: RegulatoryDocument; cat
       <div className="bg-green-50 py-10 sm:py-14">
         <Container className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="min-w-0 space-y-8">
-            <section
-              aria-labelledby="document-file"
-              className="overflow-hidden rounded-lg border border-line bg-white"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
-                <div className="flex items-center gap-3">
-                  <span className="rounded bg-danger px-2 py-1 text-xs font-bold text-white">
-                    PDF
-                  </span>
-                  <div>
-                    <h2 id="document-file" className="font-semibold text-green-900">
-                      {doc.file.description}
-                    </h2>
-                    <p className="text-sm text-ink-muted">{fileSummary(doc)}</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <a href={doc.file.href} className={buttonClasses('outline')}>
-                    <Icon name="external" className="size-4" />
-                    Open
-                  </a>
-                  <a
-                    href={doc.file.href}
-                    download={doc.file.downloadName}
-                    className={buttonClasses('secondary')}
-                  >
-                    <Icon name="download" className="size-4" />
-                    Download
-                  </a>
-                </div>
-              </div>
-              <PdfPreview href={doc.file.href} title={doc.title} />
-            </section>
+            {doc.consultation ? (
+              <ConsultationFiles docs={consultationDocuments(doc)} current={doc} />
+            ) : (
+              <SingleFile doc={doc} />
+            )}
 
             {doc.text ? (
               <section
