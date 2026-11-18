@@ -1012,3 +1012,30 @@ OGSERC's legal advisers should review it with the rest of the policy (D-074).
 **Site address at build time:** canonical links, previews, `robots.txt` and `sitemap.xml` are built in advance, so `SITE_URL` is now also a Docker build argument. `src/lib/site-url.ts` reads it and **stops a production build if it is missing**, rather than tell search engines the site lives on `localhost`. The compose files and CI pass it.
 
 **After deploying:** verify the domain in Google Search Console with a DNS `TXT` record, submit the sitemap, and import the site into Bing Webmaster Tools (RUNBOOK Section 8). Bing's index also serves DuckDuckGo and Yahoo.
+
+## D-079 Server log report (GoAccess), and disk and backup alerts (Healthchecks.io) (2026-11-18)
+
+**Decision (owner, 2026-11-18):** three additions to the VPS's monitoring, beside Umami (D-077) and UptimeRobot.
+
+**1. Visit log.** Caddy now writes one JSON line per request on the main site to the `caddy_logs` volume.
+- **Rotation:** `roll_at 00:00` starts a new compressed file each night, and `roll_keep_for 336h` deletes files after 14 days. `roll_size` is only a safety cap.
+- **IP addresses:** the owner chose full addresses for 14 days. They are needed to see and block attacking addresses. Masking was the alternative. Privacy Policy section 2 already lists IP addresses among the technical information collected, and the statement in section 7 that no IP address is stored refers to the visitor statistics tool, which is true.
+- **Not logged:** the `stats` subdomain.
+
+**2. GoAccess report** (`deploy/log-report.sh`, nightly at 02:40).
+- **What it shows:** what Umami cannot see, because Umami counts only browsers that run its script:
+  - PDF and other file downloads;
+  - crawlers, including Googlebot;
+  - 404s and other errors;
+  - probes and attack attempts;
+  - bandwidth.
+- **How it runs:** GoAccess 1.12 runs from its pinned Docker image (`allinurl/goaccess:1.12`), with nothing installed on the server. The logs belong to root inside the Caddy container, so they are read there and piped to GoAccess, which runs as the deploy user.
+- **Where the report lives:** `/var/backups/ogserc/reports/report.html` (folder 700, file 600), replaced every night.
+- **How it is viewed:** the owner chose to download it with `scp` (RUNBOOK Section 8) rather than publish it, because the report contains IP addresses. A page on `stats.<domain>` would have needed a shared password, which CLAUDE.md does not allow. Downloaded copies should be deleted after viewing, to keep within the 14 days.
+
+**3. Disk and backup alerts through Healthchecks.io's free plan.** The server cannot send email (that arrives with the contact form, step 5), and UptimeRobot's heartbeat monitors are not on its free plan.
+- **Disk:** `deploy/check-disk.sh` runs every 30 minutes. It pings with the usage of `/`, Docker's data and the backup folder, and sends `/fail` at **80%** or more.
+- **Backup:** `deploy/backup-db.sh` pings when the nightly backup succeeds and sends `/fail` when it fails. Without `HC_BACKUP_PING_URL` it runs as before.
+- **Missed pings:** Healthchecks.io also alerts when pings stop arriving, so a dead server or a broken cron job is noticed too, which a status page watched by UptimeRobot could not do.
+- **The ping URLs:** they are kept in the server's `.env` and treated as secrets.
+- **What leaves the server:** only the ping and the disk percentages. No visitor data is sent.

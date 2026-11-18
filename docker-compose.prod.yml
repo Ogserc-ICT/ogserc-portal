@@ -90,6 +90,8 @@ services:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      # Visit log, read by deploy/log-report.sh (D-079).
+      - caddy_logs:/var/log/caddy
     depends_on:
       - app
     logging: *logging
@@ -98,3 +100,4 @@ volumes:
   pgdata:
   caddy_data:
   caddy_config:
+  caddy_logs:
