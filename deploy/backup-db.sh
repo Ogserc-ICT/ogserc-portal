@@ -33,4 +33,9 @@ fi
 
 find "$dir" \( -name 'ogserc-*.dump' -o -name 'umami-*.dump' \) -mtime +14 -delete
 find "$dir" -name '*.dump.part' -mtime +1 -delete
+
+# Encrypted off-server copy (D-080), once configured. A failure here fails the backup check too.
+if grep -q '^OFFSITE_REPOSITORY=.' .env 2>/dev/null; then
+  ./deploy/offsite-backup.sh
+fi
 ping_hc ""

@@ -1039,3 +1039,32 @@ OGSERC's legal advisers should review it with the rest of the policy (D-074).
 - **Missed pings:** Healthchecks.io also alerts when pings stop arriving, so a dead server or a broken cron job is noticed too, which a status page watched by UptimeRobot could not do.
 - **The ping URLs:** they are kept in the server's `.env` and treated as secrets.
 - **What leaves the server:** only the ping and the disk percentages. No visitor data is sent.
+
+## D-080 Off-server backups: restic to Backblaze B2, encrypted (2026-11-18)
+
+**Decision (owner, 2026-11-18):** each nightly backup is also copied off the VPS, encrypted, to **Backblaze B2** (EU Central). Copies are kept as **7 daily, 4 weekly and 3 monthly**. This closes RUNBOOK Section 6's open item: until now the dumps lived only on the same server, so losing the server meant losing them.
+
+**How:**
+- **The tool:** `deploy/offsite-backup.sh` runs **restic 0.19.1** from its pinned Docker image (`restic/restic:0.19.1`), so nothing is installed on the server. restic encrypts on the server before upload (NFR-SEC-16), uploads only changes, and applies the retention policy with `forget --prune`.
+- **What is copied:**
+  - the latest site and statistics dumps;
+  - the server's `.env`, because a restored database is unusable without `PAYLOAD_SECRET` and the other secrets.
+
+  They are staged under fixed names, so every copy covers the same paths and retention can group them. The host name is fixed (`ogserc-vps`) for the same reason.
+- **When:** `deploy/backup-db.sh` runs it after the nightly dumps once `OFFSITE_REPOSITORY` is in `.env`. A failure fails the Healthchecks.io backup check (D-079), so the owner is alerted.
+- **Secrets:**
+  - they live in the server's `.env` as `OFFSITE_*`;
+  - they are passed to Docker by name (`-e NAME`), never as values on a command line;
+  - the B2 key is restricted to the one bucket.
+- **Provider-neutral:** it uses B2's S3-compatible endpoint, so any S3-compatible store works by changing `OFFSITE_REPOSITORY` and the key (CLAUDE.md, Portability). The region is taken from the endpoint name where present.
+- **Restore test:** `deploy/test-restore.sh` restores the latest copy into a throwaway PostgreSQL container with no published port. It checks that the site's tables and migrations are there, and counts statistics page views. It then removes everything. RUNBOOK Section 6 also gives the steps after losing the server.
+
+**Why B2:** the copies are a few megabytes, well inside B2's free 10 GB, and B2 needs no payment card to start. It can also hold the CMS's uploaded files in Step 4, so one provider serves both. Cloudflare R2 was the alternative. Storage in Nigeria was considered and can replace B2 later without code changes.
+
+**Retention and the Privacy Policy:** with at most 3 months off the server and 14 days on it, data deleted under the two-year statistics promise (D-077) leaves every backup within 3 months.
+
+**Cross-border storage:** the copies are held in the EU but are encrypted before they leave the server with a key that only OGSERC holds, so the provider cannot read them. OGSERC's legal advisers may want to note this for the NDPA (D-074).
+
+**Risks the owner should know:**
+- **Losing the password:** if `OFFSITE_PASSWORD` is lost, the copies cannot be opened by anyone. It is kept in the password manager, separately from the server.
+- **Attackers on the server:** someone who takes over the server could use the bucket key to delete the copies. B2 Object Lock (write-once retention) would prevent that, and can be added later if wanted.
