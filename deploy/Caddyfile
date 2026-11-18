@@ -29,8 +29,11 @@ www.{$SITE_DOMAIN} {
 
 	# Visitor statistics (D-077): only Umami's tracker script and the endpoint it reports to are
 	# reachable on the site's address, so pages load nothing from another domain.
+	# The tracker reports to the folder it was loaded from plus its endpoint, so Umami serves them
+	# as /p.js and /e and Caddy removes the /pulse prefix. Without this it posts to /pulse/pulse/e.
 	@analytics path /pulse/p.js /pulse/e
 	handle @analytics {
+		uri strip_prefix /pulse
 		reverse_proxy umami:3000
 	}
 

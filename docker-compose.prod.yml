@@ -63,9 +63,9 @@ services:
       APP_SECRET: ${UMAMI_APP_SECRET:?Set UMAMI_APP_SECRET in .env}
       # Required for two-factor sign-in, which every dashboard account must turn on.
       TWO_FACTOR_ENCRYPTION_KEY: ${UMAMI_2FA_KEY:?Set UMAMI_2FA_KEY in .env}
-      # Neutral paths on the site's own address (see deploy/Caddyfile and Analytics.tsx).
-      TRACKER_SCRIPT_NAME: pulse/p.js
-      COLLECT_API_ENDPOINT: /pulse/e
+      # Public as /pulse/p.js and /pulse/e: Caddy removes the /pulse prefix (deploy/Caddyfile).
+      TRACKER_SCRIPT_NAME: p.js
+      COLLECT_API_ENDPOINT: /e
       # Caddy replaces any X-Forwarded-For a visitor sends with their real address.
       CLIENT_IP_HEADER: x-forwarded-for
       DISABLE_TELEMETRY: '1'
