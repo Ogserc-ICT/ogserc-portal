@@ -119,7 +119,7 @@ The container listens on port 3000. Put it behind HTTPS (the host's load balance
 
 `docker-compose.prod.yml` runs three containers: the app, PostgreSQL 17 and Caddy. Caddy is the only one reachable from the internet (ports 80 and 443); it gets and renews the HTTPS certificate from Let's Encrypt and passes requests to the app. The image is built on the server (the build needs no database), so no registry token is stored there. Migrations run when the app starts.
 
-**Preview period.** Until Step 3 is finished (2FA, rate limiting, audit log), `deploy/Caddyfile` returns 404 for `/admin` and `/api`, tells search engines not to index the site, and shortens HSTS to one day for this host only. All three are marked `PREVIEW ONLY` and listed in Section 11.
+**Preview period.** Until Step 3 is finished (2FA, rate limiting, audit log), `deploy/Caddyfile` returns 404 for `/admin` and `/api` and shortens HSTS to one day for this host only. Both are marked `PREVIEW ONLY` and listed in Section 11. Search engines have been allowed to list the site since 2026-11-18 (D-078).
 
 Commands run on the server over SSH. Never paste passwords, keys or the contents of `.env` into chat, tickets or commits.
 
@@ -345,6 +345,22 @@ docker compose -f docker-compose.prod.yml start app
 
 **Visitor statistics (D-077):** the Umami dashboard at `https://stats.<domain>` shows visitors, pages, referring sites, devices, countries and site searches. Staff who only need to read can be sent a share link (Website settings, Share URL) instead of an account.
 
+**Uptime:** UptimeRobot checks the site every 5 minutes and sends an email and a phone-app alert when a check fails. It runs three monitors:
+- **`OGSERC website`:** a keyword check on the homepage for "Ogun State Electricity Regulatory Commission", so it also catches a broken page that still loads.
+- **`OGSERC contact page`:** this page is rendered on each request, so it proves the app is running.
+- **`OGSERC statistics`:** the Umami dashboard.
+
+When an alert arrives, run `docker compose -f docker-compose.prod.yml ps` and `logs --tail 100 app caddy` on the server (Section 5).
+
+**Search engines (D-078):** the site publishes `/robots.txt` and `/sitemap.xml`. Set up once after the first deploy that has them:
+1. **Google Search Console** (search.google.com/search-console), signed in with an account OGSERC controls:
+   - Add a **Domain** property for the domain.
+   - Add the `TXT` record Google shows at the DNS provider. Change no other records.
+   - Click Verify. Verification can take up to a day.
+   - Then go to *Sitemaps* and submit `sitemap.xml`.
+2. **Bing Webmaster Tools** (bing.com/webmasters): choose *Import from Google Search Console*. Bing also serves DuckDuckGo and Yahoo.
+3. **Check monthly:** use Search Console's *Pages* report for pages Google could not index, and its *Performance* report for the search words people use. These complement the visitor statistics.
+
 ## 9. Account access and recovery
 
 Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be held under whichever accounts the developer and OGSERC choose. This section records, for each one, who can administer it and how to recover or move it, so the site never depends on a single person being available.
@@ -371,7 +387,8 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 | File storage | Uploaded documents and images (S3-compatible) | `<provider>` | `<account / bucket>` | `<name>`, `<name>` | `<password manager / vault>` | Step 4 |
 | Email sending | Contact form delivery (SMTP) | `<provider>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 5 |
 | Receiving mailbox | OGSERC inbox for contact form messages | `<provider>` | `<OGSERC mailbox address>` | `<name>` | Held by OGSERC | Step 5 |
-| Error and uptime monitoring | Alerts on downtime and errors | `<provider>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 13 |
+| Error and uptime monitoring | Alerts on downtime and errors | UptimeRobot (free plan) | `<shared OGSERC IT mailbox>` | `<name>`, `<name>` | `<password manager / vault>` | Uptime active; error alerts step 13 |
+| Search engine consoles | Indexing reports, sitemap, search words (D-078) | Google Search Console, Bing Webmaster Tools | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Being set up |
 | Analytics | Privacy-friendly site analytics (FR-WEB-07) | Umami, self-hosted on the VPS (D-077) | `stats.<domain>` (named accounts, two-factor sign-in) | `<name>`, `<name>` | `<password manager / vault>` | Being set up |
 | Payment provider | Licence and application fees | `<to be agreed with OGSERC>` | — | — | — | Phase 3 only; do not create before then |
 
@@ -457,9 +474,9 @@ Build step 2 added temporary placeholders so OGSERC could review the design befo
 - [ ] The contact form sends email, with rate limiting, a configurable inbox and SPF/DKIM/DMARC; until then it offers a `mailto:` link (D-059).
 - [ ] `src/app/(frontend)/design-system/` (the review page) deleted (D-031).
 - [ ] No menu entry in `src/lib/navigation.ts` still has `ready: false`, and `/being-prepared` is removed or unused (D-027).
-- [ ] `deploy/Caddyfile` has no `PREVIEW ONLY` block left (D-054): `/admin` reopened once Step 3 is merged (2FA, rate limiting, audit log); `X-Robots-Tag: noindex` removed at launch; the HSTS override removed once every subdomain of the domain serves HTTPS.
+- [ ] `deploy/Caddyfile` has no `PREVIEW ONLY` block left (D-054): `/admin` reopened once Step 3 is merged (2FA, rate limiting, audit log); `X-Robots-Tag: noindex` removed (done 2026-11-18, D-078); the HSTS override removed once every subdomain of the domain serves HTTPS.
 - [ ] VPS backups copied off the server daily, and a restore tested (Section 6).
 - [x] Privacy Policy section 7 covers cookies and visitor statistics: wording approved by the owner on 2026-11-18 (D-077). OGSERC's legal advisers to review it with the rest of the policy (D-074).
 - [ ] `stats.<domain>`'s one-day HSTS lengthened with the main site's (D-077).
-- [ ] The monthly `deploy/prune-analytics.sh` cron job installed on the VPS, and its dry run clean (Section 6).
+- [x] The monthly `deploy/prune-analytics.sh` cron job installed on the VPS, and its dry run clean (Section 6; done 2026-11-18).
 - [ ] `IMAGE_PROCESSING=off` gone from the VPS's `.env` once its CPU shows `sse4_1` and `sse4_2` (D-056), then the setting, its CI job and `scripts/block-sharp-binaries.mjs` removed from the code, and D-055's `@img/sharp-wasm32` reconsidered.

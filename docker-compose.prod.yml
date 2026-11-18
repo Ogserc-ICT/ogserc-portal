@@ -21,6 +21,8 @@ services:
       args:
         IMAGE_PROCESSING: ${IMAGE_PROCESSING:-on}
         UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
+        # Canonical links, link previews, robots.txt and sitemap.xml are built in advance (D-078).
+        SITE_URL: ${SITE_URL:?Set SITE_URL in .env}
     image: ogserc-portal:latest
     restart: unless-stopped
     environment:

@@ -20,8 +20,8 @@ www.{$SITE_DOMAIN} {
 
 	header {
 		-Server
-		# PREVIEW ONLY: keep placeholder content out of search results.
-		X-Robots-Tag "noindex, nofollow"
+		# Search engines may list the site since 2026-11-18 (D-078); pages that must stay out of
+		# results say so themselves (robots metadata), and robots.txt keeps crawlers off /admin and /api.
 		# PREVIEW ONLY: replaces the app's two-year, includeSubDomains HSTS (next.config.ts) with one
 		# day for this host alone, until every subdomain of the domain is confirmed to serve HTTPS.
 		>Strict-Transport-Security "max-age=86400"
