@@ -967,6 +967,25 @@ It does not record names, accounts or form contents, and staff pages are never t
 
 **Upgrades:** Dependabot watches only the `Dockerfile`, not compose images, so the pinned Umami version is reviewed with the other planned upgrades (RUNBOOK Section 10). Umami's own update notice on the dashboard is left on. Security releases (for example 3.4.1) are applied promptly.
 
-**Privacy Policy:** section 7 now reads "[Sample, OGSERC to supply: cookies and visitor statistics]". OGSERC's text must describe the statistics before launch. Their wording is theirs to write.
+**Privacy Policy:** section 7 first read "[Sample, OGSERC to supply: cookies and visitor statistics]". On 2026-11-18 the owner asked for wording, because the site is already public. It is now "7. Cookies and Visitor Statistics", drafted from what the site actually does and approved by the owner in a deliberately short form:
+- no tracking or advertising cookies;
+- statistics on OGSERC's own server, recording general information (pages, referring site, device and browser, approximate location, site searches);
+- no cookies, no stored IP address, no identification;
+- Do Not Track honoured;
+- not shared or sold;
+- kept for two years;
+- the Google map's cookies, only when a visitor loads it (D-058).
+
+Before publishing, two claims were checked on the server:
+- **No stored IP address:** no Umami table has an IP column. The only columns matching `%ip%` were the `description` fields of `board` and `report`.
+- **Search words recorded:** Umami keeps the page address, which includes `?q=`.
+
+OGSERC's legal advisers should review it with the rest of the policy (D-074).
+
+**Two-year retention:** the owner chose two years. That is long enough to compare one year with the next and short enough to meet the storage-limitation principle. Umami has no retention setting when self-hosted, so `deploy/prune-analytics.sh` deletes visitor data older than two years once a month.
+- **What it deletes:** `website_event`, `event_data`, `session_data`, `revenue`, `error_event`, `heatmap_event` and `session_replay`, then each `session` with no page views left.
+- **What it keeps:** accounts, websites, reports, boards, share links and replays staff saved.
+- **How it is written:** a fixed list of table names, so the SQL never contains outside input. It skips with a warning, rather than failing, if a Umami upgrade renames a table, and `--dry-run` reports and rolls back.
+- **Backups:** dumps live for 14 days, so deleted rows leave the backups two weeks later.
 
 **To check on the server:** the VPS's virtual CPU lacks SSE4.1 and SSE4.2 (D-056). If Umami's container fails for the same reason, statistics stay off and the site is unaffected: the app does not depend on it, and Caddy does not wait for it.

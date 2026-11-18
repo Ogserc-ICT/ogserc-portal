@@ -313,6 +313,13 @@ PAYLOAD_SECRET=any-long-random-string docker compose up --build
 ```
 These copies are on the same server, so they do not survive losing it. **Open item:** copy them off the server every day (OGSERC to choose where), and test a restore before launch (step 13).
 
+**Two-year limit on visitor statistics (D-077).** The Privacy Policy promises that statistics are deleted after two years. `deploy/prune-analytics.sh` does this once a month, and it deletes only visitor data, never accounts, websites or reports. Dumps are kept for 14 days, so deleted data leaves the backups two weeks later. Off-server copies, once set up, must not be kept longer than that either. Install it once, as `deploy`, and check it with a dry run, which reports what it would delete and then undoes it:
+```sh
+(crontab -l 2>/dev/null; echo '30 3 1 * * /opt/ogserc/deploy/prune-analytics.sh >> /var/backups/ogserc/prune-analytics.log 2>&1') | crontab -
+/opt/ogserc/deploy/prune-analytics.sh --dry-run
+```
+Each table should report `0 rows … deleted` until November 2028, and the last line reads `prune ok (ROLLBACK)`. A `WARNING … skipped` line means a Umami upgrade changed a table: review the list in the script.
+
 Restore a dump into the running database (this replaces its contents):
 ```sh
 cd /opt/ogserc
@@ -429,7 +436,7 @@ For each one, check whether the reason in D-022 still holds. For example: do Pay
 
 Never upgrade only one of these; production, CI, and development must run the same Node major.
 
-**Umami** (D-077) is pinned in `docker-compose.prod.yml`, which Dependabot does not watch. At each review, and whenever the dashboard shows an update notice, read the [release notes](https://github.com/umami-software/umami/releases). Then change the tag and run `docker compose -f docker-compose.prod.yml up -d umami`. Apply security releases straight away. Back up first (Section 6), because upgrades can migrate its database.
+**Umami** (D-077) is pinned in `docker-compose.prod.yml`, which Dependabot does not watch. At each review, and whenever the dashboard shows an update notice, read the [release notes](https://github.com/umami-software/umami/releases). Then change the tag and run `docker compose -f docker-compose.prod.yml up -d umami`. Apply security releases straight away. Back up first (Section 6), because upgrades can migrate its database. After an upgrade, run `deploy/prune-analytics.sh --dry-run` and check that it reports no `WARNING` lines.
 
 Last review: `<date>` by `<name>`. Next review due: `<date + 3 months>`.
 
@@ -452,5 +459,7 @@ Build step 2 added temporary placeholders so OGSERC could review the design befo
 - [ ] No menu entry in `src/lib/navigation.ts` still has `ready: false`, and `/being-prepared` is removed or unused (D-027).
 - [ ] `deploy/Caddyfile` has no `PREVIEW ONLY` block left (D-054): `/admin` reopened once Step 3 is merged (2FA, rate limiting, audit log); `X-Robots-Tag: noindex` removed at launch; the HSTS override removed once every subdomain of the domain serves HTTPS.
 - [ ] VPS backups copied off the server daily, and a restore tested (Section 6).
-- [ ] Privacy Policy section 7 has OGSERC's wording on cookies and visitor statistics (D-077), and `stats.<domain>`'s one-day HSTS is lengthened with the main site's.
+- [x] Privacy Policy section 7 covers cookies and visitor statistics: wording approved by the owner on 2026-11-18 (D-077). OGSERC's legal advisers to review it with the rest of the policy (D-074).
+- [ ] `stats.<domain>`'s one-day HSTS lengthened with the main site's (D-077).
+- [ ] The monthly `deploy/prune-analytics.sh` cron job installed on the VPS, and its dry run clean (Section 6).
 - [ ] `IMAGE_PROCESSING=off` gone from the VPS's `.env` once its CPU shows `sse4_1` and `sse4_2` (D-056), then the setting, its CI job and `scripts/block-sharp-binaries.mjs` removed from the code, and D-055's `@img/sharp-wasm32` reconsidered.

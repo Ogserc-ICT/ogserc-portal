@@ -16,7 +16,7 @@ const LEGAL_PAGES = [
       '4. Sharing Your Information',
       '5. Keeping Your Data Secure',
       '6. Your Rights',
-      '7. Cookies',
+      '7. Cookies and Visitor Statistics',
       '8. Contact Us',
     ],
     quote: 'We do not sell your personal information to anyone.',
