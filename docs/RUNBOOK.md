@@ -284,7 +284,7 @@ Existing sessions stay open through the restart.
    docker compose -f docker-compose.prod.yml up -d --build app
    curl -s https://ogserc.org.ng | grep -o 'data-website-id="[^"]*"'
    ```
-   Open the site in a normal browser window (without Do Not Track) and check that the visit appears on the dashboard within a minute.
+   Open the site in a normal browser window (without Do Not Track) and check that the visit appears on the dashboard within a minute. If it does not, open the browser's developer tools (F12), Network tab, reload, and filter on `pulse`: `p.js` and a POST to `/pulse/e` should both return 200. A curl to `/pulse/e` does not prove this, because the browser builds the address itself (D-077).
 
 Umami's data stays out of the app: if Umami stops, the site keeps working and only the counting pauses.
 

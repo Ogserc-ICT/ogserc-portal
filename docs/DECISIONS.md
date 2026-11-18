@@ -953,6 +953,7 @@ It does not record names, accounts or form contents, and staff pages are never t
 
 **How it is wired:**
 - **No outside domain:** Caddy serves the tracker at `/pulse/p.js` and the endpoint it reports to at `/pulse/e` on the site's own address. Pages therefore load nothing from another domain, and the strict CSP (step 12) needs only `'self'` for it. The neutral names also mean fewer visits go uncounted because of ad blockers.
+- **Prefix stripped by Caddy (fixed 2026-11-18):** the tracker sends visits to the folder its script came from plus the collect endpoint. With `TRACKER_SCRIPT_NAME=pulse/p.js` and `COLLECT_API_ENDPOINT=/pulse/e`, browsers posted to `/pulse/pulse/e` and got 404, so nothing was counted. A direct curl to `/pulse/e` had worked, which hid the fault. Umami now serves `p.js` and `/e`, and Caddy removes `/pulse` (`uri strip_prefix`).
 - **Size and loading:** the script is about 2 KB and loaded with `defer`, so it never delays the page.
 - **When it is on:** `UMAMI_WEBSITE_ID` switches it on. Static pages are rendered during `next build`, so it is also a Docker build argument, like `IMAGE_PROCESSING`. It is not a secret.
 - **Off everywhere else:** without the setting there is no script tag, so development and previews are never counted. CI uses a made-up ID to test the tag.
