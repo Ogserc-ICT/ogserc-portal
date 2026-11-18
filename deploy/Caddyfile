@@ -27,5 +27,30 @@ www.{$SITE_DOMAIN} {
 		>Strict-Transport-Security "max-age=86400"
 	}
 
+	# Visitor statistics (D-077): only Umami's tracker script and the endpoint it reports to are
+	# reachable on the site's address, so pages load nothing from another domain.
+	@analytics path /pulse/p.js /pulse/e
+	handle @analytics {
+		reverse_proxy umami:3000
+	}
+
 	reverse_proxy app:3000
+}
+
+# Umami's dashboard (D-077). Every account signs in with its own name, password and two-factor
+# code; there is no shared login.
+stats.{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		-Server
+		X-Robots-Tag "noindex, nofollow"
+		# PREVIEW ONLY: one day, like the main site (RUNBOOK Section 11).
+		Strict-Transport-Security "max-age=86400"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	reverse_proxy umami:3000
 }

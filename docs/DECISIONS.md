@@ -931,3 +931,41 @@ Tests check that the five values are bold (font weight 700), that the box comes 
 **Why ignoring is safe for now:** no patched version exists (`patched: <0.0.0`), so no update or override can fix it. `picomatch` is reached through ESLint (`eslint-config-next`), `sass`'s file watcher (`chokidar`) and Payload's type generator (`json-schema-to-typescript`). All of these match glob patterns written in our config and code. No visitor input, form field or URL ever becomes a glob pattern, so the website cannot be slowed down this way.
 
 **Remove the ignore** as soon as a fixed `picomatch` is released, and update the packages that bring it in (or add a pnpm override).
+
+## D-077 Visitor statistics: Umami, self-hosted on OGSERC's server (2026-11-18)
+
+**Decision (owner, 2026-11-18):** the site counts visits with **Umami 3.5.0**, run as a fourth container in `docker-compose.prod.yml` on OGSERC's VPS (FR-WEB-07). This brings forward part of build step 11.
+
+**Why Umami, and why on OGSERC's server:**
+- **Privacy:** it sets no cookies and builds no visitor profiles, so no cookie banner is needed (D-074).
+- **Data location:** the data stays on OGSERC's own server rather than with a foreign provider, which keeps the Nigeria Data Protection Act position simple.
+- **Cost:** it is free and open source.
+- **Portability:** it needs only PostgreSQL, which the server already runs.
+- **Alternatives:** Plausible or Umami's hosted service would need no upkeep, but they hold the data abroad and cost money.
+
+**What it records:**
+- pages viewed;
+- the referring site;
+- browser, operating system, device type, and country (from the IP address);
+- words typed into site search, which the owner chose to keep, because they show what people look for.
+
+It does not record names, accounts or form contents, and staff pages are never tracked: the script is only in the public layout. Browsers that send Do Not Track are not counted at all (`data-do-not-track`).
+
+**How it is wired:**
+- **No outside domain:** Caddy serves the tracker at `/pulse/p.js` and the endpoint it reports to at `/pulse/e` on the site's own address. Pages therefore load nothing from another domain, and the strict CSP (step 12) needs only `'self'` for it. The neutral names also mean fewer visits go uncounted because of ad blockers.
+- **Size and loading:** the script is about 2 KB and loaded with `defer`, so it never delays the page.
+- **When it is on:** `UMAMI_WEBSITE_ID` switches it on. Static pages are rendered during `next build`, so it is also a Docker build argument, like `IMAGE_PROCESSING`. It is not a secret.
+- **Off everywhere else:** without the setting there is no script tag, so development and previews are never counted. CI uses a made-up ID to test the tag.
+
+**Database:** Umami has its own database and its own non-superuser role (`umami`) in the existing PostgreSQL container, created by `deploy/create-analytics-db.sh`. `CONNECT` is revoked from `PUBLIC` on both databases, so Umami cannot reach the site's data. `deploy/backup-db.sh` dumps it nightly alongside the site's database.
+
+**Dashboard:** at `stats.<domain>`. Every user has their own account with two-factor sign-in turned on (Umami 3.3+, `TWO_FACTOR_ENCRYPTION_KEY`).
+- **No shared password in front:** an extra Caddy password was considered and dropped. It would be one login shared by everyone, which CLAUDE.md does not allow.
+- **Default account:** Umami's default `admin` account must have its password changed at first sign-in (Umami 3.5 enforces this). It is then renamed or replaced by named accounts.
+- **Read-only access:** managers who only need to read can be sent a share link instead of an account.
+
+**Upgrades:** Dependabot watches only the `Dockerfile`, not compose images, so the pinned Umami version is reviewed with the other planned upgrades (RUNBOOK Section 10). Umami's own update notice on the dashboard is left on. Security releases (for example 3.4.1) are applied promptly.
+
+**Privacy Policy:** section 7 now reads "[Sample, OGSERC to supply: cookies and visitor statistics]". OGSERC's text must describe the statistics before launch. Their wording is theirs to write.
+
+**To check on the server:** the VPS's virtual CPU lacks SSE4.1 and SSE4.2 (D-056). If Umami's container fails for the same reason, statistics stay off and the site is unaffected: the app does not depend on it, and Caddy does not wait for it.

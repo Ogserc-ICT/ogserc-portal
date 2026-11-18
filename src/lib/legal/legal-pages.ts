@@ -74,9 +74,11 @@ export const privacyPolicy: LegalPage = {
       ],
     },
     {
-      // Replaces the separate Cookie Notice (D-074). Not in OGSERC's supplied text yet.
+      // Replaces the separate Cookie Notice (D-074). Not in OGSERC's supplied text yet. It should
+      // also cover the cookie-free visitor statistics (Umami, D-077): pages viewed, referring site,
+      // browser, device and country, no cookies, no profiles, words typed into site search kept.
       heading: '7. Cookies',
-      paragraphs: ['[Sample, OGSERC to supply]'],
+      paragraphs: ['[Sample, OGSERC to supply: cookies and visitor statistics]'],
     },
     {
       heading: '8. Contact Us',
