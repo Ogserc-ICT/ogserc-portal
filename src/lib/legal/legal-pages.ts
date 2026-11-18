@@ -74,11 +74,16 @@ export const privacyPolicy: LegalPage = {
       ],
     },
     {
-      // Replaces the separate Cookie Notice (D-074). Not in OGSERC's supplied text yet. It should
-      // also cover the cookie-free visitor statistics (Umami, D-077): pages viewed, referring site,
-      // browser, device and country, no cookies, no profiles, words typed into site search kept.
-      heading: '7. Cookies',
-      paragraphs: ['[Sample, OGSERC to supply: cookies and visitor statistics]'],
+      // Replaces the separate Cookie Notice (D-074). Wording approved by the owner on 2026-11-18
+      // (D-077). Keep it true to what the site does: Umami statistics (no cookies, no IP stored,
+      // Do Not Track honoured, two-year deletion by deploy/prune-analytics.sh) and the
+      // load-on-request Google map (D-058).
+      heading: '7. Cookies and Visitor Statistics',
+      paragraphs: [
+        'This website does not use cookies to track visitors or for advertising.',
+        'To learn which pages are most useful, we count visits using a statistics tool that runs on OGSERC\'s own server. It records general information such as the pages viewed, the website that referred you, your type of device and browser, your approximate location and searches made on this website. It does not use cookies, does not store your IP address and does not identify you. If your browser sends a "Do Not Track" signal, your visit is not counted. We do not share or sell these statistics. Visitor statistics are kept for two years and then deleted.',
+        'The map on our Contact page is provided by Google and loads only if you choose to show it. Google may then set its own cookies.',
+      ],
     },
     {
       heading: '8. Contact Us',
