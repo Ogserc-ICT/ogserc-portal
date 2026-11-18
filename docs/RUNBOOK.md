@@ -311,6 +311,7 @@ PAYLOAD_SECRET=any-long-random-string docker compose up --build
 (crontab -l 2>/dev/null; echo '15 2 * * * /opt/ogserc/deploy/backup-db.sh >> /var/backups/ogserc/backup.log 2>&1') | crontab -
 /opt/ogserc/deploy/backup-db.sh
 ```
+With `HC_BACKUP_PING_URL` in `.env`, each run reports to Healthchecks.io: success, failure, or nothing arrived (Section 8, D-079).
 These copies are on the same server, so they do not survive losing it. **Open item:** copy them off the server every day (OGSERC to choose where), and test a restore before launch (step 13).
 
 **Two-year limit on visitor statistics (D-077).** The Privacy Policy promises that statistics are deleted after two years. `deploy/prune-analytics.sh` does this once a month, and it deletes only visitor data, never accounts, websites or reports. Dumps are kept for 14 days, so deleted data leaves the backups two weeks later. Off-server copies, once set up, must not be kept longer than that either. Install it once, as `deploy`, and check it with a dry run, which reports what it would delete and then undoes it:
@@ -352,6 +353,38 @@ docker compose -f docker-compose.prod.yml start app
 
 When an alert arrives, run `docker compose -f docker-compose.prod.yml ps` and `logs --tail 100 app caddy` on the server (Section 5).
 
+**Disk and backup alerts (D-079):** Healthchecks.io alerts by email and phone app if the disk reaches 80%, if a nightly backup fails, or if either check stops reporting.
+1. **Create the account:** a free Healthchecks.io account with the shared OGSERC IT mailbox, with two-factor sign-in on.
+2. **Add two checks** (*Add Check*):
+   - `OGSERC disk space`: Period 30 minutes, Grace 1 hour;
+   - `OGSERC nightly backup`: Period 1 day, Grace 3 hours.
+3. **Store the ping URLs:** copy each check's ping URL into the server's `.env`, as `deploy` in `/opt/ogserc`. Use `vi .env` rather than `echo`, so the URL does not land in the shell history:
+   ```
+   HC_DISK_PING_URL=https://hc-ping.com/…
+   HC_BACKUP_PING_URL=https://hc-ping.com/…
+   ```
+4. **Schedule the disk check and test it:**
+   ```sh
+   (crontab -l 2>/dev/null | grep -v check-disk; echo '*/30 * * * * /opt/ogserc/deploy/check-disk.sh > /dev/null 2>&1') | crontab -
+   /opt/ogserc/deploy/check-disk.sh           # "disk N% (limit 80%)"; the check turns green
+   ```
+5. **If an alert arrives:**
+   - **Disk:** run `df -h` and `docker system df`. `docker image prune -f` and `docker builder prune -f` usually free the most; old dumps in `/var/backups/ogserc` are the next place to look.
+   - **Backup:** read `/var/backups/ogserc/backup.log`.
+
+**Server log report (D-079):** each night `deploy/log-report.sh` turns Caddy's visit log for the last 14 days into one GoAccess page. It shows file and PDF downloads, crawlers (Googlebot included), 404s and other errors, suspicious requests and bandwidth: everything the visitor statistics cannot see.
+- **Install once**, as `deploy`:
+  ```sh
+  (crontab -l 2>/dev/null | grep -v log-report; echo '40 2 * * * /opt/ogserc/deploy/log-report.sh >> /var/backups/ogserc/log-report.log 2>&1') | crontab -
+  /opt/ogserc/deploy/log-report.sh           # "report ok: /var/backups/ogserc/reports/report.html"
+  ```
+- **View it** from your own computer (Windows PowerShell), using the same SSH key as for deploys:
+  ```
+  scp deploy@ogserc.org.ng:/var/backups/ogserc/reports/report.html $env:USERPROFILE\Downloads\ogserc-server-log.html
+  start $env:USERPROFILE\Downloads\ogserc-server-log.html
+  ```
+- **Delete the downloaded copy afterwards.** It contains visitors' IP addresses, which the server keeps for only 14 days.
+
 **Search engines (D-078):** the site publishes `/robots.txt` and `/sitemap.xml`. Set up once after the first deploy that has them:
 1. **Google Search Console** (search.google.com/search-console), signed in with an account OGSERC controls:
    - Add a **Domain** property for the domain.
@@ -388,7 +421,8 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 | Email sending | Contact form delivery (SMTP) | `<provider>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 5 |
 | Receiving mailbox | OGSERC inbox for contact form messages | `<provider>` | `<OGSERC mailbox address>` | `<name>` | Held by OGSERC | Step 5 |
 | Error and uptime monitoring | Alerts on downtime and errors | UptimeRobot (free plan) | `<shared OGSERC IT mailbox>` | `<name>`, `<name>` | `<password manager / vault>` | Uptime active; error alerts step 13 |
-| Search engine consoles | Indexing reports, sitemap, search words (D-078) | Google Search Console, Bing Webmaster Tools | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Being set up |
+| Search engine consoles | Indexing reports, sitemap, search words (D-078) | Google Search Console, Bing Webmaster Tools | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Active |
+| Disk and backup alerts | Disk space and nightly backup checks (D-079) | Healthchecks.io (free plan) | `<shared OGSERC IT mailbox>` | `<name>`, `<name>` | `<password manager / vault>` | Being set up |
 | Analytics | Privacy-friendly site analytics (FR-WEB-07) | Umami, self-hosted on the VPS (D-077) | `stats.<domain>` (named accounts, two-factor sign-in) | `<name>`, `<name>` | `<password manager / vault>` | Being set up |
 | Payment provider | Licence and application fees | `<to be agreed with OGSERC>` | — | — | — | Phase 3 only; do not create before then |
 
@@ -427,9 +461,9 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 **Receiving mailbox**
 - Held by OGSERC. To change it, update `CONTACT_FORM_TO` and send a test message through the contact form.
 
-**Error and uptime monitoring / Analytics**
+**Error and uptime monitoring / Analytics / Disk and backup alerts**
 - Recover: through another account member, or the provider's recovery process.
-- Move: create the new account and replace the site key or snippet configuration. Historic data usually stays with the old provider; export it first if it is needed.
+- Move: create the new account and replace the site key or snippet configuration. Historic data usually stays with the old provider; export it first if it is needed. For Healthchecks.io, create the two checks again and replace `HC_DISK_PING_URL` and `HC_BACKUP_PING_URL` in the server's `.env`. Healthchecks.io is open source, so it can also be self-hosted.
 
 **Payment provider (Phase 3)**
 - Not set up in Phase 1. When it is, add its recovery and move steps here, including how webhook signing secrets are rotated (NFR-SEC-21).

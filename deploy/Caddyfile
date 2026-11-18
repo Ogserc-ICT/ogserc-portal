@@ -12,6 +12,18 @@ www.{$SITE_DOMAIN} {
 {$SITE_DOMAIN} {
 	encode zstd gzip
 
+	# Visit log for the GoAccess report (D-079). One file per day, compressed, deleted after 14 days
+	# (336h), because it holds visitors' IP addresses. roll_size is only a safety cap.
+	log {
+		output file /var/log/caddy/access.log {
+			roll_at 00:00
+			roll_size 200MiB
+			roll_keep 30
+			roll_keep_for 336h
+		}
+		format json
+	}
+
 	# PREVIEW ONLY (RUNBOOK Section 11). Staff sign-in is not finished (Step 3: 2FA, rate limiting,
 	# audit log), so the admin panel and Payload's REST and GraphQL API are closed to everyone.
 	# Public pages read content through Payload's Local API inside the app, never through /api.

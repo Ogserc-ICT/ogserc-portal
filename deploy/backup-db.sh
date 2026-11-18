@@ -6,6 +6,15 @@ set -eu
 
 cd "$(dirname "$0")/.."
 dir=/var/backups/ogserc
+
+# Healthchecks.io (D-079): a ping when the backup succeeds, /fail when it does not. Without
+# HC_BACKUP_PING_URL in .env the backup still runs, unwatched.
+hc=$(sed -n 's/^HC_BACKUP_PING_URL=//p' .env 2>/dev/null || true)
+ping_hc() {
+  if [ -n "$hc" ]; then curl -fsS -m 10 --retry 3 "$hc$1" > /dev/null 2>&1 || true; fi
+}
+trap 'status=$?; if [ "$status" -ne 0 ]; then ping_hc /fail; fi' EXIT
+
 dump="$dir/ogserc-$(date -u +%Y%m%dT%H%M%SZ).dump"
 
 # Written under a temporary name first, so a failed dump never looks like a good one.
@@ -24,3 +33,4 @@ fi
 
 find "$dir" \( -name 'ogserc-*.dump' -o -name 'umami-*.dump' \) -mtime +14 -delete
 find "$dir" -name '*.dump.part' -mtime +1 -delete
+ping_hc ""
