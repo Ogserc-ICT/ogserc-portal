@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Public_Sans } from 'next/font/google'
 import type { ReactNode } from 'react'
 
+import { Analytics } from '@/components/layout/Analytics'
 import { BackToTop } from '@/components/layout/BackToTop'
 import { SiteFooter } from '@/components/layout/SiteFooter'
 import { SiteHeader } from '@/components/layout/SiteHeader'
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         {/* A fixed string with no user input; see Splash.tsx and D-038 (CSP hash in step 12). */}
         <script dangerouslySetInnerHTML={{ __html: SPLASH_SCRIPT }} />
+        <Analytics />
       </head>
       {/* id="top" is the target of the footer's "Back to top" link (FR-WEB-13). */}
       <body id="top" className="flex min-h-screen flex-col">

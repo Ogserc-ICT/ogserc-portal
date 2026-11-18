@@ -18,6 +18,8 @@ Every setting comes from environment variables. The full list, with explanations
 | `S3_*` | From step 4 | S3-compatible file storage for uploads. |
 | `SMTP_*`, `EMAIL_FROM`, `CONTACT_FORM_TO` | From step 5 | Email for the contact form. |
 | `TURNSTILE_*` | From step 5 | Bot protection on forms. |
+| `UMAMI_WEBSITE_ID` | No | Turns on visitor statistics (D-077). Needed at build time; set only for the live site. |
+| `UMAMI_DB_PASSWORD`, `UMAMI_APP_SECRET`, `UMAMI_2FA_KEY` | VPS only | Umami's database password, session secret and two-factor key (Section 5, step I). |
 
 ## 2. Protecting `main` and scanning for secrets
 
@@ -246,12 +248,54 @@ ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no deploy@SERVE
 ```
 Existing sessions stay open through the restart.
 
+**I. Visitor statistics with Umami** (D-077, as `deploy`, in `/opt/ogserc`). Do this once; later deploys need nothing extra.
+1. **DNS:** add an `A` record for `stats.ogserc.org.ng` pointing to the server's IP. Wait until `nslookup stats.ogserc.org.ng` returns it.
+2. **Secrets**, generated on the server and never displayed:
+   ```sh
+   cd /opt/ogserc && umask 077
+   for v in UMAMI_DB_PASSWORD UMAMI_APP_SECRET UMAMI_2FA_KEY; do
+     grep -q "^$v=" .env || echo "$v=$(openssl rand -hex 32)" >> .env
+   done
+   awk -F= '{print $1 ": " length($2) " characters"}' .env
+   ```
+   Copy the updated `.env` into OGSERC's password manager. Without `UMAMI_APP_SECRET` and `UMAMI_2FA_KEY`, a restored statistics database cannot be signed into.
+3. **Database:** start PostgreSQL if it is not running, then create Umami's database and user:
+   ```sh
+   git pull --ff-only
+   docker compose -f docker-compose.prod.yml up -d db
+   ./deploy/create-analytics-db.sh                 # "analytics database ready"
+   ```
+4. **Start Umami and reload Caddy:**
+   ```sh
+   docker compose -f docker-compose.prod.yml up -d umami
+   # A restart, not `up`: Caddy only reads the changed Caddyfile when it starts again.
+   docker compose -f docker-compose.prod.yml restart caddy
+   docker compose -f docker-compose.prod.yml logs --tail 30 umami     # "Ready" and no "Illegal instruction"
+   curl -s -o /dev/null -w '%{http_code}\n' https://ogserc.org.ng/pulse/p.js   # 200
+   ```
+5. **First sign-in** at `https://stats.ogserc.org.ng` with `admin` / `umami`. Umami makes you change the password straight away. Then:
+   - turn on two-factor sign-in (Profile);
+   - create a named account for each person who needs one, each with two-factor sign-in;
+   - rename or delete `admin`.
+   Store the passwords in the password manager.
+6. **Add the website** (Settings, Websites, Add: name "OGSERC", domain `ogserc.org.ng`) and copy its **Website ID**. Add it to `.env` and rebuild the app, because pages are built with it:
+   ```sh
+   echo 'UMAMI_WEBSITE_ID=paste-the-id-here' >> .env
+   docker compose -f docker-compose.prod.yml up -d --build app
+   curl -s https://ogserc.org.ng | grep -o 'data-website-id="[^"]*"'
+   ```
+   Open the site in a normal browser window (without Do Not Track) and check that the visit appears on the dashboard within a minute.
+
+Umami's data stays out of the app: if Umami stops, the site keeps working and only the counting pauses.
+
 **Updating** (as `deploy`). Deploy only what is merged to `main` with CI green.
 ```sh
 cd /opt/ogserc && git pull --ff-only
 docker compose -f docker-compose.prod.yml up -d --build
 docker image prune -f
 ```
+If the update changed `deploy/Caddyfile`, also run `docker compose -f docker-compose.prod.yml restart caddy`: `up` does not notice a changed file mounted into a running container.
+
 **Rolling back:** `git checkout <previous commit>` and run the same `up -d --build`. Migrations only go forward, so after a release that changed the database, restore the backup taken before it (Section 6) instead.
 
 **Local portability check** (production image plus a throwaway local Postgres; requires Docker):
@@ -262,7 +306,7 @@ PAYLOAD_SECRET=any-long-random-string docker compose up --build
 
 ## 6. Backups and restore *(to be completed in step 13)*
 
-**VPS (D-054).** `deploy/backup-db.sh` writes a compressed `pg_dump` to `/var/backups/ogserc` and keeps 14 days. Install it once, as `deploy`, and run it once by hand to check:
+**VPS (D-054).** `deploy/backup-db.sh` writes a compressed `pg_dump` to `/var/backups/ogserc` and keeps 14 days. Once the statistics database exists (D-077), it also writes `umami-*.dump` the same way; restore it as below with `-d umami` and `umami-….dump`, stopping `umami` instead of `app`. Install it once, as `deploy`, and run it once by hand to check:
 ```sh
 (crontab -l 2>/dev/null; echo '15 2 * * * /opt/ogserc/deploy/backup-db.sh >> /var/backups/ogserc/backup.log 2>&1') | crontab -
 /opt/ogserc/deploy/backup-db.sh
@@ -292,6 +336,8 @@ docker compose -f docker-compose.prod.yml start app
 
 ## 8. Monitoring and incident response *(to be completed in step 13)*
 
+**Visitor statistics (D-077):** the Umami dashboard at `https://stats.<domain>` shows visitors, pages, referring sites, devices, countries and site searches. Staff who only need to read can be sent a share link (Website settings, Share URL) instead of an account.
+
 ## 9. Account access and recovery
 
 Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be held under whichever accounts the developer and OGSERC choose. This section records, for each one, who can administer it and how to recover or move it, so the site never depends on a single person being available.
@@ -319,7 +365,7 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 | Email sending | Contact form delivery (SMTP) | `<provider>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 5 |
 | Receiving mailbox | OGSERC inbox for contact form messages | `<provider>` | `<OGSERC mailbox address>` | `<name>` | Held by OGSERC | Step 5 |
 | Error and uptime monitoring | Alerts on downtime and errors | `<provider>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 13 |
-| Analytics | Privacy-friendly site analytics (FR-WEB-07) | `<Plausible / Umami / self-hosted>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 11 |
+| Analytics | Privacy-friendly site analytics (FR-WEB-07) | Umami, self-hosted on the VPS (D-077) | `stats.<domain>` (named accounts, two-factor sign-in) | `<name>`, `<name>` | `<password manager / vault>` | Being set up |
 | Payment provider | Licence and application fees | `<to be agreed with OGSERC>` | — | — | — | Phase 3 only; do not create before then |
 
 ### 9.3 How to recover or move each account
@@ -383,6 +429,8 @@ For each one, check whether the reason in D-022 still holds. For example: do Pay
 
 Never upgrade only one of these; production, CI, and development must run the same Node major.
 
+**Umami** (D-077) is pinned in `docker-compose.prod.yml`, which Dependabot does not watch. At each review, and whenever the dashboard shows an update notice, read the [release notes](https://github.com/umami-software/umami/releases). Then change the tag and run `docker compose -f docker-compose.prod.yml up -d umami`. Apply security releases straight away. Back up first (Section 6), because upgrades can migrate its database.
+
 Last review: `<date>` by `<name>`. Next review due: `<date + 3 months>`.
 
 ## 11. Placeholders to remove before launch
@@ -404,4 +452,5 @@ Build step 2 added temporary placeholders so OGSERC could review the design befo
 - [ ] No menu entry in `src/lib/navigation.ts` still has `ready: false`, and `/being-prepared` is removed or unused (D-027).
 - [ ] `deploy/Caddyfile` has no `PREVIEW ONLY` block left (D-054): `/admin` reopened once Step 3 is merged (2FA, rate limiting, audit log); `X-Robots-Tag: noindex` removed at launch; the HSTS override removed once every subdomain of the domain serves HTTPS.
 - [ ] VPS backups copied off the server daily, and a restore tested (Section 6).
+- [ ] Privacy Policy section 7 has OGSERC's wording on cookies and visitor statistics (D-077), and `stats.<domain>`'s one-day HSTS is lengthened with the main site's.
 - [ ] `IMAGE_PROCESSING=off` gone from the VPS's `.env` once its CPU shows `sse4_1` and `sse4_2` (D-056), then the setting, its CI job and `scripts/block-sharp-binaries.mjs` removed from the code, and D-055's `@img/sharp-wasm32` reconsidered.

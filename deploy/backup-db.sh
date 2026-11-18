@@ -11,6 +11,16 @@ dump="$dir/ogserc-$(date -u +%Y%m%dT%H%M%SZ).dump"
 # Written under a temporary name first, so a failed dump never looks like a good one.
 docker compose -f docker-compose.prod.yml exec -T db pg_dump -U ogserc -d ogserc -Fc > "$dump.part"
 mv "$dump.part" "$dump"
-find "$dir" -name 'ogserc-*.dump' -mtime +14 -delete
-find "$dir" -name 'ogserc-*.dump.part' -mtime +1 -delete
 echo "$(date -u +%FT%TZ) backup ok: $dump"
+
+# Visitor statistics (D-077), once its database exists.
+if docker compose -f docker-compose.prod.yml exec -T db psql -U ogserc -d postgres -tAc \
+  "SELECT 1 FROM pg_database WHERE datname = 'umami'" | grep -q 1; then
+  stats="$dir/umami-$(date -u +%Y%m%dT%H%M%SZ).dump"
+  docker compose -f docker-compose.prod.yml exec -T db pg_dump -U ogserc -d umami -Fc > "$stats.part"
+  mv "$stats.part" "$stats"
+  echo "$(date -u +%FT%TZ) backup ok: $stats"
+fi
+
+find "$dir" \( -name 'ogserc-*.dump' -o -name 'umami-*.dump' \) -mtime +14 -delete
+find "$dir" -name '*.dump.part' -mtime +1 -delete
