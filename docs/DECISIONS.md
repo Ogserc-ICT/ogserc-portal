@@ -989,3 +989,26 @@ OGSERC's legal advisers should review it with the rest of the policy (D-074).
 - **Backups:** dumps live for 14 days, so deleted rows leave the backups two weeks later.
 
 **To check on the server:** the VPS's virtual CPU lacks SSE4.1 and SSE4.2 (D-056). If Umami's container fails for the same reason, statistics stay off and the site is unaffected: the app does not depend on it, and Caddy does not wait for it.
+
+## D-078 Search engines may list the site (2026-11-18)
+
+**Decision (owner, 2026-11-18):** OGSERC is happy for the site to be found. The preview's `X-Robots-Tag: noindex, nofollow` is removed from `deploy/Caddyfile`, and the site gains what search engines and link previews need. This brings part of build step 11 forward.
+
+**Checked before the switch:**
+- **No placeholder text is public:** none of the 14 public pages showed "OGSERC to supply" or "[Sample …]" on 2026-11-18.
+- **Unfinished menu items stay out of results:** they lead to `/being-prepared`, which carries its own `noindex`, as does the design-review page.
+- **Unchanged:** the closure of `/admin` and `/api` at Caddy (until Step 3) and the one-day HSTS. Neither affects search.
+
+**What is added:**
+- **`robots.txt`** (`src/app/robots.ts`): everything public may be crawled, `/admin` and `/api` are excluded, and it names the sitemap.
+- **`sitemap.xml`** (`src/app/sitemap.ts`):
+  - **Sources:** the menu's ready pages, the two legal pages, and every news item, public notice, order and consultation document.
+  - **Dates:** each content item carries its own date as `lastmod`.
+  - **Maintenance:** it is built from the same lists as the pages, so new content appears without editing it.
+  - **Not used:** `changefreq` and `priority`, which Google ignores.
+- **Canonical links:** `alternates.canonical: './'` in the public layout resolves to each page's own path without its query string. Filtered listings, `www.` and other variants therefore all point to one official address.
+- **Link previews** for WhatsApp, Facebook and X: Open Graph and Twitter card tags take each page's existing title and description. The image is `opengraph-image.png`, generated once from `public/brand/ogserc-logo.png`: the logo, trimmed and centred on white, at 1200×630. Every page already had its own title and description, so no new public wording was written.
+
+**Site address at build time:** canonical links, previews, `robots.txt` and `sitemap.xml` are built in advance, so `SITE_URL` is now also a Docker build argument. `src/lib/site-url.ts` reads it and **stops a production build if it is missing**, rather than tell search engines the site lives on `localhost`. The compose files and CI pass it.
+
+**After deploying:** verify the domain in Google Search Console with a DNS `TXT` record, submit the sitemap, and import the site into Bing Webmaster Tools (RUNBOOK Section 8). Bing's index also serves DuckDuckGo and Yahoo.
