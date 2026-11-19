@@ -40,6 +40,21 @@ jobs:
     # blocked, the production build must not touch sharp and the homepage must still serve.
     name: Builds and serves without sharp (VPS workaround)
     runs-on: ubuntu-latest
+    # The server checks the database before it starts (D-051), as on the VPS.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       IMAGE_PROCESSING: 'off'
       NEXT_OUTPUT: standalone
@@ -54,6 +69,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Apply database migrations
+        run: pnpm migrate
       - name: Build with sharp blocked
         # pipefail: without it, tee hides a failed build and the next step fails confusingly.
         run: |
