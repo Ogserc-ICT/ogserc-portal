@@ -466,7 +466,7 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 | Domain registrar | Domain name registration | `<registrar>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | `<domain to be confirmed>` |
 | DNS / CDN / WAF | DNS records, DDoS and bot protection, Turnstile | `<e.g. Cloudflare>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 5 / 13 |
 | File storage | Uploaded documents and images (S3-compatible) | `<provider>` | `<account / bucket>` | `<name>`, `<name>` | `<password manager / vault>` | Step 4 |
-| Backup storage | Encrypted off-server backup copies (D-080) | Backblaze B2 (EU Central) | `<shared OGSERC IT mailbox>`, bucket `<name>` | `<name>`, `<name>` | `<password manager / vault>`, with `OFFSITE_PASSWORD` | Being set up |
+| Backup storage | Encrypted off-server backup copies (D-080) | Backblaze B2 (EU Central) | `<shared OGSERC IT mailbox>`, bucket `ogserc-backups-k7qm`, key `ogserc-vps-backup` (that bucket only, Read and Write) | `<name>`, `<name>` | `<password manager / vault>`, with `OFFSITE_PASSWORD` | Active since 2026-11-19; restore test passed 2026-11-19, next due 2027-02 |
 | Email sending | Contact form delivery (SMTP) | `<provider>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 5 |
 | Receiving mailbox | OGSERC inbox for contact form messages | `<provider>` | `<OGSERC mailbox address>` | `<name>` | Held by OGSERC | Step 5 |
 | Error and uptime monitoring | Alerts on downtime and errors | UptimeRobot (free plan) | `<shared OGSERC IT mailbox>` | `<name>`, `<name>` | `<password manager / vault>` | Uptime active; error alerts step 13 |
@@ -562,7 +562,7 @@ Build step 2 added temporary placeholders so OGSERC could review the design befo
 - [ ] `src/app/(frontend)/design-system/` (the review page) deleted (D-031).
 - [ ] No menu entry in `src/lib/navigation.ts` still has `ready: false`, and `/being-prepared` is removed or unused (D-027).
 - [ ] `deploy/Caddyfile` has no `PREVIEW ONLY` block left (D-054): `/admin` reopened once Step 3 is merged (2FA, rate limiting, audit log); `X-Robots-Tag: noindex` removed (done 2026-11-18, D-078); the HSTS override removed once every subdomain of the domain serves HTTPS.
-- [ ] VPS backups copied off the server daily, and a restore tested (Section 6).
+- [x] VPS backups copied off the server daily, and a restore tested (Section 6; first copy and restore test passed 2026-11-19). Rerun `deploy/test-restore.sh` before launch, and once Payload has created its tables so the site database check runs in full.
 - [x] Privacy Policy section 7 covers cookies and visitor statistics: wording approved by the owner on 2026-11-18 (D-077). OGSERC's legal advisers to review it with the rest of the policy (D-074).
 - [ ] `stats.<domain>`'s one-day HSTS lengthened with the main site's (D-077).
 - [x] The monthly `deploy/prune-analytics.sh` cron job installed on the VPS, and its dry run clean (Section 6; done 2026-11-18).
