@@ -6,3 +6,7 @@
 # {"id":"12345678"}, and a made-up 15-byte signature; checked on 2026-10-16 not to verify against
 # the real PAYLOAD_SECRET. The test now builds its fake token at run time (tests/support/fakes.ts).
 927454eddead6e4a5dea5ed72ab0479777563b50:tests/unit/test-server.spec.ts:jwt:72
+
+# Placeholder, not a key: the commented-out line "# OFFSITE_KEY_SECRET=replace-with-b2-application-key"
+# in .env.example line 45 of commit 63eccf9 (D-080). The real key lives only in the server's .env.
+63eccf965c421a3eba1907f4a7cc9fb74d69688d:.env.example:generic-api-key:45
