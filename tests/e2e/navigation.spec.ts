@@ -3,21 +3,21 @@ import { expect, test, type Page } from '@playwright/test'
 
 const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
-// SRS Section 4: the seven main-menu items, and how many links each dropdown holds.
+// SRS Section 4's main menu without User Profile, Consumer Complaint last (D-075), and how many
+// links each dropdown holds.
 const MENU_ITEMS = [
   'About OGSERC',
   'Regulatory Instruments',
   'Mandate',
-  'Consumer Complaint',
   'Media Center',
   'Resources',
-  'User Profile',
+  'Consumer Complaint',
 ]
 const DROPDOWNS: Record<string, number> = {
   'About OGSERC': 4,
   'Regulatory Instruments': 11,
   Mandate: 4,
-  'Media Center': 4,
+  'Media Center': 5, // Public Notices added (D-065)
   Resources: 6,
 }
 
@@ -139,16 +139,10 @@ test.describe('Utility bar, footer, and placeholder pages', () => {
     )
   })
 
-  test('footer has the legal page links (FR-WEB-06)', async ({ page }) => {
+  test('footer has the legal page links (FR-WEB-06, D-074)', async ({ page }) => {
     await page.goto('/')
     const legal = page.getByRole('navigation', { name: 'Legal' })
-    await expect(legal.getByRole('link')).toHaveText([
-      'Privacy Policy',
-      'Terms of Service',
-      'Cookie Notice',
-      'Accessibility Statement',
-      'Sitemap',
-    ])
+    await expect(legal.getByRole('link')).toHaveText(['Privacy Policy', 'Terms of Service'])
   })
 
   test('every link in the header and footer resolves', async ({ page, request }) => {
@@ -156,9 +150,29 @@ test.describe('Utility bar, footer, and placeholder pages', () => {
     const hrefs = await page
       .locator('header a[href], footer a[href]')
       .evaluateAll((links) => links.map((a) => a.getAttribute('href') ?? ''))
+    // Site links are fetched; email, phone and social links are only checked for their form,
+    // so the test never depends on another site being reachable.
     for (const href of new Set(hrefs)) {
+      if (/^(mailto:|tel:\+\d+$|https:\/\/)/.test(href)) continue
       const response = await request.get(href)
       expect(response.status(), href).toBe(200)
+    }
+  })
+
+  test('the footer links to email, phone and every social account', async ({ page }) => {
+    await page.goto('/')
+    const footer = page.getByRole('contentinfo')
+    await expect(footer.getByRole('link', { name: 'info@ogserc.org.ng' })).toHaveAttribute(
+      'href',
+      'mailto:info@ogserc.org.ng',
+    )
+    await expect(footer.getByRole('link', { name: '+234 813 772 0058' })).toHaveAttribute(
+      'href',
+      'tel:+2348137720058',
+    )
+    for (const network of ['LinkedIn', 'Facebook', 'Instagram', 'X', 'TikTok']) {
+      const link = footer.getByRole('link', { name: `OGSERC on ${network}`, exact: true })
+      await expect(link).toHaveAttribute('href', /^https:\/\//)
     }
   })
 
@@ -177,7 +191,7 @@ test.describe('Main menu on desktop', () => {
     await page.goto('/')
   })
 
-  test('shows the seven SRS menu items and no Menu button', async ({ page }) => {
+  test('shows the six menu items and no Menu button', async ({ page }) => {
     const items = mainNav(page).locator(':scope > ul > li > :first-child')
     await expect(items).toHaveText(MENU_ITEMS)
     await expect(menuButton(page)).toBeHidden()
@@ -267,7 +281,7 @@ test.describe('Main menu on mobile (360px)', () => {
     await expect(page.getByRole('navigation', { name: 'Utility' })).toHaveCount(0)
   })
 
-  test('the drawer lists the seven items and expands a section', async ({ page }) => {
+  test('the drawer lists the six items and expands a section', async ({ page }) => {
     await menuButton(page).click()
     const drawer = page.getByRole('dialog', { name: 'Menu' })
     await expect(drawer).toBeVisible()

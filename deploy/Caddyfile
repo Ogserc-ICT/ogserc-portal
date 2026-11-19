@@ -12,6 +12,18 @@ www.{$SITE_DOMAIN} {
 {$SITE_DOMAIN} {
 	encode zstd gzip
 
+	# Visit log for the GoAccess report (D-079). One file per day, compressed, deleted after 14 days
+	# (336h), because it holds visitors' IP addresses. roll_size is only a safety cap.
+	log {
+		output file /var/log/caddy/access.log {
+			roll_at 00:00
+			roll_size 200MiB
+			roll_keep 30
+			roll_keep_for 336h
+		}
+		format json
+	}
+
 	# PREVIEW ONLY (RUNBOOK Section 11). Staff sign-in is not finished (Step 3: 2FA, rate limiting,
 	# audit log), so the admin panel and Payload's REST and GraphQL API are closed to everyone.
 	# Public pages read content through Payload's Local API inside the app, never through /api.
@@ -20,12 +32,40 @@ www.{$SITE_DOMAIN} {
 
 	header {
 		-Server
-		# PREVIEW ONLY: keep placeholder content out of search results.
-		X-Robots-Tag "noindex, nofollow"
+		# Search engines may list the site since 2026-11-18 (D-078); pages that must stay out of
+		# results say so themselves (robots metadata), and robots.txt keeps crawlers off /admin and /api.
 		# PREVIEW ONLY: replaces the app's two-year, includeSubDomains HSTS (next.config.ts) with one
 		# day for this host alone, until every subdomain of the domain is confirmed to serve HTTPS.
 		>Strict-Transport-Security "max-age=86400"
 	}
 
+	# Visitor statistics (D-077): only Umami's tracker script and the endpoint it reports to are
+	# reachable on the site's address, so pages load nothing from another domain.
+	# The tracker reports to the folder it was loaded from plus its endpoint, so Umami serves them
+	# as /p.js and /e and Caddy removes the /pulse prefix. Without this it posts to /pulse/pulse/e.
+	@analytics path /pulse/p.js /pulse/e
+	handle @analytics {
+		uri strip_prefix /pulse
+		reverse_proxy umami:3000
+	}
+
 	reverse_proxy app:3000
+}
+
+# Umami's dashboard (D-077). Every account signs in with its own name, password and two-factor
+# code; there is no shared login.
+stats.{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		-Server
+		X-Robots-Tag "noindex, nofollow"
+		# PREVIEW ONLY: one day, like the main site (RUNBOOK Section 11).
+		Strict-Transport-Security "max-age=86400"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	reverse_proxy umami:3000
 }

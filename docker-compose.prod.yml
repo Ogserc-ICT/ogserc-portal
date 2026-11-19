@@ -20,11 +20,16 @@ services:
       context: .
       args:
         IMAGE_PROCESSING: ${IMAGE_PROCESSING:-on}
+        UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
+        # Canonical links, link previews, robots.txt and sitemap.xml are built in advance (D-078).
+        SITE_URL: ${SITE_URL:?Set SITE_URL in .env}
     image: ogserc-portal:latest
     restart: unless-stopped
     environment:
       # "off" on OGSERC's VPS until its CPU can run sharp (D-056). Needed at build and run time.
       IMAGE_PROCESSING: ${IMAGE_PROCESSING:-on}
+      # Visitor statistics (D-077). Build time for static pages, run time for dynamic ones.
+      UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
       DATABASE_URL: postgres://ogserc:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/ogserc
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:?Set PAYLOAD_SECRET in .env}
       SITE_URL: ${SITE_URL:?Set SITE_URL in .env}
@@ -49,6 +54,28 @@ services:
       retries: 10
     logging: *logging
 
+  # Privacy-friendly visitor statistics (FR-WEB-07, D-077). Uses its own database and database
+  # user in the same PostgreSQL server (deploy/create-analytics-db.sh), so it cannot read the
+  # site's data. Caddy serves its tracker on the site's address and its dashboard on stats.<domain>.
+  umami:
+    image: ghcr.io/umami-software/umami:3.5.0
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:?Set UMAMI_DB_PASSWORD in .env}@db:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET:?Set UMAMI_APP_SECRET in .env}
+      # Required for two-factor sign-in, which every dashboard account must turn on.
+      TWO_FACTOR_ENCRYPTION_KEY: ${UMAMI_2FA_KEY:?Set UMAMI_2FA_KEY in .env}
+      # Public as /pulse/p.js and /pulse/e: Caddy removes the /pulse prefix (deploy/Caddyfile).
+      TRACKER_SCRIPT_NAME: p.js
+      COLLECT_API_ENDPOINT: /e
+      # Caddy replaces any X-Forwarded-For a visitor sends with their real address.
+      CLIENT_IP_HEADER: x-forwarded-for
+      DISABLE_TELEMETRY: '1'
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *logging
+
   caddy:
     image: caddy:2.11.7-alpine
     restart: unless-stopped
@@ -63,6 +90,8 @@ services:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      # Visit log, read by deploy/log-report.sh (D-079).
+      - caddy_logs:/var/log/caddy
     depends_on:
       - app
     logging: *logging
@@ -71,3 +100,4 @@ volumes:
   pgdata:
   caddy_data:
   caddy_config:
+  caddy_logs:

@@ -32,3 +32,6 @@ npm-debug.log*
 
 # Claude Code personal settings (shared settings are in .claude/settings.json)
 .claude/settings.local.json
+
+# Files the owner hands over for checking before they are placed in the site (never committed)
+/incoming/

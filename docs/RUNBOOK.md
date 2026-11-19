@@ -20,6 +20,8 @@ Every setting comes from environment variables. The full list, with explanations
 | `SMTP_*`, `EMAIL_FROM`, `CONTACT_FORM_TO` | From step 5 | Email for the contact form. |
 | `TURNSTILE_*` | From step 5 | Bot protection on forms. |
 | `TEST_DATABASE_URL` | Tests only | Database that `pnpm test:e2e:db` empties and uses (Section 3.1). Never set it on a deployed server. |
+| `UMAMI_WEBSITE_ID` | No | Turns on visitor statistics (D-077). Needed at build time; set only for the live site. |
+| `UMAMI_DB_PASSWORD`, `UMAMI_APP_SECRET`, `UMAMI_2FA_KEY` | VPS only | Umami's database password, session secret and two-factor key (Section 5, step I). |
 
 ## 2. Protecting `main` and scanning for secrets
 
@@ -194,7 +196,7 @@ The container listens on port 3000. Put it behind HTTPS (the host's load balance
 
 `docker-compose.prod.yml` runs three containers: the app, PostgreSQL 17 and Caddy. Caddy is the only one reachable from the internet (ports 80 and 443); it gets and renews the HTTPS certificate from Let's Encrypt and passes requests to the app. The image is built on the server (the build needs no database), so no registry token is stored there. Migrations run when the app starts.
 
-**Preview period.** Until Step 3 is finished (2FA, rate limiting, audit log), `deploy/Caddyfile` returns 404 for `/admin` and `/api`, tells search engines not to index the site, and shortens HSTS to one day for this host only. All three are marked `PREVIEW ONLY` and listed in Section 11.
+**Preview period.** Until Step 3 is finished (2FA, rate limiting, audit log), `deploy/Caddyfile` returns 404 for `/admin` and `/api` and shortens HSTS to one day for this host only. Both are marked `PREVIEW ONLY` and listed in Section 11. Search engines have been allowed to list the site since 2026-11-18 (D-078).
 
 Commands run on the server over SSH. Never paste passwords, keys or the contents of `.env` into chat, tickets or commits.
 
@@ -323,12 +325,54 @@ ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no deploy@SERVE
 ```
 Existing sessions stay open through the restart.
 
+**I. Visitor statistics with Umami** (D-077, as `deploy`, in `/opt/ogserc`). Do this once; later deploys need nothing extra.
+1. **DNS:** add an `A` record for `stats.ogserc.org.ng` pointing to the server's IP. Wait until `nslookup stats.ogserc.org.ng` returns it.
+2. **Secrets**, generated on the server and never displayed:
+   ```sh
+   cd /opt/ogserc && umask 077
+   for v in UMAMI_DB_PASSWORD UMAMI_APP_SECRET UMAMI_2FA_KEY; do
+     grep -q "^$v=" .env || echo "$v=$(openssl rand -hex 32)" >> .env
+   done
+   awk -F= '{print $1 ": " length($2) " characters"}' .env
+   ```
+   Copy the updated `.env` into OGSERC's password manager. Without `UMAMI_APP_SECRET` and `UMAMI_2FA_KEY`, a restored statistics database cannot be signed into.
+3. **Database:** start PostgreSQL if it is not running, then create Umami's database and user:
+   ```sh
+   git pull --ff-only
+   docker compose -f docker-compose.prod.yml up -d db
+   ./deploy/create-analytics-db.sh                 # "analytics database ready"
+   ```
+4. **Start Umami and reload Caddy:**
+   ```sh
+   docker compose -f docker-compose.prod.yml up -d umami
+   # A restart, not `up`: Caddy only reads the changed Caddyfile when it starts again.
+   docker compose -f docker-compose.prod.yml restart caddy
+   docker compose -f docker-compose.prod.yml logs --tail 30 umami     # "Ready" and no "Illegal instruction"
+   curl -s -o /dev/null -w '%{http_code}\n' https://ogserc.org.ng/pulse/p.js   # 200
+   ```
+5. **First sign-in** at `https://stats.ogserc.org.ng` with `admin` / `umami`. Umami makes you change the password straight away. Then:
+   - turn on two-factor sign-in (Profile);
+   - create a named account for each person who needs one, each with two-factor sign-in;
+   - rename or delete `admin`.
+   Store the passwords in the password manager.
+6. **Add the website** (Settings, Websites, Add: name "OGSERC", domain `ogserc.org.ng`) and copy its **Website ID**. Add it to `.env` and rebuild the app, because pages are built with it:
+   ```sh
+   echo 'UMAMI_WEBSITE_ID=paste-the-id-here' >> .env
+   docker compose -f docker-compose.prod.yml up -d --build app
+   curl -s https://ogserc.org.ng | grep -o 'data-website-id="[^"]*"'
+   ```
+   Open the site in a normal browser window (without Do Not Track) and check that the visit appears on the dashboard within a minute. If it does not, open the browser's developer tools (F12), Network tab, reload, and filter on `pulse`: `p.js` and a POST to `/pulse/e` should both return 200. A curl to `/pulse/e` does not prove this, because the browser builds the address itself (D-077).
+
+Umami's data stays out of the app: if Umami stops, the site keeps working and only the counting pauses.
+
 **Updating** (as `deploy`). Deploy only what is merged to `main` with CI green.
 ```sh
 cd /opt/ogserc && git pull --ff-only
 docker compose -f docker-compose.prod.yml up -d --build
 docker image prune -f
 ```
+If the update changed `deploy/Caddyfile`, also run `docker compose -f docker-compose.prod.yml restart caddy`: `up` does not notice a changed file mounted into a running container.
+
 **Rolling back:** `git checkout <previous commit>` and run the same `up -d --build`. Migrations only go forward, so after a release that changed the database, restore the backup taken before it (Section 6) instead.
 
 **Local portability check** (production image plus a throwaway local Postgres; requires Docker):
@@ -339,12 +383,68 @@ PAYLOAD_SECRET=any-long-random-string docker compose up --build
 
 ## 6. Backups and restore *(to be completed in step 13)*
 
-**VPS (D-054).** `deploy/backup-db.sh` writes a compressed `pg_dump` to `/var/backups/ogserc` and keeps 14 days. Install it once, as `deploy`, and run it once by hand to check:
+**VPS (D-054).** `deploy/backup-db.sh` writes a compressed `pg_dump` to `/var/backups/ogserc` and keeps 14 days. Once the statistics database exists (D-077), it also writes `umami-*.dump` the same way; restore it as below with `-d umami` and `umami-….dump`, stopping `umami` instead of `app`. Install it once, as `deploy`, and run it once by hand to check:
 ```sh
 (crontab -l 2>/dev/null; echo '15 2 * * * /opt/ogserc/deploy/backup-db.sh >> /var/backups/ogserc/backup.log 2>&1') | crontab -
 /opt/ogserc/deploy/backup-db.sh
 ```
-These copies are on the same server, so they do not survive losing it. **Open item:** copy them off the server every day (OGSERC to choose where), and test a restore before launch (step 13).
+With `HC_BACKUP_PING_URL` in `.env`, each run reports to Healthchecks.io: success, failure, or nothing arrived (Section 8, D-079).
+These copies are on the same server, so they do not survive losing it. The off-server copy below covers that.
+
+**Off-server copies (D-080).** After each nightly backup, `deploy/offsite-backup.sh` sends an encrypted copy to Backblaze B2 using restic, from its pinned Docker image.
+- **What is copied:** the latest site and statistics dumps, and `.env`.
+- **Kept:** 7 daily, 4 weekly and 3 monthly copies.
+- **Monitoring:** the Healthchecks.io backup check fails if this step fails.
+- **Encryption:** everything is encrypted on the server before upload with `OFFSITE_PASSWORD`. **Without that password nobody can open the copies, us included.** Keep it in OGSERC's password manager, separately from the server.
+
+Set up once:
+1. **Backblaze account.** At backblaze.com, sign up for B2 Cloud Storage with the shared OGSERC IT mailbox, choosing the **EU Central** region at sign-up. Turn on two-factor authentication.
+2. **Bucket.** Create a bucket with a unique name (for example `ogserc-backups-` plus a few random letters), set it to **Private**, and leave Object Lock off. Then set its *Lifecycle Settings* to **Keep only the last version of the file**, so copies restic deletes really go. Note the bucket's **Endpoint** (for example `s3.eu-central-003.backblazeb2.com`).
+3. **Application key.** Under *Application Keys → Add a New Application Key*, give it access to **that bucket only**, with **Read and Write**. Note the **keyID** and **applicationKey**; the key is shown only once.
+4. **Server settings.** As `deploy` in `/opt/ogserc`, run each `read` line on its own and paste the value when asked:
+   ```sh
+   read -r -p 'Endpoint: ' ep
+   read -r -p 'Bucket name: ' bk
+   read -r -p 'keyID: ' ki
+   read -r -p 'applicationKey: ' ks
+   ```
+   then:
+   ```sh
+   umask 077
+   sed -i '/^OFFSITE_/d' .env
+   printf 'OFFSITE_REPOSITORY=s3:https://%s/%s/ogserc\nOFFSITE_KEY_ID=%s\nOFFSITE_KEY_SECRET=%s\nOFFSITE_PASSWORD=%s\n' "$ep" "$bk" "$ki" "$ks" "$(openssl rand -hex 32)" >> .env
+   unset ep bk ki ks
+   grep '^OFFSITE_' .env | sed -E 's/=.*/=(set)/'
+   ```
+   Copy the updated `.env` into the password manager now. Its `OFFSITE_PASSWORD` is the encryption password.
+5. **Create the repository and make the first copy:**
+   ```sh
+   ./deploy/offsite-backup.sh init
+   ./deploy/backup-db.sh                       # ends with "offsite ok"
+   ./deploy/offsite-backup.sh snapshots
+   ```
+
+**Restore test.** `deploy/test-restore.sh` restores the latest off-server copy into a temporary database on the server, checks that it holds the site's tables, migrations and statistics, then removes everything it created. The live site is not touched. Until Payload first starts on the server (Step 3, when `/admin` opens), the live site database has no tables; the test then checks that the copy is empty too and relies on the statistics database. Run it before launch and then every three months; it ends with `RESTORE TEST PASSED`. `./deploy/offsite-backup.sh check` verifies the repository itself.
+
+**After losing the server:**
+1. Set up a new one (Section 5).
+2. Put the four `OFFSITE_*` lines from the password manager into an empty `/opt/ogserc/.env`.
+3. Restore the copy into a folder:
+   ```sh
+   cd /opt/ogserc && . ./deploy/restic-env.sh
+   mkdir -p /var/backups/ogserc/recovered
+   RESTIC_USER="$(id -u):$(id -g)" RESTIC_MOUNT=/var/backups/ogserc/recovered:/restore restic restore latest --host ogserc-vps --target /restore
+   ```
+4. Copy `recovered/data/env` over `.env`.
+5. Start the database (`up -d db`) and create Umami's (`./deploy/create-analytics-db.sh`).
+6. Restore each dump with `pg_restore` as below, then start the rest.
+
+**Two-year limit on visitor statistics (D-077).** The Privacy Policy promises that statistics are deleted after two years. `deploy/prune-analytics.sh` does this once a month, and it deletes only visitor data, never accounts, websites or reports. Dumps are kept for 14 days on the server and up to 3 months off it (D-080), so deleted data leaves every backup within 3 months. Install it once, as `deploy`, and check it with a dry run, which reports what it would delete and then undoes it:
+```sh
+(crontab -l 2>/dev/null; echo '30 3 1 * * /opt/ogserc/deploy/prune-analytics.sh >> /var/backups/ogserc/prune-analytics.log 2>&1') | crontab -
+/opt/ogserc/deploy/prune-analytics.sh --dry-run
+```
+Each table should report `0 rows … deleted` until November 2028, and the last line reads `prune ok (ROLLBACK)`. A `WARNING … skipped` line means a Umami upgrade changed a table: review the list in the script.
 
 Restore a dump into the running database (this replaces its contents):
 ```sh
@@ -368,6 +468,56 @@ docker compose -f docker-compose.prod.yml start app
 6. Run `pnpm migrate:status` against the new database to confirm it is up to date, then `pnpm db:verify` (read-only role, Section 3) to confirm every table and migration record is there. The server's startup check repeats this when it starts.
 
 ## 8. Monitoring and incident response *(to be completed in step 13)*
+
+**Visitor statistics (D-077):** the Umami dashboard at `https://stats.<domain>` shows visitors, pages, referring sites, devices, countries and site searches. Staff who only need to read can be sent a share link (Website settings, Share URL) instead of an account.
+
+**Uptime:** UptimeRobot checks the site every 5 minutes and sends an email and a phone-app alert when a check fails. It runs three monitors:
+- **`OGSERC website`:** a keyword check on the homepage for "Ogun State Electricity Regulatory Commission", so it also catches a broken page that still loads.
+- **`OGSERC contact page`:** this page is rendered on each request, so it proves the app is running.
+- **`OGSERC statistics`:** the Umami dashboard.
+
+When an alert arrives, run `docker compose -f docker-compose.prod.yml ps` and `logs --tail 100 app caddy` on the server (Section 5).
+
+**Disk and backup alerts (D-079):** Healthchecks.io alerts by email and phone app if the disk reaches 80%, if a nightly backup fails, or if either check stops reporting.
+1. **Create the account:** a free Healthchecks.io account with the shared OGSERC IT mailbox, with two-factor sign-in on.
+2. **Add two checks** (*Add Check*):
+   - `OGSERC disk space`: Period 30 minutes, Grace 1 hour;
+   - `OGSERC nightly backup`: Period 1 day, Grace 3 hours.
+3. **Store the ping URLs:** copy each check's ping URL into the server's `.env`, as `deploy` in `/opt/ogserc`. Use `vi .env` rather than `echo`, so the URL does not land in the shell history:
+   ```
+   HC_DISK_PING_URL=https://hc-ping.com/…
+   HC_BACKUP_PING_URL=https://hc-ping.com/…
+   ```
+4. **Schedule the disk check and test it:**
+   ```sh
+   (crontab -l 2>/dev/null | grep -v check-disk; echo '*/30 * * * * /opt/ogserc/deploy/check-disk.sh > /dev/null 2>&1') | crontab -
+   /opt/ogserc/deploy/check-disk.sh           # "disk N% (limit 80%)"; the check turns green
+   ```
+5. **If an alert arrives:**
+   - **Disk:** run `df -h` and `docker system df`. `docker image prune -f` and `docker builder prune -f` usually free the most; old dumps in `/var/backups/ogserc` are the next place to look.
+   - **Backup:** read `/var/backups/ogserc/backup.log`.
+
+**Server log report (D-079):** each night `deploy/log-report.sh` turns Caddy's visit log for the last 14 days into one GoAccess page. It shows file and PDF downloads, crawlers (Googlebot included), 404s and other errors, suspicious requests and bandwidth: everything the visitor statistics cannot see.
+- **Install once**, as `deploy`:
+  ```sh
+  (crontab -l 2>/dev/null | grep -v log-report; echo '40 2 * * * /opt/ogserc/deploy/log-report.sh >> /var/backups/ogserc/log-report.log 2>&1') | crontab -
+  /opt/ogserc/deploy/log-report.sh           # "report ok: /var/backups/ogserc/reports/report.html"
+  ```
+- **View it** from your own computer (Windows PowerShell), using the same SSH key as for deploys:
+  ```
+  scp deploy@ogserc.org.ng:/var/backups/ogserc/reports/report.html $env:USERPROFILE\Downloads\ogserc-server-log.html
+  start $env:USERPROFILE\Downloads\ogserc-server-log.html
+  ```
+- **Delete the downloaded copy afterwards.** It contains visitors' IP addresses, which the server keeps for only 14 days.
+
+**Search engines (D-078):** the site publishes `/robots.txt` and `/sitemap.xml`. Set up once after the first deploy that has them:
+1. **Google Search Console** (search.google.com/search-console), signed in with an account OGSERC controls:
+   - Add a **Domain** property for the domain.
+   - Add the `TXT` record Google shows at the DNS provider. Change no other records.
+   - Click Verify. Verification can take up to a day.
+   - Then go to *Sitemaps* and submit `sitemap.xml`.
+2. **Bing Webmaster Tools** (bing.com/webmasters): choose *Import from Google Search Console*. Bing also serves DuckDuckGo and Yahoo.
+3. **Check monthly:** use Search Console's *Pages* report for pages Google could not index, and its *Performance* report for the search words people use. These complement the visitor statistics.
 
 ## 9. Account access and recovery
 
@@ -393,10 +543,13 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 | Domain registrar | Domain name registration | `<registrar>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | `<domain to be confirmed>` |
 | DNS / CDN / WAF | DNS records, DDoS and bot protection, Turnstile | `<e.g. Cloudflare>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 5 / 13 |
 | File storage | Uploaded documents and images (S3-compatible) | `<provider>` | `<account / bucket>` | `<name>`, `<name>` | `<password manager / vault>` | Step 4 |
+| Backup storage | Encrypted off-server backup copies (D-080) | Backblaze B2 (EU Central) | `<shared OGSERC IT mailbox>`, bucket `ogserc-backups-k7qm`, key `ogserc-vps-backup` (that bucket only, Read and Write) | `<name>`, `<name>` | `<password manager / vault>`, with `OFFSITE_PASSWORD` | Active since 2026-11-19; restore test passed 2026-11-19, next due 2027-02 |
 | Email sending | Contact form delivery (SMTP) | `<provider>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 5 |
 | Receiving mailbox | OGSERC inbox for contact form messages | `<provider>` | `<OGSERC mailbox address>` | `<name>` | Held by OGSERC | Step 5 |
-| Error and uptime monitoring | Alerts on downtime and errors | `<provider>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 13 |
-| Analytics | Privacy-friendly site analytics (FR-WEB-07) | `<Plausible / Umami / self-hosted>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 11 |
+| Error and uptime monitoring | Alerts on downtime and errors | UptimeRobot (free plan) | `<shared OGSERC IT mailbox>` | `<name>`, `<name>` | `<password manager / vault>` | Uptime active; error alerts step 13 |
+| Search engine consoles | Indexing reports, sitemap, search words (D-078) | Google Search Console, Bing Webmaster Tools | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Active |
+| Disk and backup alerts | Disk space and nightly backup checks (D-079) | Healthchecks.io (free plan) | `<shared OGSERC IT mailbox>` | `<name>`, `<name>` | `<password manager / vault>` | Being set up |
+| Analytics | Privacy-friendly site analytics (FR-WEB-07) | Umami, self-hosted on the VPS (D-077) | `stats.<domain>` (named accounts, two-factor sign-in) | `<name>`, `<name>` | `<password manager / vault>` | Being set up |
 | Payment provider | Licence and application fees | `<to be agreed with OGSERC>` | — | — | — | Phase 3 only; do not create before then |
 
 ### 9.3 How to recover or move each account
@@ -427,6 +580,10 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 - Recover: through another account member, or the provider's recovery process.
 - Move: create the new bucket, copy all objects across with the provider's sync tool or any S3-compatible copy tool, update the `S3_*` variables, then check that documents download on the site. Commands are added in build step 4.
 
+**Backup storage (Backblaze B2)**
+- Recover: through another account member, or Backblaze's recovery process. The copies themselves open only with `OFFSITE_PASSWORD`, so losing the account does not expose them, but losing the password makes them unusable.
+- Move: create a bucket and key at the new S3-compatible provider, run `./deploy/offsite-backup.sh init` with the new `OFFSITE_REPOSITORY` and keys, and keep the old account until the new one holds 3 months of copies.
+
 **Email sending**
 - Recover: through another account member, or the provider's recovery process.
 - Move: set up the new provider, update the SPF and DKIM DNS records (and DMARC if needed) (NFR-SEC-15), update the `SMTP_*` and `EMAIL_FROM` variables, then send a test message through the contact form.
@@ -434,9 +591,9 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 **Receiving mailbox**
 - Held by OGSERC. To change it, update `CONTACT_FORM_TO` and send a test message through the contact form.
 
-**Error and uptime monitoring / Analytics**
+**Error and uptime monitoring / Analytics / Disk and backup alerts**
 - Recover: through another account member, or the provider's recovery process.
-- Move: create the new account and replace the site key or snippet configuration. Historic data usually stays with the old provider; export it first if it is needed.
+- Move: create the new account and replace the site key or snippet configuration. Historic data usually stays with the old provider; export it first if it is needed. For Healthchecks.io, create the two checks again and replace `HC_DISK_PING_URL` and `HC_BACKUP_PING_URL` in the server's `.env`. Healthchecks.io is open source, so it can also be self-hosted.
 
 **Payment provider (Phase 3)**
 - Not set up in Phase 1. When it is, add its recovery and move steps here, including how webhook signing secrets are rotated (NFR-SEC-21).
@@ -460,6 +617,8 @@ For each one, check whether the reason in D-022 still holds. For example: do Pay
 
 Never upgrade only one of these; production, CI, and development must run the same Node major.
 
+**Umami** (D-077) is pinned in `docker-compose.prod.yml`, which Dependabot does not watch. At each review, and whenever the dashboard shows an update notice, read the [release notes](https://github.com/umami-software/umami/releases). Then change the tag and run `docker compose -f docker-compose.prod.yml up -d umami`. Apply security releases straight away. Back up first (Section 6), because upgrades can migrate its database. After an upgrade, run `deploy/prune-analytics.sh --dry-run` and check that it reports no `WARNING` lines.
+
 Last review: `<date>` by `<name>`. Next review due: `<date + 3 months>`.
 
 ## 11. Placeholders to remove before launch
@@ -472,11 +631,16 @@ Build step 2 added temporary placeholders so OGSERC could review the design befo
 - [x] Crest placeholder replaced with the Ogun State crest image (step 2b).
 - [x] Hero photographs supplied (step 2b, D-037).
 - [ ] `docs/ASSET-CREDITS.md` has no "TO CONFIRM" left: every image's source, licence and permission recorded (D-034).
-- [ ] Hero slide headlines and action wording supplied by OGSERC (`[Sample headline …]` gone).
+- [x] Hero slide headlines and action wording: slide 1 is OGSERC's tagline; the slide 2 and 3 headlines were drafted for the owner (D-057). OGSERC to confirm them before launch.
 - [ ] The inline splash script is hashed in, or moved out of, the Content-Security-Policy (step 12, D-038).
-- [ ] Contact section map added (or removed) once the office address is confirmed.
+- [x] Contact section map added, loading from Google only on request (D-058). The strict CSP must allow `frame-src https://www.google.com` (step 12).
+- [ ] `src/lib/documents/catalogue.ts` emptied: every document moved into the Documents collection, its PDF into object storage, and `public/documents/` deleted (step 6, D-060).
+- [ ] The contact form sends email, with rate limiting, a configurable inbox and SPF/DKIM/DMARC; until then it offers a `mailto:` link (D-059).
 - [ ] `src/app/(frontend)/design-system/` (the review page) deleted (D-031).
 - [ ] No menu entry in `src/lib/navigation.ts` still has `ready: false`, and `/being-prepared` is removed or unused (D-027).
-- [ ] `deploy/Caddyfile` has no `PREVIEW ONLY` block left (D-054): `/admin` reopened once Step 3 is merged (2FA, rate limiting, audit log); `X-Robots-Tag: noindex` removed at launch; the HSTS override removed once every subdomain of the domain serves HTTPS.
-- [ ] VPS backups copied off the server daily, and a restore tested (Section 6).
+- [ ] `deploy/Caddyfile` has no `PREVIEW ONLY` block left (D-054): `/admin` reopened once Step 3 is merged (2FA, rate limiting, audit log); `X-Robots-Tag: noindex` removed (done 2026-11-18, D-078); the HSTS override removed once every subdomain of the domain serves HTTPS.
+- [x] VPS backups copied off the server daily, and a restore tested (Section 6; first copy and restore test passed 2026-11-19). Rerun `deploy/test-restore.sh` before launch, and once Payload has created its tables so the site database check runs in full.
+- [x] Privacy Policy section 7 covers cookies and visitor statistics: wording approved by the owner on 2026-11-18 (D-077). OGSERC's legal advisers to review it with the rest of the policy (D-074).
+- [ ] `stats.<domain>`'s one-day HSTS lengthened with the main site's (D-077).
+- [x] The monthly `deploy/prune-analytics.sh` cron job installed on the VPS, and its dry run clean (Section 6; done 2026-11-18).
 - [ ] `IMAGE_PROCESSING=off` gone from the VPS's `.env` once its CPU shows `sse4_1` and `sse4_2` (D-056), then the setting, its CI job and `scripts/block-sharp-binaries.mjs` removed from the code, and D-055's `@img/sharp-wasm32` reconsidered.

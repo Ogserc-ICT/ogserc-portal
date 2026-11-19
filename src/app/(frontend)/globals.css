@@ -116,3 +116,49 @@
 html:has(#mobile-menu[open]) .back-to-top {
   display: none;
 }
+
+/*
+ * Photo viewer on news stories (PhotoGallery.tsx, D-069): a full-screen modal <dialog> on darkest
+ * green. It fades in with @starting-style and `allow-discrete`; a browser without them opens and
+ * closes it instantly. Unlayered, like the rule above, so it beats the browser's dialog styles.
+ */
+.lightbox {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  inset: 0;
+  width: 100vw;
+  max-width: none;
+  height: 100vh;
+  height: 100dvh;
+  max-height: none;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background: color-mix(in srgb, var(--color-green-900) 96%, var(--color-black));
+  color: var(--color-white);
+  opacity: 0;
+  transition:
+    opacity 200ms ease-out,
+    overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+
+.lightbox[open] {
+  opacity: 1;
+}
+
+@starting-style {
+  .lightbox[open] {
+    opacity: 0;
+  }
+}
+
+html:has(.lightbox[open]) .back-to-top {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox {
+    transition: none;
+  }
+}

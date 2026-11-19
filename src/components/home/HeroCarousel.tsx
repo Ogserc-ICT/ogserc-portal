@@ -64,7 +64,7 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
     <section
       aria-roledescription="carousel"
       aria-label="Highlights"
-      className="on-dark relative isolate overflow-hidden bg-green-900 text-white"
+      className="on-dark relative isolate flex min-h-[70svh] flex-col justify-center overflow-hidden bg-green-900 text-white sm:min-h-0"
       onPointerEnter={(event) => event.pointerType === 'mouse' && setHovering(true)}
       onPointerLeave={() => setHovering(false)}
       onFocus={onFocus}
@@ -119,6 +119,9 @@ export function HeroCarousel({ slides }: { slides: Slide[] }) {
               {slide.text ? <p className="mt-4 text-lg text-green-50">{slide.text}</p> : null}
               <ButtonLink href={slide.action.href} className="mt-8">
                 {slide.action.label}
+                {slide.action.context ? (
+                  <span className="sr-only"> {slide.action.context}</span>
+                ) : null}
                 <Icon name="arrowRight" className="size-5" />
               </ButtonLink>
             </div>

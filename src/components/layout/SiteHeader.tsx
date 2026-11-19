@@ -8,7 +8,7 @@ import { mainMenu, utilityLinks } from '@/lib/navigation'
 
 /**
  * Desktop (lg and up): utility bar, logo with the commission's name and the crest, then the green
- * seven-item menu bar. Below lg: one compact row with the logo, the crest and the Menu button; the
+ * six-item menu bar. Below lg: one compact row with the logo, the crest and the Menu button; the
  * menu and the utility links are in the drawer (D-036).
  */
 export function SiteHeader() {

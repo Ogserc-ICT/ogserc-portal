@@ -602,7 +602,8 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - **Footer content:** the footer holds the quick links, contact details and legal links. The button is never visible while any of the footer is on screen, so it cannot cover them, at any width or scroll position. At the bottom of the page the footer's own link takes over.
 - **Hero pause button:** the button appears only after scrolling more than one viewport. That puts its top edge more than one viewport down the document, below the hero, so it can never meet the pause button in the hero's corner.
 - **Main content:** the button does float over main content mid-page, as any floating button does.
-- **Tests:** at 360 and 1280px, a test checks the first scroll position where the button appears (clear of the pause button and of every link and button) and the very bottom of the page.
+- **Tests:** at 360 and 1280px, a test checks the first scroll position where the button appears (clear of the pause button and of every link and button in the header and footer) and the very bottom of the page (the button hidden, nothing covered).
+  - *Changed 2026-10-30 (owner's choice):* the first-position check used to cover every link and button on the page. That depended on whichever content happened to sit under the corner, not on the button, and the taller phone hero (D-062) moved a Latest updates card under it. It now checks what this decision guarantees.
 
 **Focus after scrolling: the skip link.** The skip link is the first focusable element. Moving focus there means the next Tab continues exactly as on a fresh page load: utility bar, logo, menu. The header logo was the other candidate. Focusing it would skip the desktop utility bar (Contact Us, Licences, FAQs, Search).
 
@@ -1077,3 +1078,384 @@ The D-051 boot fix (its own `BasePayload` instance) still applies and has its ow
 **Checked:** `scripts/block-sharp-binaries.mjs` makes every sharp binary fail to load, as on the VPS. With it, a standalone build without the setting logs the VPS's error; with `IMAGE_PROCESSING=off` the build never mentions sharp, and the standalone server serves the homepage and every image without the optimiser. CI repeats this in the "Builds and serves without sharp" job.
 
 **Undo when the CPU is fixed** (RUNBOOK Section 11): check `grep -cw sse4_2 /proc/cpuinfo` is above 0, remove `IMAGE_PROCESSING=off` from the VPS's `.env`, redeploy. Then remove this setting, its CI job and the helper, and decide on D-055's package (`@img/sharp-wasm32`): it helps only on CPUs with SSE4.1 but without x86-64-v2, which are rare, so removing it is likely.
+
+## D-057 Real contact details and social links in the footer before the CMS exists (2026-10-29)
+
+**Decision:** The footer summary, office address, phone, email and five social accounts (LinkedIn, Facebook, Instagram, X, TikTok) supplied by the owner replace their placeholders in `src/lib/placeholder-content.ts`. Email and phone are `mailto:` and `tel:` links in the footer and the homepage contact section. The footer shows the OGSERC wordmark on a white panel, because the green wordmark barely shows on the darkest-green footer. The social icons are outline marks added to `Icon.tsx` in its 24px, 2px-stroke style (shapes follow the common Lucide and Tabler outlines), so no icon library is added. Social links open in the same tab.
+
+**Why:** The site is live as a preview (D-054) and `/admin` stays closed until Step 3 is merged, so staff cannot edit this yet. These are OGSERC's own published details, not invented content. This widens the D-028 exception only for these values. Step 4's seed must move them into the CMS, so the exception still ends at launch.
+
+**Links as supplied, corrected:** the owner replaced the first LinkedIn link (admin-only) and Facebook link (a share link) with the accounts' own addresses. The Facebook address loses its redirect parameters and uses `www` instead of `web`. TikTok had no `https://`. A tracking parameter was removed from Instagram.
+
+**Hero and favicon (same day):** slide 1's headline is OGSERC's tagline "Electricity for all in Ogun State", and its button reads "Learn more", with "about OGSERC" added for screen readers (WCAG 2.4.4), pointing to About Us (the "being prepared" page until About is built). The headlines on slides 2 and 3 were drafted for the owner to match their buttons. The introduction on slide 1 ("Transparent oversight and robust regulation of Ogun State's power sector.") reuses the words of OGSERC's footer summary. The favicon (`src/app/icon.png`) and home-screen icon (`src/app/apple-icon.png`) are the logo's "O" with the Ogun State map, cut from `public/brand/ogserc-logo.png`. At tab size the full wordmark would be unreadable. They are static files, so they need no image processing on the VPS (D-056).
+
+**Tests:** the header-and-footer link test fetches only the site's own links and checks email, phone and social links by their form, so it never depends on another site being up.
+
+## D-058 The office map loads only when the visitor asks (2026-10-29)
+
+**Decision:** The office map (homepage contact section, and the contact page when it is built) is a panel with "Show map" and "Open in Google Maps". Google's embedded map (`www.google.com/maps/embed`, no API key) loads only after "Show map" is pressed, and focus then moves to it. Without JavaScript only the link shows. The link is OGSERC's own Google Maps link. The embed address uses the place it resolves to (OPIC Tower, 7.1344754, 3.3396073). Both are in `placeholder-content.ts` with the other contact details (D-057). Chosen by the owner over an always-loaded map or a link only.
+
+**Why:** an always-loaded Google map adds roughly 1 MB on mobile data and sets Google cookies on every visit (which would need a cookie notice, FR-WEB-06). Loading on request keeps pages light (NFR performance), and nothing goes to Google unless the visitor chooses. No library is needed. The component is a small client component in `src/components/ui/OfficeMap.tsx`.
+
+**Later:** the strict CSP (build step 12, D-011) must allow `frame-src https://www.google.com`. The privacy notice should say that showing the map loads content from Google. If OGSERC prefers the embed address from Google Maps' "Share > Embed a map", replace `embedUrl` only.
+
+**Tests:** `tests/e2e/office-map.spec.ts` checks that no request goes to Google before the click (Google is never reached from tests; the embed is answered locally), that the map appears and takes focus after it, and that only the link shows without JavaScript.
+
+## D-059 Contact page and enquiry form, before email sending exists (2026-10-29)
+
+**Decision:** `/contact` (SRS 6.12) follows the layout the owner chose from a reference screenshot: a dark green header band ("Get in touch", "Contact OGSERC"), then Head office, Department contacts and Office hours cards beside a "Send a message" form, then the office map (D-058). OGSERC supplied the inbox (`info@ogserc.org.ng`), the consumer complaints address (`ccu@ogserc.org.ng`), the licensing and registration address (`registration@ogserc.org.ng`) and the hours (Monday to Friday, 8:00am to 5:00pm). The introduction and department descriptions were drafted and the owner agreed the enquiry types. Weekends and public holidays are shown as closed. No reply time is promised, because none was given. Content sits in `placeholder-content.ts` with D-057's details, for the step 4 seed.
+
+**Form:** a server action (`src/app/(frontend)/contact/actions.ts`) with `useActionState`, so it works without JavaScript (full page load) and with it (focus moves to the result or to a GOV.UK-style error list). Validation is in `src/lib/contact/enquiry.ts` and runs on the server: name, email and message required, formats for email and phone, lengths, enquiry type from the list. Single-line fields have line breaks collapsed, so nothing typed can add an email header later. The browser's own validation is off (`noValidate`) so every visitor sees the same messages. Nothing typed is logged.
+
+**Spam protection (owner's choice: invisible checks, not Cloudflare Turnstile):** a hidden trap field (a bot that fills it is told "sent" and nothing is kept), and a signed timestamp issued with the page (`src/lib/contact/form-token.ts`, an HMAC with a key derived from `PAYLOAD_SECRET`). A form sent within 3 seconds, after 24 hours, or with a changed token is asked to send again, keeping the message. The page therefore renders per request (`connection()`).
+
+**Sending (owner's choice: decide later):** no email is sent yet. A valid message gets "the online form cannot send messages yet" and an "Email your message" `mailto:` link that carries the subject and message, so nothing typed is lost. Rate limiting is also deferred: there is nothing to limit until the form sends. **Before sending is switched on**, the sending slice must add rate limiting (CLAUDE.md security rules), a configurable inbox in an environment variable (FR-CNT-02), the confirmation message, and the domain's SPF, DKIM and DMARC (launch checklist item 13). The choice is between OGSERC's Microsoft 365 (SMTP AUTH on one mailbox) and a sending service.
+
+**Measured (D-041):** the homepage's JavaScript went from 186.0 KB to 186.5 KB gzipped with the map component (production build). The contact page adds nothing to the homepage.
+
+## D-060 The first Order, published before the Documents collection exists (2026-10-29)
+
+**Decision:** OGSERC's first Order, *Order on the Commencement of Operations of the Commission and the Mandatory Registration of Licensees and Electricity Operators in Ogun State, 2026* (OGSERC/ORD/2026/001), is published at `/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001`. A listing page (`/regulatory-instruments/orders-and-directives`) shows it as a card. Both follow the reference screenshots the owner supplied, with OGSERC's design system. The owner chose this over waiting for Step 3 and the Documents collection (option A). The documents are listed in `src/lib/documents/catalogue.ts`, a temporary exception like D-028. Its fields follow FR-DOC-02, so step 6 can move each entry into the CMS unchanged. Only non-draft documents are ever listed or served.
+
+**The files:**
+- **Signed copy.** OGSERC's scan is 20 pages, 14.3 MB, with no text layer. The site serves a 150 dpi copy built from the same page images (2.5 MB, checked legible, with the title and language set in the PDF properties) at `public/documents/orders-and-directives/ogserc-ord-2026-001.pdf`. The full-resolution scan is not in the repository: it would add 14 MB to git history for good. It can be offered once object storage exists.
+- **Full text.** It comes from OGSERC's Word file. A conversion script turned it into structured blocks (headings, sub-paragraphs, the definitions list, the schedule tables, the signatories) in `src/lib/documents/text-ogserc-ord-2026-001.ts`. The text was compared with the signed scan: dates, every fee in Schedule 3, the filing email and the wording match. The word count of the page text equals the Word file's, apart from the title lines shown in the page header and Word's formatting codes. Two paragraphs split by page breaks in the Word file (8(5) and 18(5)) are joined. The wording must not be edited by hand; corrections come from OGSERC as a new file.
+- **Not committed.** Neither the Word file nor the original scan is committed. Both stay in the git-ignored `incoming/` folder.
+- **Signatures.** The signed copy shows the signatures of the Chairman/CEO and the Secretary, and initials on every page. The owner confirmed OGSERC is content for it to go online, as paragraph 27 of the Order requires publication on the website. The web text lists the signatories' names and roles, not their signatures.
+
+**Page design and how it differs from the reference:**
+- **Status.** Status uses the SRS set (Published, Superseded, Revoked), not "Active".
+- **No download counts.** These would need visitor tracking (FR-WEB-07 allows only privacy-friendly analytics).
+- **Summary.** The summary is paragraph 1 (Citation) of the Order itself, so nothing is written for it. "Questions?" points to `registration@ogserc.org.ng`, the address paragraph 10(2) gives for filings and enquiries.
+- **PDF preview.** It shows only at 1024px and wider (`PdfPreview.tsx`, with Hide and Show): most phone browsers cannot show a PDF in a page, and a phone should not download 2.5 MB unasked. Phones get Open and Download buttons.
+- **Full text.** It has a Contents list and anchors for each Part, paragraph and Schedule (`#paragraph-10`). Its tables scroll sideways on narrow screens inside a focusable region.
+- **Category sidebar.** It lists the eleven SRS Regulatory Instruments categories from `navigation.ts`, with counts. It is a sideways-scrolling row of pills on phones.
+- **Not yet built.** Filters (FR-DOC-04) and related documents wait for more than one document (step 6).
+
+**Shared pieces:** the dark header band (`PageBand`) and white sidebar cards (`Panel`) are now components, also used by the contact page.
+
+**Found in review:** at 360px both pages first scrolled sideways (about 1,400px wide). The hidden screen-reader count in each category pill is positioned absolutely; with no positioned ancestor it escaped the scrolling row. The grid column also grew to fit the row. Fixed with `relative` on the links and `min-w-0` on the columns. A test now checks that neither page scrolls sideways at 360px.
+
+**Later:** the strict CSP (step 12) needs `frame-src 'self'` for the preview. Site search (step 10) should index the full text, which is why the text is kept as data, not only in the PDF.
+
+## D-061 "Our Mission" becomes "Vision, Mission & Values", one page (2026-10-29)
+
+**Decision:** The About OGSERC menu item "Our Mission" (SRS Section 4) is renamed **Vision, Mission & Values** and opens one page at `/about/mission`. The page shows OGSERC's vision, mission and five values (PRIDE: Predictability, Responsiveness, Integrity, Data, Excellence), with anchors `#vision`, `#mission` and `#values`. The owner supplied the wording, and it is used as given, except that each value's description starts with a capital because it stands on its own. The menu keeps four items. The content sits in `placeholder-content.ts` with the other OGSERC-supplied details (D-057), for the step 4 seed.
+
+**Why:** the owner first suggested adding "Our Vision" beside "Our Mission", with both opening the same page. That would put two menu links to one page, which can look like a mistake, and screen-reader users hear two different link names for the same place. One item named for everything on the page avoids both. The three statements are short and read best together.
+
+**Sitemap change note (SRS 2.5):** this changes the wording of the approved Section 4 sitemap; no page was added or removed. OGSERC to confirm in writing with the other sitemap items at sign-off.
+
+## D-062 Homepage: real updates only, Tenders and Events hidden, taller hero on phones (2026-10-30)
+
+**Decision:** Following the owner's review of the live preview:
+- **Latest updates** shows only real items. The six sample news cards are gone. The one item is Order OGSERC/ORD/2026/001, linking to its page. The registration forms come next. The items sit in `latestUpdates` in `placeholder-content.ts` until the News collection exists (step 9). With a single item, the row has no focusable scroll region (there is nothing to scroll to) and the card fills a phone's width. From two items on, the scroll-snap row (D-030) comes back on its own.
+- **Tenders** and **Events** are hidden from the homepage until OGSERC has real ones. The components and sample data stay, so bringing them back takes one line each in `page.tsx`. FR-WEB-02 lists both sections, so they must return or be signed off as removed before launch.
+- **Hero** is at least 70% of the small viewport height (`70svh`) on phones, with the slide content centred vertically. From 640px up it keeps its content height. `svh` rather than `vh`, so the hero does not jump when the mobile browser's address bar hides.
+
+- **Public notices** keeps its section but shows only real notices: the Order's publication on the website (30 October 2026), linking to the Order. The second notice, that the registration forms are available to download, is added when the forms are published, so the site never announces something it does not have yet.
+- **Added with the forms (D-063):** a Latest updates card and a Public notice for the registration forms, both linking to `/regulatory-instruments/forms`. With two updates the scroll-snap row is back.
+- **"View all news"** still points to the news page, which step 9 builds (owner's choice).
+
+## D-063 Registration forms as static Word files, before the Documents collection exists (2026-10-30)
+
+**Decision:** The eleven registration forms (REG-01A to REG-01K, Version 2026.1) under the Commencement and Registration Order (OGSERC/ORD/2026/001) are published at `/regulatory-instruments/forms` as static Word files in `public/forms/registration/`, with OGSERC's exact file names. The page shows the Registration Form Selection Guide as text first, then the forms A to K, each with one Word download, then how to submit. The source files are kept unchanged in `docs/source/` (the guide's Word file and its verbatim Markdown text). They are only for the record and the tests; the page does not read them, and Docker leaves `docs/` out of the image.
+
+**Why:** the Order is in force from 2 November 2026 and operators need the forms now. The Documents collection (step 4) does not exist yet. This follows D-060 (the Order as a static PDF).
+
+**Rules, from the owner:**
+- **Two ways to submit, no other:** by hand at the Commission's Registry, or by email to `registration@ogserc.org.ng`. The page never mentions an online portal. Paragraph 24 of the Order says the Commission *may* issue one; that is the Order's own text, on the Order page only.
+- **Word only.** No PDF versions and no preview in this round, on purpose. Both can be added later (a PDF per form, and D-060's desktop preview).
+- **The guide is text on the page only.** No download of the guide, and no Word or PDF version of it on the site. Its wording, amounts and paragraph references are used exactly as in `docs/source/registration-guide.md`, and a test compares the page with that file. Its closing italic line ("Forms are available from…") is left out; the "How to submit" box replaces it.
+- **Link text** uses each form's own title in sentence case (form D: "Generation of 1 MW to below 10 MW"). "Who it is for" uses the guide's wording ("1 MW to less than 10 MW"). Both are OGSERC's.
+- **Sizes** are read from the files when the page is built, never typed in.
+- **Guide table on phones:** below 640px each row shows as a card (the category letter large, then "Who registers", "Form" and "Fee" with small labels). The table keeps its caption (the guide's subtitle), `<th scope>` cells and explicit table roles, because some browsers drop table semantics when rows change display; the header row stays for screen readers only, and the small labels are hidden from them so nothing is read twice. Each form code links to that form's entry (`#reg-01c`). From 640px it is an ordinary table.
+- **Office hours** on the page reuse the contact page's 8:00am to 5:00pm (owner, 2026-10-30).
+- **Registry address** uses the guide's wording, "5th and 6th Floors, OPIC Building, Oke-Ilewo, Abeokuta". The footer's "Floors 5 & 6, OPIC Towers" is also correct (owner); they need not match.
+
+**Exception to lowercase URLs (CLAUDE.md Conventions):** the download addresses keep OGSERC's file names, with capitals and underscores, for example `/forms/registration/OGSERC_Form_REG-01C_Generation_10MW_and_above.docx`. The rule is for page addresses; these are file addresses, and the owner asked for the names unchanged so the downloaded file matches the Registry's copy.
+
+**Step 4:** the forms move into the CMS Documents collection, category Forms. The same public download addresses must keep working, or redirect permanently to the new ones, because they will be shared in emails and letters. `*.docx` is marked binary in `.gitattributes` so git never alters the files.
+
+## D-064 About Us, Our History and OGSERC's Structure, before the Pages collection exists (2026-11-01)
+
+**Decision:** The remaining three About OGSERC pages go live with text the owner supplied on 2026-11-01: `/about` (About Us), `/about/history` (Our History) and `/about/structure` (OGSERC's Structure). The text sits in `placeholder-content.ts` (`aboutUs`, `ourHistory`, `ogsercStructure`) beside the vision and mission (D-061), for the step 4 seed. All four About pages share a row of section links under the page band (`AboutNav`), so a visitor can move between them without reopening the menu.
+
+The text is used as given, except for these changes, all confirmed by the owner on 2026-11-01:
+- **Typo:** "Executive Chaiman" is corrected to "Executive Chairman".
+- **Division name:** the text lists "Legal, Licensing, Consumer and Consumer Affairs"; the organogram says "Legal, Licensing and Consumer Affairs". The page uses the organogram's name.
+- **Short titles on "What we do"** (Licensing, Tariffs, The Ogun State Electricity Market, Performance, Consumer protection, Regulations, codes and standards) are ours, drawn from each item so the cards can be scanned. OGSERC can still change them.
+- **Key dates** on Our History repeat the dates already in the text, as a timeline. Nothing is added.
+
+**Organogram:** drawn in HTML from the owner's organogram image, not shown as the image. Headings and lists are read by screen readers and by site search, scale to a 360px phone, and need no alt text that could fall out of step. The Office of the Chairman (one of the five divisions in the text) holds the three units the organogram draws beside the Chairman / CEO: Internal Audit, Public Affairs and Stakeholder, and Registry (confirmed by the owner). Unit names are copied as drawn (for example "Engineering Standard", "Finance and Account").
+
+**Still to come (SRS Section 4):** the Structure page is to cover commissioners and management too. The owner has put this on hold (2026-11-01), so no placeholder people are shown until they ask for it.
+
+## D-065 Public Notices in the Media Center menu, and the registration notice (2026-11-01)
+
+**Decision:** Media Center gets a fifth menu item, **Public Notices**, after News, at `/media-center/notices`. It lists OGSERC's notices newest first, and each notice has its own page at `/media-center/notices/<slug>`. The first is OGSERC's public notice "Commencement of Operations and Mandatory Registration of Electricity Operators" (issued at Abeokuta, 26 October 2026, under Order OGSERC/ORD/2026/001). The homepage's Public notices and Latest updates list it first, and its "View all notices" link now opens the list. The notices sit in `src/lib/notices/public-notices.ts` until build step 9 brings the Announcements collection (FR-NEWS-03); the step 4 seed must carry them over.
+
+**Why a menu item:** the owner first asked for the notice under News. The document is a public notice, the homepage already has a Public notices section with a "View all notices" link, and FR-NEWS-03 makes "public notice" a category of its own. Putting notices under News would mix them with news stories. A Public Notices page that only the homepage links to would be hard to find again. The owner chose the menu item.
+
+**Sitemap change note (SRS 2.5):** SRS Section 4's Media Center lists News, Tenders, Events, Photos & Videos. This adds Public Notices. OGSERC to confirm in writing with the other sitemap items at sign-off (see D-061).
+
+**The text is the notice as issued**, except:
+- "license" is spelt "licence", to match the Order and the rest of the site (owner, 2026-11-01). "licensed" and "licensee" are unchanged.
+- The semicolon before the bank details is a colon.
+- The bank details get a heading, "Payment details", so the page's sections can be navigated.
+
+Every date, deadline, fee, penalty and threshold in the notice was checked against the Order's text on the site, and all match. The notice's "transfer of oversight ... on 23 June 2025" matches the Order's recital 4.
+
+**Bank accounts:** published at the owner's request (2026-11-01), digit for digit as in the notice: Zenith Bank 1313352257 (processing fees) and Sterling Bank 0150934805 (administrative charges), each "50% of Applicable Registration Rate". A test checks both numbers, so a later edit cannot change them by accident. They are shown as one card per account rather than a table, because a five-column table does not fit a 360px phone.
+
+**Dates:** the homepage lists sort by the date the notice went on the site (1 November 2026), as the earlier homepage notices do. The notice's own pages show the issue date, 26 October 2026.
+
+## D-066 Forms page: bank accounts before the rules, contact person hidden (2026-11-02)
+
+**Decision:** At the owner's request, the Forms page shows OGSERC's two bank accounts for registration fees in a **Payment details** box inside the selection guide, after the table and before "Rules for choosing". The accounts come from the registration notice's data (D-065), so the two pages always show the same numbers. A shared `BankAccounts` component draws both. The account name, account number and bank are bold, and the number is large, so they are hard to miss. The box has a gold border and links to the notice, so it reads as separate from the guide's own text (Form REG-GUIDE, which stays word for word as OGSERC's source, D-063).
+
+The "Contact person" line in How to submit is hidden until OGSERC names one: `formsSubmission.contactPerson` is `null`, and setting a name shows the line again.
+
+Tests check that the five values are bold (font weight 700), that the box comes between the table and the rules, and that the rules still match the source.
+
+## D-067 Resources > Downloads lists every file on the site (2026-11-02)
+
+**Decision:** `/resources/downloads` lists every document and form the site offers, to download, grouped by document type. Today that is Forms (REG-01A to REG-01K, Word) and Orders & Directives (Order OGSERC/ORD/2026/001, signed PDF). Each entry shows its reference or form code, file type and size, and its date and status (documents) or version (forms). It links to its own page: the document page, or the form's entry on the Forms page.
+
+**How it stays complete:** the page has no list of its own. `src/lib/downloads.ts` reads the documents catalogue and the registration forms, the same data their pages use, and groups them by the Regulatory Instruments categories in menu order, leaving empty groups out. A new document added to the catalogue appears under its category on both its category page and Downloads, with nothing else to update. In build step 4 both sources move into the Documents collection, and the page reads that instead (FR-CMS-02 lists Downloads as a CMS section).
+
+**Categories** are the Regulatory Instruments menu's (Rules & Regulations, Energy Caps, Guidelines, Forms, …, Orders & Directives), so a document has the same type everywhere on the site. A test compares the page's downloads with every PDF, Word and Excel file under `public/documents` and `public/forms`, so a file published elsewhere but missing here fails the build.
+
+**Accessibility:** each Download button's accessible name names the file ("Download REG-01C (Generation of 10 MW or more), Word, 406 KB"), starting with its visible text, so the twelve buttons are told apart by screen readers and voice control.
+
+## D-068 Media Center > News lists the Latest updates, before the News collection exists (2026-11-02)
+
+**Decision:** `/media-center/news` is live. It lists every item in the homepage's Latest updates (`latestUpdates` in `placeholder-content.ts`), newest first, as cards in a grid: today the registration notice (D-065), the registration forms and Order OGSERC/ORD/2026/001. Each card links to the item's own page. The menu's News item and the homepage's "View all news" link now open it.
+
+**Why:** after the registration notice went live under Public Notices, the owner noticed that News still showed "This section is being prepared". The notice was first meant for News. The Latest updates items are already the site's news (the comment on `latestUpdates` says build step 9 moves them into the News collection), so News shows them rather than repeating them in a second list. The registration notice therefore appears on both News and Public Notices; it has one page, under Public Notices.
+
+**Adding news until step 9:** add an entry to `latestUpdates`. It appears on the homepage and on News. In build step 9 the page reads the News collection instead (FR-NEWS-01: author, category, featured image, attachments), and the branded image placeholder gives way to real photographs.
+
+## D-069 News stories have their own pages, with a photo gallery (2026-11-16)
+
+**Decision:** news stories live in `src/lib/news/news-articles.ts` until build step 9 brings the News collection (FR-NEWS-01). Each story has its own page at `/media-center/news/<slug>`: the title band with the date, the first photograph leading the story, the text (paragraphs and an optional highlighted list), then the other photographs as a gallery. Stories feed the homepage's Latest updates and the News page (D-068), where their card shows the lead photograph instead of the branded placeholder. The first story is "OGSERC Visits NERC to Strengthen Regulatory Collaboration" (13 November 2026), with seven photographs, text as supplied by the owner. Only the title's capitals were changed to title case.
+
+**Photographs:** resized and re-encoded before commit (full size up to 1600px wide, and a 640px thumbnail for cards and the gallery), with their metadata removed. The VPS serves images as they are (`IMAGE_PROCESSING=off`, D-056), so small pages need small files in the repo. There are no captions or names (owner). Each photo has a plain description as alt text that does not guess who is who.
+
+**Gallery:** each thumbnail is a link to the full-size photo, so without JavaScript it simply opens the image. With JavaScript it opens a viewer: a native modal `<dialog>` like the menu drawer (D-036), with previous and next buttons, arrow keys, Escape, a close button, a click outside the photo to close, Tab kept inside, page scroll locked and focus returned to the thumbnail. It fades in with `@starting-style`, and the fade is skipped for reduced motion. Its CSS is in `globals.css` (D-041). The client JavaScript loads only on story pages.
+
+**Adding a story until step 9:** put the photos through the same resize (full and `-thumb`), add them under `src/assets/news/<slug>/`, and add an entry to `newsArticles`. The step 4 seed must carry the stories and their photos into the CMS.
+
+## D-070 Order OGSERC/ORD/2026/002, the transitional adoption of NERC instruments (2026-11-16)
+
+**Decision:** OGSERC's second Order, *Order on the Transitional Adoption of NERC Regulatory Instruments in the Ogun State Electricity Market* (OGSERC/ORD/2026/002), is published at `/regulatory-instruments/orders-and-directives/ogserc-ord-2026-002`, beside Order 001 and in the same way (D-060). It should have gone up with Order 001; the owner supplied the signed copy on 2026-11-16.
+
+**Dates come from the signed copy.** It was made on 2 November 2026 ("Dated at Abeokuta this 2nd day of November 2026", page 9), and paragraph 2 says it takes effect on 3 November 2026. The owner first asked for 26 October and 2 November, to match Order 001. They agreed 3 November once paragraph 2 was pointed out, but still wanted 26 October as the date made. The site shows 2 November because the signed instrument on the same page says so, and the site must not show a regulatory instrument as published before it was signed. If OGSERC issues a corrected signed copy, the dates follow it.
+
+**The files:**
+- **Signed copy.** OGSERC's scan (HP Scan, 11 pages at 200 dpi, 3.4 MB, no text layer) is served as supplied. Unlike Order 001 it was small enough not to need a reduced copy.
+- **Full text.** No Word file was supplied, so the text was typed from the scan and checked against it page by page. It keeps the Order's own spelling and slips as signed: "license", "regularization", "allow a state set up" (recital B), "Option B:" in paragraph 12(4), paragraph 17(2) ending at item (e) with "; or", and Schedule 1's note that "The Check column is for the legal team and is removed before signature". Schedule headings use Order 001's form ("Schedule 1: Adopted instruments" with "(Section 5)" beneath), so they get `#schedule-1` anchors and a Contents link. If OGSERC supplies the Word file, compare the text against it.
+- **No "Questions?" box.** The Order names no address for enquiries.
+
+**Homepage and News (owner, 2026-11-16):** Order 002 is a Latest update (so it is also on News) and a homepage public notice. Both are dated 2 November 2026, the Order's own date, as Order 001's update carries 26 October. The notice is worded as the Order's title, not "is now published", because the date shown is the Order's date, not the day it went online.
+
+## D-071 Consultation: paper OGSERC/CP/2026/001 and the draft State Grid and OGEM Order (2026-11-17)
+
+**Decision:** Regulatory Instruments > Consultation is built (`/regulatory-instruments/consultation`) and lists OGSERC's first consultation: Consultation paper OGSERC/CP/2026/001, *Regularization of Unlicensed Electricity Distribution in the Sagamu Interchange, Ota and Agbara Areas, and Gas Supply for Embedded Generation*, and the draft Order it consults on, *Order on the Establishment of the Ogun State Grid and the Ogun Electricity Market, Gas Supply for Embedded Generation Connected to the State Grid, and the Regularisation of Unlicensed Distribution and Third-Party Investment in Industrial Distribution Zones in Ogun State*. Each has its own page. They sit in `catalogue.ts` like the Orders (D-060), and Downloads picks them up.
+
+**Consultation details (FR-DRAFT-01, FR-DRAFT-02).** Documents can now carry a `consultation` field: closing date, hearing, email, hand-delivery address and subject line. A document with one shows a "Have your say" panel first in its sidebar, and a "Comments by" badge on its card and page. The email link pre-fills the paper's subject line. Comments go by email or by hand only; there is no online form (Phase 2). The badge states the closing date, not "open" or "closed", because the pages are static and a computed state would go out of date.
+
+**Taken from the documents, not supplied separately.** The owner said there was no consultation date, but the paper gives one: issued 16 November 2026, responses by 30 November 2026, hearing in Abeokuta on 3 December 2026 (cover, document control table, "How to respond", Section 13). The site shows those. The owner gave `info@ogserc.org.ng` for comments, which matches the paper.
+
+**Status of the draft.** The draft Order is listed with status Published: in FR-DOC-02 and the CMS, "draft" means not yet public, and drafts are never served (D-060). It shows as a draft through its type ("Draft Order"), its reference, and its own cover wording as the summary: "Not yet made by the Commission; no legal effect."
+
+**Shown as printed.** The draft's cover leaves its numbers blank ("OGSERC/ORD/2026/[●] (draft)", "Consultation Paper OGSERC/CP/2026/[●]"), and the site shows them that way. The owner is content with this. The paper calls it Order No. OGSERC/ORD/2026/003, and the draft's paragraph B.1 names CP/2026/001.
+
+**Files.** Both are Word exports with a text layer (24 and 63 pages, 1.0 and 1.3 MB). No full text is typed into the site this time: site search (step 10) can index the PDFs' text layer. The paper is served as supplied.
+
+**One correction to the draft, at the owner's request.** Article 47.3 (page 50) gave `info@ogserc.gov.ng`; the owner confirmed it should be `info@ogserc.org.ng` and asked for it to be fixed. No Word file was supplied, so the PDF was corrected as a standard incremental update: page 50's content stream is appended with "gov" changed to "org", and a new cross-reference section points back to the original. Every original byte is kept, and nothing else changed. It is not an email link, so no link needed changing. Checked: the text layer reads `info@ogserc.org.ng`, the file still has 63 pages, and page 50 renders cleanly. OGSERC's Word source still has `.gov.ng`, so it should be corrected there before the final Order. The original file is kept in the git-ignored `incoming/` folder.
+
+**Shared pieces.** The Orders listing and document page are now `DocumentCategoryPage` and `DocumentDetail`, used by both categories. Document pages now show related documents (FR-DOC-03), and the paper and the draft link to each other.
+
+**Homepage and News (owner, 2026-11-17):** the consultation is a Latest update (so it is also on News) and a homepage notice in the "Consultation notice" category (FR-NEWS-03). Both link to the paper's page and are dated 16 November 2026, the date of issue. At the owner's request the update card has a graphic instead of the branded placeholder (`src/assets/updates/consultation-cp-2026-001.jpg`, 960×540, 56 KB, no metadata). It combines hero photo 2 under a deep-green overlay, the two documents' cover pages (rendered with pdf.js), the gold bolt, "Public consultation", "Have your say" and the closing date. Like every card image it is decorative (empty alt): the card's title and summary carry the same information.
+
+**Raised with the owner, left as supplied (owner, 2026-11-17):** the paper is version 2026.2 and the draft 2026.1. The paper's recovery terms differ between sections: 42 instalments after a six-month moratorium (summary, Q12 "48 months"), but 60 months with 54 instalments in Section 6. Its compensation look-back reads "[6] years" in Section 6 and "5-year" in Q9. Some bracketed blanks remain ("[60] days", "[60] months"). Section 2 has a slip: "It particularly from five groups". Corrections come from OGSERC as new files.
+
+## D-072 Next.js 16.4.3 to 16.4.6 for GHSA-mfr8-8qww-v76h (2026-11-17)
+
+**Decision:** `next` and `eslint-config-next` go from 16.4.3 to 16.4.6, the latest patch release. 16.4.3 is affected by GHSA-mfr8-8qww-v76h (moderate): information disclosure across root params when a `'use cache'` function is called through `unstable_cache()`. It is fixed in 16.4.5. The site does not use `unstable_cache`, but Next.js 16.4.3 stopped `next dev` and `next build` with a security notice that only a retry got past. That would break CI and deploys, so the upgrade could not wait.
+
+**Checked:** Payload 3.90.2 accepts Next.js `>=16.3.3 <17.0.0`. Lint, typecheck, build (no security notice) and the full Playwright suite against the production build pass. `pnpm audit` no longer lists the advisory. No code changes were needed.
+
+## D-073 A consultation's documents appear together on each of their pages (2026-11-17)
+
+**Decision (owner, 2026-11-17):** the paper and the draft Order work together, so each page now has a "Documents in this consultation" section showing both files, the page's own document first: what each one is, its reference and file details, Open and Download, and a link to the other's page. Before, the homepage card led to the paper's page, where the draft Order showed only in the sidebar's Related documents. The sidebar panel stays (FR-DOC-03). A document belongs to a consultation when it carries the same `consultation` details (`consultationDocuments` in `catalogue.ts`).
+
+**Previews start closed on consultation pages (owner).** Showing two inline PDFs at once would download 2.3 MB before anyone asked. On these pages each preview starts closed and loads its PDF only when "Show preview" is first pressed. Orders keep their preview open, as before (D-060). With two files on a page, the Open, Download and preview buttons name their file for screen readers (for example "Show preview of Draft Order for consultation, version 2026.1"), and each preview has its own id.
+
+## D-074 Legal pages: Privacy Policy and Terms of Service only (2026-11-17)
+
+**Decision:** The footer's legal links are **Privacy Policy** (`/privacy-policy`) and **Terms of Service** (`/terms-of-service`). At the owner's request, the Cookie Notice, Accessibility Statement and Sitemap links are removed. Both pages carry OGSERC's text as the owner supplied it on 2026-11-17, word for word, in `src/lib/legal/legal-pages.ts` until build step 4 moves them into the Pages collection (the seed must carry them over). One `LegalPageView` component draws both: title band, "Last updated", then numbered sections. The contact sections link the address from `contactDetails`, so it stays in step with the footer.
+
+**Cookies:** FR-WEB-06 asks for a cookie notice only if non-essential cookies are used. Today none are: analytics is to be cookie-free (FR-WEB-07) and the Google map loads only when a visitor asks for it (D-058). The owner chose to cover cookies as a section of the Privacy Policy rather than a page of its own. OGSERC's text has no cookies section yet, so section 7 "Cookies" shows "[Sample, OGSERC to supply]" and the supplied "Contact Us" becomes section 8. That placeholder must be replaced before launch.
+
+**Accessibility and Sitemap:** dropping the Accessibility Statement removes a page, not the commitment: the site still meets WCAG 2.1 AA (NFR, every page tested with axe). Dropping the human-readable Sitemap link does not affect `sitemap.xml` for search engines (build step 11).
+
+**For OGSERC's legal advisers to review (not changed on the site):** the text describes features that come in Phase 2 (accounts and login details, complaints, petitions, uploads), and the Privacy Policy does not yet mention the Nigeria Data Protection Act 2023, a retention period, or the other NDPA rights (access, deletion, objection, complaint to the NDPC), which NFR-SEC-19 and the SRS's privacy requirements expect to be confirmed with them.
+
+**SRS change note (SRS 2.5):** FR-WEB-06 and SRS Section 4's footer list Privacy Policy, Terms of Service, Cookie Notice, Accessibility Statement and Sitemap. This keeps the first two. OGSERC to confirm in writing with the other sitemap items at sign-off (see D-061).
+
+## D-075 Main menu: User Profile removed, Consumer Complaint last (2026-11-17)
+
+**Decision (owner):** the main menu has six items: About OGSERC, Regulatory Instruments, Mandate, Media Center, Resources, Consumer Complaint. **User Profile** is removed, because it and Consumer Complaint lead to the same consumer complaint portal; Consumer Complaint stays and moves to the end. Its link still goes to "This section is being prepared" until the Consumer Complaint page is built.
+
+**Scope:** online complaint submission, tracking and user accounts are Phase 2 (SRS Section 5). In Phase 1 the Consumer Complaint page gives information only (how to complain, what to include, contacts), per CLAUDE.md. The portal is to be planned with the owner before any Phase 2 work starts.
+
+**Layout:** with six items the menu bar has more room at 1024px; the overflow and wide-fallback-font tests (D-032) still run against it.
+
+**Sitemap change note (SRS 2.5):** SRS Section 4 lists seven main-menu items, with Consumer Complaint fourth and User Profile seventh. OGSERC to confirm in writing with the other sitemap items at sign-off (see D-061).
+
+## D-076 Audit: GHSA-fc5q-39xc-vjpf (picomatch) ignored until a fix exists (2026-11-17)
+
+**Decision:** advisory **GHSA-fc5q-39xc-vjpf** (`picomatch` <=4.0.7, high: a crafted glob pattern with repeated extglobs can make matching very slow, ReDoS) is added to `pnpm.auditConfig.ignoreGhsas` in `package.json`, as GHSA-vfj7-8cjw-p6xm (`braces`) was at scaffold time. Published on 2026-11-17, it turned the CI audit red on every branch, `main` included.
+
+**Why ignoring is safe for now:** no patched version exists (`patched: <0.0.0`), so no update or override can fix it. `picomatch` is reached through ESLint (`eslint-config-next`), `sass`'s file watcher (`chokidar`) and Payload's type generator (`json-schema-to-typescript`). All of these match glob patterns written in our config and code. No visitor input, form field or URL ever becomes a glob pattern, so the website cannot be slowed down this way.
+
+**Remove the ignore** as soon as a fixed `picomatch` is released, and update the packages that bring it in (or add a pnpm override).
+
+## D-077 Visitor statistics: Umami, self-hosted on OGSERC's server (2026-11-18)
+
+**Decision (owner, 2026-11-18):** the site counts visits with **Umami 3.5.0**, run as a fourth container in `docker-compose.prod.yml` on OGSERC's VPS (FR-WEB-07). This brings forward part of build step 11.
+
+**Why Umami, and why on OGSERC's server:**
+- **Privacy:** it sets no cookies and builds no visitor profiles, so no cookie banner is needed (D-074).
+- **Data location:** the data stays on OGSERC's own server rather than with a foreign provider, which keeps the Nigeria Data Protection Act position simple.
+- **Cost:** it is free and open source.
+- **Portability:** it needs only PostgreSQL, which the server already runs.
+- **Alternatives:** Plausible or Umami's hosted service would need no upkeep, but they hold the data abroad and cost money.
+
+**What it records:**
+- pages viewed;
+- the referring site;
+- browser, operating system, device type, and country (from the IP address);
+- words typed into site search, which the owner chose to keep, because they show what people look for.
+
+It does not record names, accounts or form contents, and staff pages are never tracked: the script is only in the public layout. Browsers that send Do Not Track are not counted at all (`data-do-not-track`).
+
+**How it is wired:**
+- **No outside domain:** Caddy serves the tracker at `/pulse/p.js` and the endpoint it reports to at `/pulse/e` on the site's own address. Pages therefore load nothing from another domain, and the strict CSP (step 12) needs only `'self'` for it. The neutral names also mean fewer visits go uncounted because of ad blockers.
+- **Prefix stripped by Caddy (fixed 2026-11-18):** the tracker sends visits to the folder its script came from plus the collect endpoint. With `TRACKER_SCRIPT_NAME=pulse/p.js` and `COLLECT_API_ENDPOINT=/pulse/e`, browsers posted to `/pulse/pulse/e` and got 404, so nothing was counted. A direct curl to `/pulse/e` had worked, which hid the fault. Umami now serves `p.js` and `/e`, and Caddy removes `/pulse` (`uri strip_prefix`).
+- **Size and loading:** the script is about 2 KB and loaded with `defer`, so it never delays the page.
+- **When it is on:** `UMAMI_WEBSITE_ID` switches it on. Static pages are rendered during `next build`, so it is also a Docker build argument, like `IMAGE_PROCESSING`. It is not a secret.
+- **Off everywhere else:** without the setting there is no script tag, so development and previews are never counted. CI uses a made-up ID to test the tag.
+
+**Database:** Umami has its own database and its own non-superuser role (`umami`) in the existing PostgreSQL container, created by `deploy/create-analytics-db.sh`. `CONNECT` is revoked from `PUBLIC` on both databases, so Umami cannot reach the site's data. `deploy/backup-db.sh` dumps it nightly alongside the site's database.
+
+**Dashboard:** at `stats.<domain>`. Every user has their own account with two-factor sign-in turned on (Umami 3.3+, `TWO_FACTOR_ENCRYPTION_KEY`).
+- **No shared password in front:** an extra Caddy password was considered and dropped. It would be one login shared by everyone, which CLAUDE.md does not allow.
+- **Default account:** Umami's default `admin` account must have its password changed at first sign-in (Umami 3.5 enforces this). It is then renamed or replaced by named accounts.
+- **Read-only access:** managers who only need to read can be sent a share link instead of an account.
+
+**Upgrades:** Dependabot watches only the `Dockerfile`, not compose images, so the pinned Umami version is reviewed with the other planned upgrades (RUNBOOK Section 10). Umami's own update notice on the dashboard is left on. Security releases (for example 3.4.1) are applied promptly.
+
+**Privacy Policy:** section 7 first read "[Sample, OGSERC to supply: cookies and visitor statistics]". On 2026-11-18 the owner asked for wording, because the site is already public. It is now "7. Cookies and Visitor Statistics", drafted from what the site actually does and approved by the owner in a deliberately short form:
+- no tracking or advertising cookies;
+- statistics on OGSERC's own server, recording general information (pages, referring site, device and browser, approximate location, site searches);
+- no cookies, no stored IP address, no identification;
+- Do Not Track honoured;
+- not shared or sold;
+- kept for two years;
+- the Google map's cookies, only when a visitor loads it (D-058).
+
+Before publishing, two claims were checked on the server:
+- **No stored IP address:** no Umami table has an IP column. The only columns matching `%ip%` were the `description` fields of `board` and `report`.
+- **Search words recorded:** Umami keeps the page address, which includes `?q=`.
+
+OGSERC's legal advisers should review it with the rest of the policy (D-074).
+
+**Two-year retention:** the owner chose two years. That is long enough to compare one year with the next and short enough to meet the storage-limitation principle. Umami has no retention setting when self-hosted, so `deploy/prune-analytics.sh` deletes visitor data older than two years once a month.
+- **What it deletes:** `website_event`, `event_data`, `session_data`, `revenue`, `error_event`, `heatmap_event` and `session_replay`, then each `session` with no page views left.
+- **What it keeps:** accounts, websites, reports, boards, share links and replays staff saved.
+- **How it is written:** a fixed list of table names, so the SQL never contains outside input. It skips with a warning, rather than failing, if a Umami upgrade renames a table, and `--dry-run` reports and rolls back.
+- **Backups:** dumps live for 14 days, so deleted rows leave the backups two weeks later.
+
+**To check on the server:** the VPS's virtual CPU lacks SSE4.1 and SSE4.2 (D-056). If Umami's container fails for the same reason, statistics stay off and the site is unaffected: the app does not depend on it, and Caddy does not wait for it.
+
+## D-078 Search engines may list the site (2026-11-18)
+
+**Decision (owner, 2026-11-18):** OGSERC is happy for the site to be found. The preview's `X-Robots-Tag: noindex, nofollow` is removed from `deploy/Caddyfile`, and the site gains what search engines and link previews need. This brings part of build step 11 forward.
+
+**Checked before the switch:**
+- **No placeholder text is public:** none of the 14 public pages showed "OGSERC to supply" or "[Sample …]" on 2026-11-18.
+- **Unfinished menu items stay out of results:** they lead to `/being-prepared`, which carries its own `noindex`, as does the design-review page.
+- **Unchanged:** the closure of `/admin` and `/api` at Caddy (until Step 3) and the one-day HSTS. Neither affects search.
+
+**What is added:**
+- **`robots.txt`** (`src/app/robots.ts`): everything public may be crawled, `/admin` and `/api` are excluded, and it names the sitemap.
+- **`sitemap.xml`** (`src/app/sitemap.ts`):
+  - **Sources:** the menu's ready pages, the two legal pages, and every news item, public notice, order and consultation document.
+  - **Dates:** each content item carries its own date as `lastmod`.
+  - **Maintenance:** it is built from the same lists as the pages, so new content appears without editing it.
+  - **Not used:** `changefreq` and `priority`, which Google ignores.
+- **Canonical links:** `alternates.canonical: './'` in the public layout resolves to each page's own path without its query string. Filtered listings, `www.` and other variants therefore all point to one official address.
+- **Link previews** for WhatsApp, Facebook and X: Open Graph and Twitter card tags take each page's existing title and description. The image is `opengraph-image.png`, generated once from `public/brand/ogserc-logo.png`: the logo, trimmed and centred on white, at 1200×630. Every page already had its own title and description, so no new public wording was written.
+
+**Site address at build time:** canonical links, previews, `robots.txt` and `sitemap.xml` are built in advance, so `SITE_URL` is now also a Docker build argument. `src/lib/site-url.ts` reads it and **stops a production build if it is missing**, rather than tell search engines the site lives on `localhost`. The compose files and CI pass it.
+
+**After deploying:** verify the domain in Google Search Console with a DNS `TXT` record, submit the sitemap, and import the site into Bing Webmaster Tools (RUNBOOK Section 8). Bing's index also serves DuckDuckGo and Yahoo.
+
+## D-079 Server log report (GoAccess), and disk and backup alerts (Healthchecks.io) (2026-11-18)
+
+**Decision (owner, 2026-11-18):** three additions to the VPS's monitoring, beside Umami (D-077) and UptimeRobot.
+
+**1. Visit log.** Caddy now writes one JSON line per request on the main site to the `caddy_logs` volume.
+- **Rotation:** `roll_at 00:00` starts a new compressed file each night, and `roll_keep_for 336h` deletes files after 14 days. `roll_size` is only a safety cap.
+- **IP addresses:** the owner chose full addresses for 14 days. They are needed to see and block attacking addresses. Masking was the alternative. Privacy Policy section 2 already lists IP addresses among the technical information collected, and the statement in section 7 that no IP address is stored refers to the visitor statistics tool, which is true.
+- **Not logged:** the `stats` subdomain.
+
+**2. GoAccess report** (`deploy/log-report.sh`, nightly at 02:40).
+- **What it shows:** what Umami cannot see, because Umami counts only browsers that run its script:
+  - PDF and other file downloads;
+  - crawlers, including Googlebot;
+  - 404s and other errors;
+  - probes and attack attempts;
+  - bandwidth.
+- **How it runs:** GoAccess 1.12 runs from its pinned Docker image (`allinurl/goaccess:1.12`), with nothing installed on the server. The logs belong to root inside the Caddy container, so they are read there and piped to GoAccess, which runs as the deploy user.
+- **Where the report lives:** `/var/backups/ogserc/reports/report.html` (folder 700, file 600), replaced every night.
+- **How it is viewed:** the owner chose to download it with `scp` (RUNBOOK Section 8) rather than publish it, because the report contains IP addresses. A page on `stats.<domain>` would have needed a shared password, which CLAUDE.md does not allow. Downloaded copies should be deleted after viewing, to keep within the 14 days.
+
+**3. Disk and backup alerts through Healthchecks.io's free plan.** The server cannot send email (that arrives with the contact form, step 5), and UptimeRobot's heartbeat monitors are not on its free plan.
+- **Disk:** `deploy/check-disk.sh` runs every 30 minutes. It pings with the usage of `/`, Docker's data and the backup folder, and sends `/fail` at **80%** or more.
+- **Backup:** `deploy/backup-db.sh` pings when the nightly backup succeeds and sends `/fail` when it fails. Without `HC_BACKUP_PING_URL` it runs as before.
+- **Missed pings:** Healthchecks.io also alerts when pings stop arriving, so a dead server or a broken cron job is noticed too, which a status page watched by UptimeRobot could not do.
+- **The ping URLs:** they are kept in the server's `.env` and treated as secrets.
+- **What leaves the server:** only the ping and the disk percentages. No visitor data is sent.
+
+## D-080 Off-server backups: restic to Backblaze B2, encrypted (2026-11-18)
+
+**Decision (owner, 2026-11-18):** each nightly backup is also copied off the VPS, encrypted, to **Backblaze B2** (EU Central). Copies are kept as **7 daily, 4 weekly and 3 monthly**. This closes RUNBOOK Section 6's open item: until now the dumps lived only on the same server, so losing the server meant losing them.
+
+**How:**
+- **The tool:** `deploy/offsite-backup.sh` runs **restic 0.19.1** from its pinned Docker image (`restic/restic:0.19.1`), so nothing is installed on the server. restic encrypts on the server before upload (NFR-SEC-16), uploads only changes, and applies the retention policy with `forget --prune`.
+- **What is copied:**
+  - the latest site and statistics dumps;
+  - the server's `.env`, because a restored database is unusable without `PAYLOAD_SECRET` and the other secrets.
+
+  They are staged under fixed names, so every copy covers the same paths and retention can group them. The host name is fixed (`ogserc-vps`) for the same reason.
+- **When:** `deploy/backup-db.sh` runs it after the nightly dumps once `OFFSITE_REPOSITORY` is in `.env`. A failure fails the Healthchecks.io backup check (D-079), so the owner is alerted.
+- **Secrets:**
+  - they live in the server's `.env` as `OFFSITE_*`;
+  - they are passed to Docker by name (`-e NAME`), never as values on a command line;
+  - the B2 key is restricted to the one bucket.
+- **Provider-neutral:** it uses B2's S3-compatible endpoint, so any S3-compatible store works by changing `OFFSITE_REPOSITORY` and the key (CLAUDE.md, Portability). The region is taken from the endpoint name where present.
+- **Restore test:** `deploy/test-restore.sh` restores the latest copy into a throwaway PostgreSQL container with no published port. It checks that the site's tables and migrations are there, and counts statistics page views. It then removes everything. RUNBOOK Section 6 also gives the steps after losing the server.
+
+**Why B2:** the copies are a few megabytes, well inside B2's free 10 GB, and B2 needs no payment card to start. It can also hold the CMS's uploaded files in Step 4, so one provider serves both. Cloudflare R2 was the alternative. Storage in Nigeria was considered and can replace B2 later without code changes.
+
+**Retention and the Privacy Policy:** with at most 3 months off the server and 14 days on it, data deleted under the two-year statistics promise (D-077) leaves every backup within 3 months.
+
+**Cross-border storage:** the copies are held in the EU but are encrypted before they leave the server with a key that only OGSERC holds, so the provider cannot read them. OGSERC's legal advisers may want to note this for the NDPA (D-074).
+
+**Risks the owner should know:**
+- **Losing the password:** if `OFFSITE_PASSWORD` is lost, the copies cannot be opened by anyone. It is kept in the password manager, separately from the server.
+- **Attackers on the server:** someone who takes over the server could use the bucket key to delete the copies. B2 Object Lock (write-once retention) would prevent that, and can be added later if wanted.

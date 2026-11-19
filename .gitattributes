@@ -7,6 +7,7 @@
 *.webp binary
 *.ico binary
 *.pdf binary
+*.docx binary
 *.woff binary
 *.woff2 binary
 # Third-party data kept exactly as published, so its SHA-256 matches the source (data/common-passwords/SOURCE.md).

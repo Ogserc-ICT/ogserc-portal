@@ -1,10 +1,12 @@
 /**
- * Site structure from SRS Section 4: utility bar, seven-item main menu, footer links.
+ * Site structure from SRS Section 4: utility bar, main menu (six items, D-075), footer links.
  *
  * Each link records the page's final URL and whether that page exists yet. Links to pages that are
  * not built yet go to the shared "This section is being prepared" page. When a later build step
  * creates a page, set `ready: true` on its entry (docs/DECISIONS.md D-027).
  */
+
+import { privacyPolicy, termsOfService } from '@/lib/legal/legal-pages'
 
 export const PENDING_PATH = '/being-prepared'
 
@@ -23,30 +25,43 @@ export const hrefFor = (link: SiteLink): string => (link.ready ? link.path : PEN
 const resolve = (link: SiteLink): ResolvedLink => ({ label: link.label, href: hrefFor(link) })
 
 export const routes = {
-  contact: pending('Contact Us', '/contact'),
+  about: { label: 'About Us', path: '/about', ready: true },
+  history: { label: 'Our History', path: '/about/history', ready: true },
+  // SRS Section 4's "Our Mission", renamed with the owner's agreement (D-061).
+  visionMissionValues: { label: 'Vision, Mission & Values', path: '/about/mission', ready: true },
+  structure: { label: "OGSERC's Structure", path: '/about/structure', ready: true },
+  contact: { label: 'Contact Us', path: '/contact', ready: true },
   licences: pending('Licences', '/licences'),
   faqs: pending('FAQs', '/faqs'),
   search: pending('Search', '/search'),
   consumerComplaint: pending('Consumer Complaint', '/consumer-complaint'),
-  userProfile: pending('User Profile', '/user-profile'),
   regulatoryInstruments: pending('Regulatory Instruments', '/regulatory-instruments'),
   energyCaps: pending('Energy Caps', '/regulatory-instruments/energy-caps'),
-  news: pending('News', '/media-center/news'),
+  forms: { label: 'Forms', path: '/regulatory-instruments/forms', ready: true },
+  consultation: {
+    label: 'Consultation',
+    path: '/regulatory-instruments/consultation',
+    ready: true,
+  },
+  ordersAndDirectives: {
+    label: 'Orders & Directives',
+    path: '/regulatory-instruments/orders-and-directives',
+    ready: true,
+  },
+  downloads: { label: 'Downloads', path: '/resources/downloads', ready: true },
+  // Lists the homepage's Latest updates until the News collection exists (D-068).
+  news: { label: 'News', path: '/media-center/news', ready: true },
   tenders: pending('Tenders', '/media-center/tenders'),
   events: pending('Events', '/media-center/events'),
-  notices: pending('Public Notices', '/media-center/notices'),
+  // Not in the SRS Section 4 Media Center menu; added with the owner's agreement (D-065).
+  notices: { label: 'Public Notices', path: '/media-center/notices', ready: true },
 } satisfies Record<string, SiteLink>
 
 const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
   {
     id: 'about',
     label: 'About OGSERC',
-    links: [
-      pending('About Us', '/about'),
-      pending('Our History', '/about/history'),
-      pending('Our Mission', '/about/mission'),
-      pending("OGSERC's Structure", '/about/structure'),
-    ],
+    links: [routes.about, routes.history, routes.visionMissionValues, routes.structure],
   },
   {
     id: 'regulatory-instruments',
@@ -55,10 +70,10 @@ const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
       pending('Rules & Regulations', '/regulatory-instruments/rules-and-regulations'),
       routes.energyCaps,
       pending('Guidelines', '/regulatory-instruments/guidelines'),
-      pending('Forms', '/regulatory-instruments/forms'),
-      pending('Consultation', '/regulatory-instruments/consultation'),
+      routes.forms,
+      routes.consultation,
       pending('Licences', '/regulatory-instruments/licences'),
-      pending('Orders & Directives', '/regulatory-instruments/orders-and-directives'),
+      routes.ordersAndDirectives,
       pending('Codes', '/regulatory-instruments/codes'),
       pending('Manuals', '/regulatory-instruments/manuals'),
       pending('Market Documents', '/regulatory-instruments/market-documents'),
@@ -80,6 +95,7 @@ const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
     label: 'Media Center',
     links: [
       routes.news,
+      routes.notices,
       routes.tenders,
       routes.events,
       pending('Photos & Videos', '/media-center/photos-and-videos'),
@@ -89,7 +105,7 @@ const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
     id: 'resources',
     label: 'Resources',
     links: [
-      pending('Downloads', '/resources/downloads'),
+      routes.downloads,
       pending('Reports & Publications', '/resources/reports-and-publications'),
       pending('Statistics', '/resources/statistics'),
       pending('Tariff & Metering Information', '/resources/tariff-and-metering'),
@@ -98,6 +114,18 @@ const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
     ],
   },
 ]
+
+const groupPages = (id: string): (ResolvedLink & { path: string })[] => {
+  const found = menuGroups.find((g) => g.id === id)
+  if (!found) throw new Error(`Unknown menu group: ${id}`)
+  return found.links.map((link) => ({ ...resolve(link), path: link.path }))
+}
+
+/** The Regulatory Instruments categories, in menu order, for the document pages' sidebar. */
+export const instrumentCategories = () => groupPages('regulatory-instruments')
+
+/** The About OGSERC pages, in menu order, for the section's own navigation. */
+export const aboutPages = () => groupPages('about')
 
 const group = (id: string): MenuEntry => {
   const found = menuGroups.find((g) => g.id === id)
@@ -112,15 +140,17 @@ const single = (id: string, link: SiteLink): MenuEntry => ({
   href: hrefFor(link),
 })
 
-/** The seven main-menu items, in SRS Section 4 order. */
+/**
+ * The six main-menu items. SRS Section 4's order, except that User Profile is dropped and Consumer
+ * Complaint, which leads to the same portal, moves to the end (owner, D-075).
+ */
 export const mainMenu: MenuEntry[] = [
   group('about'),
   group('regulatory-instruments'),
   group('mandate'),
-  single('consumer-complaint', routes.consumerComplaint),
   group('media-center'),
   group('resources'),
-  single('user-profile', routes.userProfile),
+  single('consumer-complaint', routes.consumerComplaint),
 ]
 
 export const utilityLinks: ResolvedLink[] = [
@@ -131,7 +161,7 @@ export const utilityLinks: ResolvedLink[] = [
 ].map(resolve)
 
 export const footerQuickLinks: ResolvedLink[] = [
-  pending('About Us', '/about'),
+  routes.about,
   pending('Regulatory Framework', '/regulatory-instruments'),
   routes.energyCaps,
   pending('Licences & Permits', '/licences'),
@@ -139,11 +169,11 @@ export const footerQuickLinks: ResolvedLink[] = [
   pending('News & Updates', '/media-center/news'),
 ].map(resolve)
 
-/** FR-WEB-06 legal pages. */
-export const legalLinks: ResolvedLink[] = [
-  pending('Privacy Policy', '/privacy'),
-  pending('Terms of Service', '/terms'),
-  pending('Cookie Notice', '/cookies'),
-  pending('Accessibility Statement', '/accessibility'),
-  pending('Sitemap', '/sitemap'),
-].map(resolve)
+/**
+ * FR-WEB-06 legal pages. The owner dropped the Cookie Notice, Accessibility Statement and Sitemap
+ * links; cookies are a section of the Privacy Policy (D-074).
+ */
+export const legalLinks: ResolvedLink[] = [privacyPolicy, termsOfService].map((page) => ({
+  label: page.title,
+  href: page.path,
+}))

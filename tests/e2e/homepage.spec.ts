@@ -6,14 +6,11 @@ import { waitForSettledPage } from './support/settle'
 const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
 // FR-WEB-02 order, after the hero (which holds the page's only h1, and one h2 per slide).
-const SECTION_HEADINGS = [
-  'Quick services',
-  'Latest updates',
-  'Public notices',
-  'Tenders',
-  'Events',
-  'Contact us',
-]
+const SECTION_HEADINGS = ['Quick services', 'Latest updates', 'Public notices', 'Contact us']
+
+const NOTICE_PATH = '/media-center/notices/commencement-of-operations-and-mandatory-registration'
+const STORY_PATH = '/media-center/news/ogserc-visits-nerc'
+const CONSULTATION_PATH = '/regulatory-instruments/consultation/ogserc-cp-2026-001'
 
 test.describe('Homepage', () => {
   test.beforeEach(async ({ page }) => {
@@ -40,9 +37,20 @@ test.describe('Homepage', () => {
     const current = hero.locator('[aria-roledescription="slide"]:not([inert])')
     await expect(current).toHaveCount(1)
     await expect(current.getByRole('heading', { level: 2 })).toHaveText(
-      '[Sample tagline, OGSERC to supply]',
+      'Electricity for all in Ogun State',
     )
     await expect(current.getByRole('link')).toHaveCount(1)
+    await expect(current.getByRole('link')).toHaveAccessibleName('Learn more about OGSERC')
+  })
+
+  test('has the OGSERC favicon and home-screen icon', async ({ page, request }) => {
+    for (const rel of ['icon', 'apple-touch-icon']) {
+      const href = await page.locator(`link[rel="${rel}"]`).first().getAttribute('href')
+      expect(href, rel).toBeTruthy()
+      const response = await request.get(href ?? '')
+      expect(response.status(), rel).toBe(200)
+      expect(response.headers()['content-type'], rel).toBe('image/png')
+    }
   })
 
   test('quick services list the five SRS services', async ({ page }) => {
@@ -58,25 +66,87 @@ test.describe('Homepage', () => {
     ])
   })
 
-  test('shows only clearly marked placeholder content', async ({ page }) => {
-    await expect(page.getByText('[Sample tagline, OGSERC to supply]')).toBeVisible()
-    await expect(page.getByText(/OGSERC to supply/).first()).toBeVisible()
+  // Every homepage section now holds real OGSERC content (D-062); sample text must not return.
+  test('shows no placeholder content', async ({ page }) => {
+    await expect(page.getByText(/OGSERC to supply|\[Sample/)).toHaveCount(0)
   })
 
-  test('public notices are listed newest first', async ({ page }) => {
-    const dates = await page
-      .locator('section[aria-labelledby="public-notices-heading"] time')
+  test('the first slide shows the introduction', async ({ page }) => {
+    await expect(
+      page.getByText("Transparent oversight and robust regulation of Ogun State's power sector."),
+    ).toBeVisible()
+  })
+
+  test('public notices are listed newest first: the consultation, Order 002, the registration notice, the forms, then Order 001', async ({
+    page,
+  }) => {
+    const section = page.locator('section[aria-labelledby="public-notices-heading"]')
+    const dates = await section
+      .locator('time')
       .evaluateAll((els) => els.map((el) => el.getAttribute('datetime') ?? ''))
-    expect(dates.length).toBeGreaterThan(1)
+    expect(dates).toHaveLength(5)
     expect(dates).toEqual([...dates].sort().reverse())
+    const links = section.getByRole('listitem').getByRole('link')
+    await expect(links.nth(0)).toHaveAttribute('href', CONSULTATION_PATH)
+    await expect(section.getByRole('listitem').nth(0)).toContainText('Consultation notice')
+    await expect(links.nth(1)).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-002',
+    )
+    await expect(links.nth(2)).toHaveAttribute('href', NOTICE_PATH)
+    await expect(links.nth(3)).toHaveAttribute('href', '/regulatory-instruments/forms')
+    await expect(section.getByRole('link', { name: 'View all notices' })).toHaveAttribute(
+      'href',
+      '/media-center/notices',
+    )
+    await expect(section.getByRole('link', { name: /OGSERC\/ORD\/2026\/001/ })).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
+    )
   })
 
-  test('latest updates scroll with the keyboard (no JavaScript carousel)', async ({ page }) => {
+  test('latest updates show the consultation, the NERC visit, Order 002, the registration notice, the forms, then Order 001', async ({
+    page,
+  }) => {
+    const section = page.locator('section[aria-labelledby="latest-updates-heading"]')
+    const cards = section.getByRole('article')
+    await expect(cards).toHaveCount(6)
+    await expect(cards.nth(0).getByRole('link')).toHaveAttribute('href', CONSULTATION_PATH)
+    // The consultation card has its own graphic, not the placeholder.
+    await expect(cards.nth(0).locator('img')).toHaveAttribute('alt', '')
+    await expect(cards.nth(1).getByRole('link')).toHaveAttribute('href', STORY_PATH)
+    await expect(cards.nth(2).getByRole('link')).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-002',
+    )
+    await expect(cards.nth(3).getByRole('link')).toHaveAttribute('href', NOTICE_PATH)
+    await expect(cards.nth(4).getByRole('link')).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/forms',
+    )
+    await expect(cards.nth(5).getByRole('link')).toHaveAttribute(
+      'href',
+      '/regulatory-instruments/orders-and-directives/ogserc-ord-2026-001',
+    )
+  })
+
+  test('latest updates scroll with the keyboard on phones (no JavaScript carousel)', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile', 'Two cards fit side by side on wider screens')
     const region = page.getByRole('region', { name: /Latest updates, scroll sideways/ })
     await expect(region).toHaveAttribute('tabindex', '0')
     await region.focus()
     await page.keyboard.press('ArrowRight')
     await expect.poll(() => region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0)
+  })
+
+  test('the hero fills most of a phone screen', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile', 'The taller hero applies to phones only')
+    const hero = page.getByRole('region', { name: 'Highlights' })
+    const height = (await hero.boundingBox())?.height ?? 0
+    const viewport = page.viewportSize()?.height ?? 0
+    expect(height).toBeGreaterThanOrEqual(viewport * 0.69)
   })
 
   test('the page does not scroll sideways', async ({ page }) => {

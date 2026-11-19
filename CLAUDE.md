@@ -58,7 +58,7 @@ Before saying a task is done, run lint, typecheck, and the relevant tests, and f
 ## Conventions
 
 - Content is edited in the CMS, never hard-coded. Staff must be able to change any page text, document, tariff, or licencee without a developer.
-- Follow the sitemap and navigation in SRS Section 4 exactly (seven-item main menu plus utility bar, modelled on LASERC's structure). Use OGSERC's own branding and wording; never copy the benchmark site's logo, images, text, or code. Keep URLs clean and lowercase (for example `/regulatory-instruments/rules-and-regulations`).
+- Follow the sitemap and navigation in SRS Section 4 exactly (main menu plus utility bar, modelled on LASERC's structure; six items since the owner dropped User Profile, docs/DECISIONS.md D-075). Use OGSERC's own branding and wording; never copy the benchmark site's logo, images, text, or code. Keep URLs clean and lowercase (for example `/regulatory-instruments/rules-and-regulations`).
 - Mobile-first. Test layouts at 360px wide first. Keep pages light for low-bandwidth connections: optimised images, lazy loading, minimal client-side JavaScript.
 - Accessibility: WCAG 2.1 AA. Semantic HTML, visible focus states, sufficient contrast, alt text, keyboard navigation.
 - Brand: OGSERC's identity is green (fresh mid-green to deep forest green) with a gold/yellow accent and a dark olive-brown neutral, per the logo (Ogun State map in the O, gold lightning bolt in the E, Ogun State crest beside it). Palette sampled from the logo (`public/brand/ogserc-logo.png`, transparent): mid green `#1D9D62`, deep green `#1D7248`, darkest green `#0D4126`, light green `#A5D07D`, gold `#FED009`; sample the dark olive-brown neutral from the full lockup. Define these once as Tailwind theme colors and never hard-code hex values elsewhere. Use gold for buttons and accents, never for body text on white (contrast); use the dark neutral on gold.
@@ -125,13 +125,13 @@ The site must be movable to any host that runs Node.js or Docker (a VPS, Railway
 6. If a requirement is ambiguous or conflicts with the SRS, ask instead of guessing.
 7. Work on a branch and open a pull request for each slice; do not commit directly to `main`. Every CI check (lint, typecheck, dependency audit, build, Playwright with axe accessibility, secret scan, Docker build) must be green before merging. GitHub does not enforce this on the current plan, so it is a rule to follow, not a setting (see docs/RUNBOOK.md Section 2).
 8. Record important technical choices and the reasons in `docs/DECISIONS.md`.
-9. Include privacy-friendly analytics, a legal-pages footer (Privacy, Terms, Cookies, Accessibility, Sitemap), and PDF text extraction for search, as specified in the SRS.
+9. Include privacy-friendly analytics, a legal-pages footer (Privacy Policy and Terms of Service; cookies are a section of the Privacy Policy, docs/DECISIONS.md D-074), and PDF text extraction for search, as specified in the SRS.
 10. Update `docs/STATUS.md` at the end of each session: what was committed (with hashes), the latest CI results, open owner and OGSERC items, and the exact next step. Start each session by reading it.
 
 ## Build order (Phase 1)
 
 1. Scaffold the project, repository settings, CI checks, `.env.example`, Dockerfile, and `docs/DECISIONS.md`
-2. Design system and layout shell (header with utility bar and seven-item menu, footer) using the brand palette; build the homepage and **stop for OGSERC review**
+2. Design system and layout shell (header with utility bar and main menu, footer) using the brand palette; build the homepage and **stop for OGSERC review**
 3. Users, roles, two-factor authentication, and access control in Payload
 4. Collections: Documents (with categories), News, Events, Announcements, Tenders, Reports, FAQs, Pages, Media; plus the seed script with placeholder content
 5. Static information pages (About, Consumer Complaint landing, Contact, legal pages)

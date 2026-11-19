@@ -24,6 +24,14 @@ ENV DATABASE_URL=postgres://build:build@localhost:5432/build \
 # "off" only for a host whose CPU cannot run sharp (D-056). Next.js reads it at build time.
 ARG IMAGE_PROCESSING=on
 ENV IMAGE_PROCESSING=${IMAGE_PROCESSING}
+# Umami website ID for visitor statistics (D-077). Not a secret: it appears in every page. Static
+# pages are rendered here, so it is needed at build time; empty leaves statistics off.
+ARG UMAMI_WEBSITE_ID=
+ENV UMAMI_WEBSITE_ID=${UMAMI_WEBSITE_ID}
+# Public address for canonical links, link previews, robots.txt and sitemap.xml, which are built
+# here (D-078). Required: the build stops without it rather than point search engines at localhost.
+ARG SITE_URL
+ENV SITE_URL=${SITE_URL}
 RUN pnpm build
 
 # 3. Small runtime image, running as a non-root user.

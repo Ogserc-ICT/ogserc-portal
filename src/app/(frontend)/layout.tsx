@@ -2,11 +2,13 @@ import type { Metadata } from 'next'
 import { Public_Sans } from 'next/font/google'
 import type { ReactNode } from 'react'
 
+import { Analytics } from '@/components/layout/Analytics'
 import { BackToTop } from '@/components/layout/BackToTop'
 import { SiteFooter } from '@/components/layout/SiteFooter'
 import { SiteHeader } from '@/components/layout/SiteHeader'
 import { SkipLink } from '@/components/layout/SkipLink'
 import { SPLASH_SCRIPT, Splash } from '@/components/layout/Splash'
+import { siteUrl } from '@/lib/site-url'
 
 import './globals.css'
 
@@ -18,12 +20,22 @@ const publicSans = Public_Sans({
   variable: '--font-public-sans',
 })
 
+const SITE_NAME = 'Ogun State Electricity Regulatory Commission (OGSERC)'
+
 export const metadata: Metadata = {
+  metadataBase: siteUrl(),
   title: {
-    default: 'Ogun State Electricity Regulatory Commission (OGSERC)',
+    default: SITE_NAME,
     template: '%s | OGSERC',
   },
   description: 'Official website of the Ogun State Electricity Regulatory Commission.',
+  // './' resolves to each page's own path without its query string, so every page names one
+  // official address and filtered or www. variants are not counted as duplicates (D-078).
+  alternates: { canonical: './' },
+  // Link previews on WhatsApp, Facebook and X. Each page's title and description fill in the rest;
+  // the image is opengraph-image.png in this folder.
+  openGraph: { type: 'website', siteName: SITE_NAME, locale: 'en_NG', url: './' },
+  twitter: { card: 'summary_large_image' },
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -33,6 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         {/* A fixed string with no user input; see Splash.tsx and D-038 (CSP hash in step 12). */}
         <script dangerouslySetInnerHTML={{ __html: SPLASH_SCRIPT }} />
+        <Analytics />
       </head>
       {/* id="top" is the target of the footer's "Back to top" link (FR-WEB-13). */}
       <body id="top" className="flex min-h-screen flex-col">

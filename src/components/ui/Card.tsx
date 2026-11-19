@@ -1,3 +1,4 @@
+import Image, { type StaticImageData } from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
@@ -7,7 +8,7 @@ type CardProps = {
   title: string
   href: string
   /** Heading level for the title, so cards fit the page outline. */
-  headingLevel?: 'h3' | 'h4'
+  headingLevel?: 'h2' | 'h3' | 'h4'
   meta?: ReactNode
   media?: ReactNode
   children?: ReactNode
@@ -46,6 +47,26 @@ export function Card({
       </div>
     </article>
   )
+}
+
+/**
+ * A card's photograph, cropped to the placeholder's 16:9 so cards in a row line up. Decorative
+ * (empty alt): the card's title already names the story, and the photo sits inside its link area.
+ */
+export function CardImage({ image }: { image: StaticImageData }) {
+  return (
+    <Image
+      src={image}
+      alt=""
+      sizes="(min-width: 64rem) 22rem, (min-width: 40rem) 45vw, 90vw"
+      className="aspect-video w-full object-cover"
+    />
+  )
+}
+
+/** The item's photograph if it has one, otherwise the branded placeholder. */
+export function CardMedia({ image }: { image?: StaticImageData }) {
+  return image ? <CardImage image={image} /> : <ImagePlaceholder />
 }
 
 /** Branded stand-in for a photo until OGSERC supplies real images. */
