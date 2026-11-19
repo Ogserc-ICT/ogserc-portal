@@ -24,6 +24,15 @@ test.describe('server startup checks', () => {
     expect(errorsFor({ ...valid, NODE_ENV: 'production' })).toEqual([])
   })
 
+  test('turning the breach check off in production warns but does not stop the server', () => {
+    const warns = (env: Record<string, string | undefined>) => checkServerEnv({ ...valid, ...env }).warnings
+    const production = checkServerEnv({ ...valid, NODE_ENV: 'production', PASSWORD_BREACH_CHECK: 'off' })
+    expect(production.errors).toEqual([])
+    expect(production.warnings).toEqual([expect.stringContaining('PASSWORD_BREACH_CHECK=off')])
+    expect(warns({ NODE_ENV: 'development', PASSWORD_BREACH_CHECK: 'off' })).toEqual([])
+    expect(warns({ NODE_ENV: 'production' })).toEqual([])
+  })
+
   test('DATABASE_URL and PAYLOAD_SECRET are required', () => {
     const errors = errorsFor({ NODE_ENV: 'development' })
     expect(errors).toContain('DATABASE_URL is required.')

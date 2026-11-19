@@ -14,6 +14,9 @@ import { PASSWORD_MESSAGES } from '../../src/lib/auth/password-policy'
 // The policy hook on the staff collection, with fake requests (D-053). The database tests check the
 // same paths through Payload itself (tests/e2e-db/password-policy.spec.ts).
 
+// The hooks use the real breach check; keep them offline. The breach tests below pass a fake.
+process.env.PASSWORD_BREACH_CHECK = 'off'
+
 type HookArgs = Parameters<typeof passwordPolicyOnSave>[0]
 
 const strong = () => randomBytes(12).toString('hex')

@@ -24,6 +24,7 @@ export async function runTestDbScript(
     DATABASE_URL: process.env.TEST_DATABASE_URL ?? '',
     PROTECTED_DATABASE_URL: process.env.DATABASE_URL ?? '',
     E2E_SCRIPT_CONFIRM_FILE: confirmFile,
+    PASSWORD_BREACH_CHECK: 'off',
   }
   // Arguments are test-generated emails; quote them anyway so the shell never splits or expands them.
   const command = ['pnpm', 'payload', 'run', script, ...args.map((arg) => JSON.stringify(arg))].join(' ')

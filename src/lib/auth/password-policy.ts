@@ -21,6 +21,7 @@ export const PASSWORD_MESSAGES = {
   organisation: 'A password must not contain "ogserc".',
   email: 'A password must not contain the email address, or part of it, before the @.',
   common: 'This password is on a list of common passwords. Choose another.',
+  breached: 'This password has appeared in a data breach elsewhere. Choose another.',
 } as const
 
 /**
