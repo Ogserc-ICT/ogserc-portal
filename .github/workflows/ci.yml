@@ -44,7 +44,7 @@ jobs:
       IMAGE_PROCESSING: 'off'
       NEXT_OUTPUT: standalone
       DATABASE_URL: postgres://ci:ci@localhost:5432/ci
-      PAYLOAD_SECRET: ci-placeholder-not-a-secret
+      PAYLOAD_SECRET: ci-placeholder-not-a-secret-at-least-32-chars
       SITE_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v7
@@ -55,7 +55,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Build with sharp blocked
+        # pipefail: without it, tee hides a failed build and the next step fails confusingly.
         run: |
+          set -o pipefail
           NODE_OPTIONS="--import ./scripts/block-sharp-binaries.mjs --max-old-space-size=8000" \
             pnpm exec next build 2>&1 | tee build.log
           if grep -q 'sharp' build.log; then echo "The build tried to load sharp"; exit 1; fi
