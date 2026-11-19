@@ -1,11 +1,12 @@
 import { randomBytes } from 'node:crypto'
 
-import { type APIRequestContext, type APIResponse, expect, test } from '@playwright/test'
+import { type APIRequestContext, type APIResponse, expect, request, test } from '@playwright/test'
 
 import { readCommonPasswords } from '../../src/lib/auth/common-passwords'
 import { BULK_PASSWORD_MESSAGE } from '../../src/lib/auth/enforce-password-policy'
 import { PASSWORD_MESSAGES } from '../../src/lib/auth/password-policy'
 import { attemptLogin, createStaff, loadAdminAccount, newAccount, signIn, type TestAccount } from './support/auth'
+import { runTestDbScript } from './support/db-script'
 
 // The staff password policy through Payload's own REST pipeline, on the running server (D-053).
 // Every refusal must be a 400 on the `password` path with the policy's message, never a 500, and
@@ -157,4 +158,76 @@ test('a bulk update that sets a password is refused whole, and changes no accoun
   }
   // Control: the same bulk update without a password still works.
   expect((await admin.patch(`/api/users?${where}`, { data: { name: '[Test] renamed' } })).status()).toBe(200)
+})
+
+// --- Reset links (D-053) ---------------------------------------------------------------------
+// The reset form's endpoint, with a token issued through the Local API (no email is sent).
+
+const PROBE = 'tests/support/password-probe.ts'
+
+async function issueResetToken(email: string): Promise<string> {
+  const { token } = (await runTestDbScript(PROBE, ['issue-token', email])) as { token?: unknown }
+  expect(typeof token, 'the probe issued no reset token').toBe('string')
+  return token as string
+}
+
+/** One reset-password request from a visitor who is not signed in, as the reset form sends it. */
+async function resetPassword(token: string, password: string): Promise<APIResponse & { bodyText: string }> {
+  const anonymous = await request.newContext({ baseURL })
+  opened.push(anonymous)
+  const response = await anonymous.post('/api/users/reset-password', { data: { token, password } })
+  return Object.assign(response, { bodyText: await response.text() })
+}
+
+test('a reset link cannot set a password that breaks the policy, and still works afterwards', async () => {
+  const account = await createStaff(admin, 'pw-reset', ['editor'])
+  const token = await issueResetToken(account.email)
+  for (const weak of weakPasswords(account.email)) {
+    await expectPasswordRefused(await resetPassword(token, weak.password), weak.message, `reset: ${weak.name}`)
+  }
+  expect((await attemptLogin(baseURL, account.email, account.password)).status, 'old password still works').toBe(200)
+
+  // Each refusal rolled back, so the same link still sets a compliant password, once.
+  const strong = random(24)
+  const accepted = await resetPassword(token, strong)
+  expect(accepted.status(), accepted.bodyText.slice(0, 300)).toBe(200)
+  expect((await attemptLogin(baseURL, account.email, strong)).status, 'new password works').toBe(200)
+  expect((await attemptLogin(baseURL, account.email, account.password)).status, 'old password refused').toBe(401)
+  expect((await resetPassword(token, random(24))).status(), 'a used link is refused').toBe(403)
+})
+
+test('a reset with an invalid link gets the same refusal whatever the password', async () => {
+  // The policy is checked only for a valid link, so a guessed token learns nothing from the reply.
+  const token = random(40)
+  const weak = await resetPassword(token, `ogserc${random(6)}`)
+  const strong = await resetPassword(token, random(24))
+  expect(weak.status(), weak.bodyText.slice(0, 300)).toBe(403)
+  expect(strong.status()).toBe(403)
+  expect(weak.bodyText).toBe(strong.bodyText)
+})
+
+test('trusted server code cannot get around the policy either', async () => {
+  const first = await createStaff(admin, 'pw-probe-a', ['editor'])
+  const second = await createStaff(admin, 'pw-probe-b', ['editor'])
+  type Outcome = { status: number | string; message?: string }
+  const result = (await runTestDbScript(PROBE, ['bypass', first.email, second.email])) as {
+    create: Outcome
+    created: number
+    update: Outcome
+    bulk: Outcome
+    reset: Outcome
+    hashesUnchanged: boolean
+    tokenStillIssued: boolean
+  }
+  const refused = { status: 400, message: PASSWORD_MESSAGES.organisation }
+  expect(result.create, 'create').toEqual(refused)
+  expect(result.created, 'no account created').toBe(0)
+  expect(result.update, 'update by id').toEqual(refused)
+  expect(result.bulk, 'bulk update').toEqual({ status: 400, message: BULK_PASSWORD_MESSAGE })
+  expect(result.reset, 'resetPassword').toEqual(refused)
+  expect(result.hashesUnchanged, 'no password changed').toBe(true)
+  expect(result.tokenStillIssued, 'the refused reset kept its token').toBe(true)
+  for (const account of [first, second]) {
+    expect((await attemptLogin(baseURL, account.email, account.password)).status, account.email).toBe(200)
+  }
 })
