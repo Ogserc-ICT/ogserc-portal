@@ -19,6 +19,7 @@ Every setting comes from environment variables. The full list, with explanations
 | `S3_*` | From step 4 | S3-compatible file storage for uploads. |
 | `SMTP_*`, `EMAIL_FROM`, `CONTACT_FORM_TO` | From step 5 | Email for the contact form. |
 | `TURNSTILE_*` | From step 5 | Bot protection on forms. |
+| `PASSWORD_BREACH_CHECK` | No | `off` stops checking new staff passwords against Have I Been Pwned (D-053). Leave it unset on servers; the server warns at startup if it is `off` in production. The server must be able to reach `api.pwnedpasswords.com` over HTTPS; if it cannot, passwords are accepted on the other rules and a warning is logged. |
 | `TEST_DATABASE_URL` | Tests only | Database that `pnpm test:e2e:db` empties and uses (Section 3.1). Never set it on a deployed server. |
 | `UMAMI_WEBSITE_ID` | No | Turns on visitor statistics (D-077). Needed at build time; set only for the live site. |
 | `UMAMI_DB_PASSWORD`, `UMAMI_APP_SECRET`, `UMAMI_2FA_KEY` | VPS only | Umami's database password, session secret and two-factor key (Section 5, step I). |

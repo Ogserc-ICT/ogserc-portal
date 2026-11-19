@@ -92,6 +92,8 @@ export default defineConfig({
       // Deliberately written with a path and a trailing slash: the server must normalise it to the
       // origin (src/lib/env.ts siteOrigin), or the CSRF tests and every cookie sign-in would fail.
       SITE_URL: `${baseURL}/portal/`,
+      // Tests never call Have I Been Pwned; the breach check has its own unit tests (D-053).
+      PASSWORD_BREACH_CHECK: 'off',
       // Local dev server only: build into .next-e2e (next.config.ts). CI uses the production build.
       ...(isCI ? {} : { E2E_TEST_SERVER: 'true' }),
     },
