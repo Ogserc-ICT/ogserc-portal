@@ -1029,9 +1029,30 @@ This decision relies on Payload 3.90.2 behaviour that a release may change:
 
 The D-051 boot fix (its own `BasePayload` instance) still applies and has its own list in D-051.
 
+## D-053 Staff password policy, enforced on every path that sets a password (2026-11-19)
+
+(Numbered in order but written after D-054 to D-080: the code cited it from 2026-10-21.)
+
+**Decision:** A staff password has 12 to 128 characters (code points) and must not contain "ogserc", the email's local part (if 3 or more characters) or any piece of it of 4 or more characters, and must not be in SecLists' 10,000 most common passwords (`data/common-passwords/`, MIT). The rules are in `src/lib/auth/password-policy.ts` and checked by `src/lib/auth/enforce-password-policy.ts` in three hooks on the Users collection:
+- `beforeValidate` on create (including the first user) and on any update that sets a password, checking both the stored and the submitted email;
+- `beforeOperation` refusing a bulk update (by query) that sets a password, whatever the password;
+- `beforeOperation` on `resetPassword`, which finds the account by the same token query Payload uses next and checks the new password before Payload hashes it.
+
+There is no exemption: trusted server code with `overrideAccess` obeys it too. If the common-passwords list cannot be read, passwords are refused (500), never accepted unchecked. Refusals are a 400 on the `password` path with fixed messages that never include the password.
+
+**Why:**
+- **Length over composition rules** (NIST SP 800-63B): a minimum of 12 and a list of known-bad passwords stop the guessable ones without forcing patterns staff then write down. The 128 maximum bounds hashing work; strings over 512 UTF-16 units are refused before they are counted.
+- **A hook on Payload's own reset instead of a replacement endpoint** (the plan's first idea): Payload's `beforeValidate` on reset runs after it has already hashed the password, so a check there is too late, but `beforeOperation` sees the password first. Keeping Payload's endpoint keeps its token handling, expiry and session behaviour. With no valid token the hook does nothing, so Payload's own 403 follows and the reply never depends on the password. A refusal rolls the transaction back, so the same link works for a corrected password.
+- **No bulk password changes:** one password for many accounts is never legitimate, and refusing it keeps every password check to one account at a time.
+- **Tests:** unit tests for each rule; `tests/e2e-db/password-policy.spec.ts` for every REST path (create, own change, administrator change, email change, bulk, reset link, invalid link) and, through `tests/support/password-probe.ts`, the Local API with `overrideAccess`.
+
+**Still to come:** the breach check against Have I Been Pwned's range API (k-anonymity: only the first 5 characters of the SHA-1 hash leave the server), skipped with a warning if the service cannot be reached, in its own commit.
+
+**Watch (re-check after Payload upgrades):** `resetPassword` calling `beforeOperation` with the plain password in `args.data` before hashing, and finding the account by `resetPasswordToken` and `resetPasswordExpiration` (Payload 3.90.2, `auth/operations/resetPassword.js`).
+
 ## D-054 First deploy: OGSERC's VPS with Docker Compose and Caddy, as a closed preview (2026-10-28)
 
-(Written on `main` while Step 3 was unmerged. D-053 is reserved for the Step 3 password policy, which the code already cites; it is written with that work.)
+(Written on `main` while Step 3 was unmerged. D-053, the Step 3 password policy, is written above.)
 
 **Decision:** The owner asked to host the site on OGSERC's own VPS (AlmaLinux 8.10, 2 vCPU, 4 GB RAM, 100 GB SSD) at `ogserc.org.ng` before Phase 1 is complete. `docker-compose.prod.yml` runs the app, PostgreSQL 17 and Caddy 2.11.7 on that server. Until Step 3 is merged, `deploy/Caddyfile` closes `/admin` and `/api` (404), sends `X-Robots-Tag: noindex, nofollow`, and shortens HSTS to one day without `includeSubDomains`. The image is built on the server. `deploy/backup-db.sh` keeps 14 days of nightly `pg_dump` files. Steps are in RUNBOOK Sections 5 and 6.
 

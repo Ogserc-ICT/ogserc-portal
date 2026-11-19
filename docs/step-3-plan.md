@@ -68,7 +68,7 @@ Minimum 12, maximum 128 characters. Rejected if in a bundled list of the 10,000 
 MIT, a text file), or if it contains the email's local part or "ogserc". Then the HIBP range API (k-anonymity, only the first 5 chars of
 the SHA-1 hash leave the server, `Add-Padding` header). If HIBP is unreachable, the check is skipped with a
 warning (fail-open). `PASSWORD_BREACH_CHECK=off` disables it (CI). Enforced in `beforeValidate` (create, update,
-first user) and in the replacement `/reset-password` endpoint.
+first user) and, for reset links, in a `beforeOperation` hook on Payload's own reset (D-053).
 
 ### Rate limiting (`src/lib/auth/rate-limit.ts`)
 A hidden `rate-limits` collection (deny-all access) with an atomic, parameterised `INSERT ... ON CONFLICT ... RETURNING`
@@ -121,6 +121,10 @@ must set up 2FA at next login.
    class; the last-administrator rule runs once per operation in `beforeOperation`, not per document, because bulk documents
    run in parallel; first-register returns no token.
 3. Password policy (offline list + HIBP) and replacement reset-password endpoint.
+   **Done except HIBP** (2026-11-19): 583322c (common-passwords list), bc81927 (create, update, first user), d6700d2 (no bulk
+   password change), 0e2d4ab (reset path), then the reset-link and trusted-code tests and D-053. Difference from the design
+   above: no replacement endpoint; a `beforeOperation` hook checks the password on Payload's own reset, before it hashes it
+   (D-053). HIBP follows in its own commit.
 4. Rate limiting + migration.
 5. Audit log + hooks + migration.
 6. 2FA plugin, guards, admin reset, emergency CLI + migration.
