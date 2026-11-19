@@ -66,6 +66,10 @@ export function checkServerEnv(env: Env): EnvCheck {
     }
   }
 
+  if (env.PASSWORD_BREACH_CHECK === 'off' && production && !isBuildPhase(env)) {
+    warnings.push('PASSWORD_BREACH_CHECK=off: staff passwords are not checked against known data breaches (D-053).')
+  }
+
   if (env.E2E_TEST_COLLECTIONS === 'true' && production) {
     errors.push('E2E_TEST_COLLECTIONS must never be enabled in production.')
   }

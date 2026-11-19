@@ -9,8 +9,8 @@ Updated 2026-11-19. Plan for Step 3: `docs/step-3-plan.md`.
   and restore test passed 2026-11-19).
 - **Step 3 is partly on `main`.** The owner merged draft PR #16 on 2026-11-19 (`5b6cded`): plan commits 1 and 2 and most of
   commit 3. The VPS has **not** been deployed since, so it still runs the code from before that merge.
-- **Branch `feat/step-3-password-reset`, draft PR #51:** finishes commit 3 apart from the breach check: reset-link and
-  trusted-code tests (`tests/e2e-db/password-policy.spec.ts`), D-053, and this file.
+- **Step 3 plan commit 3 (password policy) is complete:** PR #51 (reset-link and trusted-code tests, D-053) merged; the
+  breach check (Have I Been Pwned, fail-open) is on branch `feat/step-3-breach-check`.
 
 ## Before the next deploy (any deploy now includes Step 3 so far)
 - The server's `PAYLOAD_SECRET` must be at least 32 characters, or the app refuses to start. Owner to check its length
@@ -20,8 +20,6 @@ Updated 2026-11-19. Plan for Step 3: `docs/step-3-plan.md`.
 - `/admin` and `/api` stay closed in the Caddyfile until Step 3 is complete (D-054, RUNBOOK Section 11).
 
 ## Remaining Step 3 plan commits
-3. Breach check (Have I Been Pwned range API, k-anonymity, fail-open with a warning, `PASSWORD_BREACH_CHECK=off` in CI), with
-   built-in `fetch` and `crypto` only.
 4. Rate limiting (also limits the 15-minute lockout that anyone can trigger on a known staff email; D-052).
 5. Audit log (also records `pnpm auth:unlock`).
 6. 2FA (payload-totp, guards, admin reset, emergency CLI). Re-test Strict cookies with it (D-052).
@@ -73,4 +71,5 @@ When Step 3 is complete: reopen `/admin` in `deploy/Caddyfile`.
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-Merge PR #51 when its CI is green. Then the breach check (plan commit 3, last part) on a new branch from `main`.
+Merge the breach check PR when its CI is green. Then plan commit 4, rate limiting, on a new branch from `main`
+(propose its plan first). The VPS needs outbound HTTPS to `api.pwnedpasswords.com` once Step 3 is deployed.

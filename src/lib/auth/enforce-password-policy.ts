@@ -6,8 +6,9 @@ import {
   ValidationError,
 } from 'payload'
 
+import { type BreachResult, checkBreached } from './breach-check'
 import { readCommonPasswords } from './common-passwords'
-import { passwordProblem } from './password-policy'
+import { PASSWORD_MESSAGES, passwordProblem } from './password-policy'
 
 // Applies the staff password policy (password-policy.ts) wherever Payload sets a password
 // (D-053). There is no option, context flag or overrideAccess exemption to skip it: trusted
@@ -25,17 +26,28 @@ type Check = {
   req: PayloadRequest
 }
 
-type Dependencies = { readList: () => ReadonlySet<string> }
+type Dependencies = {
+  readList: () => ReadonlySet<string>
+  checkBreach: (password: string) => Promise<BreachResult>
+}
+
+const defaults: Dependencies = { readList: readCommonPasswords, checkBreach: (password) => checkBreached(password) }
+
+export const BREACH_CHECK_SKIPPED =
+  'Breach check unavailable (Have I Been Pwned did not answer); password accepted on the other rules.'
 
 /**
  * Throws a 400 ValidationError on the `password` path if the password breaks the policy. If the
  * common-passwords list cannot be read it refuses (500), never skips: a missing file must not
- * quietly weaken the policy.
+ * quietly weaken the policy. The breach check runs last, only for a password that passed every
+ * local rule, and fails open: if the service cannot answer, the password is accepted with a
+ * warning, so an outage elsewhere never locks staff out of setting a password.
  */
 export async function enforcePasswordPolicy(
   { password, emails, collection, req }: Check,
-  { readList }: Dependencies = { readList: readCommonPasswords },
+  overrides: Partial<Dependencies> = {},
 ): Promise<void> {
+  const { readList, checkBreach } = { ...defaults, ...overrides }
   let common: ReadonlySet<string>
   try {
     common = readList()
@@ -43,8 +55,15 @@ export async function enforcePasswordPolicy(
     req.payload.logger.error('Common-passwords list could not be read; password refused (data/common-passwords).')
     throw new APIError(PASSWORD_CHECK_UNAVAILABLE, 500, undefined, true)
   }
+  const refuse = (message: string): never => {
+    throw new ValidationError({ collection, errors: [{ message, path: 'password' }] }, req.t)
+  }
   const problem = passwordProblem(password, emails, common)
-  if (problem) throw new ValidationError({ collection, errors: [{ message: problem, path: 'password' }] }, req.t)
+  if (problem) refuse(problem)
+
+  const breach = await checkBreach(password as string)
+  if (breach === 'found') refuse(PASSWORD_MESSAGES.breached)
+  if (breach === 'unavailable') req.payload.logger.warn(BREACH_CHECK_SKIPPED)
 }
 
 /**

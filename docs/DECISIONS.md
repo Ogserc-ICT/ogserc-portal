@@ -1046,7 +1046,10 @@ There is no exemption: trusted server code with `overrideAccess` obeys it too. I
 - **No bulk password changes:** one password for many accounts is never legitimate, and refusing it keeps every password check to one account at a time.
 - **Tests:** unit tests for each rule; `tests/e2e-db/password-policy.spec.ts` for every REST path (create, own change, administrator change, email change, bulk, reset link, invalid link) and, through `tests/support/password-probe.ts`, the Local API with `overrideAccess`.
 
-**Still to come:** the breach check against Have I Been Pwned's range API (k-anonymity: only the first 5 characters of the SHA-1 hash leave the server), skipped with a warning if the service cannot be reached, in its own commit.
+**Breach check (added 2026-11-19):** after every local rule passes, `src/lib/auth/breach-check.ts` asks Have I Been Pwned's Pwned Passwords range API whether the password has appeared in a data breach, and refuses it if so. Only the first 5 characters of the password's SHA-1 hash leave the server (k-anonymity); `Add-Padding` hides even the reply's size; no API key or account is needed; built-in `fetch` and `crypto` only, no new library.
+- **Fails open:** if the service cannot answer within 3 seconds, or answers with anything but 200, the password is accepted on the other rules and a fixed warning (no password) is logged. A failure elsewhere must not stop staff from setting or resetting a password, and the common-passwords list still applies. A fail-closed check would turn an outage at a third party into a lockout here.
+- **`PASSWORD_BREACH_CHECK=off`** skips it. The database tests set it (they never call the service; the check has its own unit tests with a fake fetch). The server warns at startup if it is `off` in production.
+- **Privacy:** the 5-character prefix matches hundreds of unrelated hashes, so neither the service nor anyone watching learns the password. No account, email or other personal data is sent. The server needs outbound HTTPS to `api.pwnedpasswords.com`.
 
 **Watch (re-check after Payload upgrades):** `resetPassword` calling `beforeOperation` with the plain password in `args.data` before hashing, and finding the account by `resetPasswordToken` and `resetPasswordExpiration` (Payload 3.90.2, `auth/operations/resetPassword.js`).
 

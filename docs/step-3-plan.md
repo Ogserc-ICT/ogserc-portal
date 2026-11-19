@@ -121,10 +121,10 @@ must set up 2FA at next login.
    class; the last-administrator rule runs once per operation in `beforeOperation`, not per document, because bulk documents
    run in parallel; first-register returns no token.
 3. Password policy (offline list + HIBP) and replacement reset-password endpoint.
-   **Done except HIBP** (2026-11-19): 583322c (common-passwords list), bc81927 (create, update, first user), d6700d2 (no bulk
+   **Done** (2026-11-19): 583322c (common-passwords list), bc81927 (create, update, first user), d6700d2 (no bulk
    password change), 0e2d4ab (reset path), then the reset-link and trusted-code tests and D-053. Difference from the design
    above: no replacement endpoint; a `beforeOperation` hook checks the password on Payload's own reset, before it hashes it
-   (D-053). HIBP follows in its own commit.
+   (D-053). HIBP added the same day as its own commit (`src/lib/auth/breach-check.ts`, fail-open).
 4. Rate limiting + migration.
 5. Audit log + hooks + migration.
 6. 2FA plugin, guards, admin reset, emergency CLI + migration.
