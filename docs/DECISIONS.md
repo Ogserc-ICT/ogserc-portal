@@ -638,9 +638,400 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - **Fix, in the tests only:** axe scans that cover scroll-revealed sections first call `waitForSettledPage` (`tests/e2e/support/settle.ts`). It fades in every pending section, restores the scroll position, and waits until every finite animation and transition has finished.
 - **Where it is used:** the back-to-top, homepage and smoke axe tests. The homepage and smoke scans previously skipped below-the-fold sections, which sit at opacity 0 until revealed, so they now check more.
 
+## D-044 Test database isolation, and only one first administrator (2026-10-15)
+
+**Decision:**
+- Tests that need a database run with `pnpm test:e2e:db` (`playwright.db.config.ts`), against `TEST_DATABASE_URL`, never the development database.
+- **Before anything starts**, the guard (`tests/support/test-db.ts`) refuses if:
+  - `NODE_ENV` is production;
+  - the database name does not contain `e2e` or `test`;
+  - the host and database name equal those in `DATABASE_URL`.
+
+  It prints only the host and database name, and has no bypass flag.
+- **The reset** (`tests/support/reset-test-db.ts`, run before the server starts):
+  - checks the guard again;
+  - checks that `DATABASE_URL` names the test database;
+  - checks `current_database()` and the pool's host on the live connection;
+  - drops and recreates the `public` schema in that one database and runs the migrations.
+
+  It never runs `DROP DATABASE` and never connects elsewhere.
+- **The server:** the run starts its own server on port 3100 and never reuses one. It runs on the test database, with a separate `.next-e2e` build folder locally (only when `E2E_TEST_SERVER=true` and `NODE_ENV` is not production; production builds always use `.next`). Global setup reads the database the running server reports (`E2E_DB_IDENTITY_FILE`, written in `onInit`), prints it, and aborts on any mismatch.
+- **First user:** the hook that makes the first user an administrator takes a transaction-scoped Postgres advisory lock (`src/lib/transaction-lock.ts`), recounts, and refuses a first-register request that lost the race.
+- **Empty production database:** a production server with no accounts logs a `SECURITY:` error at startup.
+
+**Why:**
+- A test that empties the wrong database would destroy development or production content, so every layer checks independently.
+- Running the test without the lock showed the race is real: two simultaneous first-register requests both returned 200 and created two administrators. Payload checks "no users" and creates the user in one read-committed transaction without a lock. With the lock: 403 and 200, and one user, in two separate runs.
+
+**Trade-off:**
+- Each `pnpm test:e2e:db` run starts a fresh server (about 1 minute locally).
+- The host comes from the pool's connection string. Postgres reports the database name but not the hostname, so a DNS-level redirect would not be detected.
+
+## D-045 Media uploads: real images only, 10 MB, publishers replace (2026-10-15, updated 2026-10-16)
+
+**Decision:**
+- **Types:** Media accepts exactly `image/jpeg`, `image/png`, `image/webp` and `image/avif` (`upload.mimeTypes`). There is no wildcard and no SVG, because SVG can carry script.
+- **Content check:** a `beforeOperation` hook (`src/lib/uploads/image-signature.ts`) reads each uploaded file's first bytes. It rejects the file with a 400 unless the bytes are one of those four formats and the declared type and extension agree with them. No new dependency.
+- **AVIF (2026-10-16):** a file counts as AVIF only if its `ftyp` major brand is `avif`, `avis` or `mif1` **and** `avif` is among its compatible brands. HEIC and HEIF (iPhone photos) share the `mif1` brand but are rejected; staff convert them to JPEG first. Tested with real JPEG, PNG, WebP and AVIF files from sharp's encoders, and with hand-built HEIC/HEIF headers (sharp cannot encode HEVC).
+- **Sizes** (`src/lib/uploads/limits.ts`):
+  - 10 MB per image, checked in the same hook (raised from 5 MB on 2026-10-16 at the owner's request). **OGSERC may change this**; it is one constant, `MAX_IMAGE_BYTES`, and must stay at or below the ceiling.
+  - 25 MB global ceiling (`upload.limits.fileSize`), enforced while the request is read (413). It replaces Payload's default of 20 MB so Step 4 PDFs are not cut off.
+- **Messages (2026-10-16):** staff who may make the upload are told which rule failed: the image's size and the limit; that the content is not one of the four formats; the declared type against the real one; or the file name's extension and the ones that fit. The declared type is repeated only if it looks like a media type. Anyone else (signed out, or an editor replacing a file) is not inspected by the hook. They get the access check's generic 403, which Payload runs after the hook and before it reads the file (checked in Payload 3.90.2's `create`, `updateByID` and `update` operations). Trusted server code using `overrideAccess` is still checked.
+- **Access:** editors and above upload; only publishers and administrators replace, edit or delete, because a change to a published image shows everywhere it is used. Read stays public (`allowAll`, the only use; see D-049).
+
+**Why:**
+- NFR-SEC-08 requires uploads to be limited by type and size and checked by content.
+- **Tested without the hook,** Payload's own check rejected HTML, SVG and HTML renamed `.png`. It **accepted a JPEG declared and named as a PNG (201)**, and it has no per-collection size limit.
+- With the hook, `tests/e2e-db/media.spec.ts` rejects all of these, plus a valid image over the image limit (400) and a 27 MB file (413). Since 2026-10-16 it also accepts a 9.7 MB PNG and rejects a 10.8 MB one.
+
+**Open questions:**
+- **For Step 4 (draft files):** a file is public at `/api/media/file/...` as soon as it is uploaded, before any document that uses it is published. Options: keep media public and treat uploads as publishable; add a `published` flag checked by Media `read`; or keep draft documents' files in a separate access-controlled collection. Decide before building Documents.
+- **For OGSERC:** the size limit for PDFs and other documents (Step 4). Until then only the 25 MB ceiling applies.
+
+**Watch:**
+- If a Next.js `proxy.ts` (middleware) is added, for example for the CSP nonce in step 12, Next caps request bodies at 10 MB by default (`proxyClientMaxBodySize`). Raise it to the upload ceiling, or uploads between 10 and 25 MB will fail.
+- **Test note:** after a 413 the server stops reading the request, so the client's keep-alive connection cannot be reused. The ceiling test therefore uses its own connection.
+- **Test uploads (2026-10-16):** the test server stores uploads in a throwaway `ogserc-e2e-media` folder in the OS temp folder (`MEDIA_DIR`), which is emptied before and after each run. Earlier runs wrote test files into the development `media/` folder.
+
+## D-046 Test files and Playwright configs stay out of the Docker build context (2026-10-16)
+
+**Decision:**
+- `.dockerignore` excludes `playwright*.config.ts` as well as `tests/`.
+- It also excludes local-only folders that are gitignored but not yet in `.dockerignore`: `.next-e2e`, `media`, `.claude`, `*.tsbuildinfo` and `playwright-report-db`.
+- The type check is unchanged. There is no `ignoreBuildErrors`, no `skipLibCheck` change, and no build-only tsconfig.
+
+**Why:**
+- The Docker job failed in `pnpm build` with `playwright.db.config.ts(6,62): error TS2307: Cannot find module './tests/support/test-db'`.
+- `next build` type-checks every file `tsconfig.json` includes (`**/*.ts`). `tests/` was excluded from the image, but `playwright.db.config.ts` was copied in and imports from `tests/support/`. The failure was reproduced in a copy of the exact Docker context, built from the tracked files and the old `.dockerignore`.
+- `playwright.db.config.ts` is the only root code file that imports from an excluded folder. The other Playwright configs import only `@playwright/test` and are not needed in the image either.
+- Excluding the configs is enough. With the new rules, the simulated context passes `pnpm typecheck` and `pnpm build`, with no test file, database-reset script or Playwright config in it.
+- The local-only folders matter for `docker build` on a developer machine. CI's checkout never has them. `.next-e2e/types` is included by `tsconfig.json`, so stale route types from the test server could break or change the build. `media` holds development uploads that must never reach an image.
+
+**Watch:**
+- Any new root-level or `src/` TypeScript file that imports from `tests/` or `docs/` will break the Docker build in the same way.
+- `scripts/*.mjs` are in the context but are not type-checked (`allowJs` without `checkJs`).
+
+**Runtime stage:** the `runner` stage starts `FROM node:22-alpine`, not from `builder`, so it does not inherit the builder's placeholder `DATABASE_URL` and `PAYLOAD_SECRET`. The simulated build's `.next/standalone`, `.next/static` and `public` folders (what `runner` copies) contain neither value.
+
+## D-047 Test database runs: the reset must confirm itself; earlier servers must be stopped (2026-10-16)
+
+**What happened:** twice (2026-10-16 at 13:05, and again during this fix), a `pnpm test:e2e:db` run started on a test database that still held the previous run's accounts. The saved server log of the second case shows why. `pnpm payload run tests/support/reset-test-db.ts` printed only pnpm's banner, never loaded Payload or connected to the database, and **exited with code 0** about 6 seconds later. The harness trusted that exit code and started the server.
+
+**Cause, as far as it can be established:** Payload's CLI (`payload/bin.js`) loads TypeScript through tsx's asynchronous loader worker. It disables Node's synchronous hooks on purpose, and calls `void start()` with nothing awaiting it at the top level. If that loader stalls before the script runs, Node finds nothing left to do and exits with code 0, without an error or an "unsettled top-level await" warning. The behaviour is certain; the stall inside tsx could not be reproduced on demand.
+
+**Decision:**
+- **The reset confirms itself.** After verifying the schema, the migrations and an empty `users` table, `reset-test-db.ts` writes a confirmation file (host, database, users: 0).
+  - The wrapper (`tests/support/test-server.ts`) deletes that file before each attempt and starts the server only if a fresh one exists.
+  - Without it, the wrapper retries once (the reset is idempotent and repeats every guard), then fails loudly.
+- **The users table must be empty:** checked by the reset in the database (`reset-steps.ts`), and again in global setup through the running server before the first test (`/api/users/init` must report `initialized: false`).
+- **No earlier server:** before anything else, the config (and the wrapper again, before the reset) refuses if something accepts connections on the test port (IPv4 or IPv6 localhost, 1-second timeout), or if the process recorded by the previous run is still alive.
+  - This runs before Playwright's own check because that check is an HTTP request with no timeout: a hung earlier server that accepts connections but never answers makes Playwright wait for ever.
+- **Server log:** everything the reset and the server print is also written to `test-results/e2e-db-server.log` (git-ignored, uploaded with the CI report on failure). Secrets are removed first:
+  - the exact values of secret-named environment variables (`*DATABASE_URL`, `*SECRET*`, `*PASSWORD*`, `*TOKEN*`, `*_KEY`, `*_KEY_ID`);
+  - connection strings, JWTs, reset links, tokens in URLs and password fields in JSON.
+
+  Unit tests cover each, and a scan of real runs' logs found no secret value, database URL or token.
+
+**Ruled out:**
+- A leftover server or connection from an earlier run was not the cause in the observed case. Port 3100 was free, no earlier test-server process existed, and the log shows the reset never ran.
+- Such a server could still write after a reset. That is why the port and process checks exist.
+
+**Watch:** other `payload run` and `payload migrate` commands may be affected the same way, including `pnpm migrate` in CI. Treat a silent, quick exit of a Payload CLI command as "did not run".
+
+## D-048 Staff accounts: email changes by administrators only; roles kept out of the session token (2026-10-16)
+
+**Decision:**
+- **Email:** only administrators can change an account's email address. It is the sign-in name, so a change by anyone else would be a way to take over or disguise an account.
+  - Done by overriding only the `access.update` of Payload's built-in `email` field. Payload deep-merges it with the original (`fields/mergeBaseFields.js`), which keeps the built-in validation, uniqueness and lower-casing.
+  - The admin panel then shows the field read-only for everyone else (`EmailAndUsername`: `readOnly: !permissions.email.update`).
+  - Create access is left open, because the first-register screen has no signed-in user; creating accounts is administrators-only anyway.
+- **Roles not in the token:** `saveToJWT` is removed from `roles`.
+  - Payload's JWT strategy reloads the user from the database on every request (`auth/strategies/jwt.js`, `findByID`), so the token's copy of the roles was never used for decisions. It only disclosed them to anyone holding the token.
+- **No migration:** neither change alters the schema. `pnpm migrate:create --skip-empty` generated no statements.
+
+**Tests** (`tests/e2e-db/users.spec.ts`). Run first against the unchanged code; two failed, which led to the two changes above:
+- An editor cannot set roles on their own account or anyone else's, or create accounts. Field access drops the value silently, so the stored record is checked.
+- A second administrator cannot change their own roles, alone or in a bulk update that also (successfully) changes another account. Payload passes each document's id to field access in bulk updates, so `canSetRoles` sees the administrator's own id.
+- Unknown roles (`superuser`, a mix with a valid role, `''`) and an empty list are rejected with 400 by Payload's select validation. No extra `validate` is needed.
+- A demotion takes effect on the next request made with the same token.
+- The token's claims contain no `roles`. *(Failed before the change.)*
+- An account with no roles is refused: no user list, no upload, no admin panel. It can still read public media.
+  - Its roles are removed directly in the test database by `tests/support/strip-roles.ts`, because the API requires at least one role. That script runs under the same guards as the reset and confirms its own result (D-047).
+- A non-administrator's attempt to set `hash`, `salt`, `loginAttempts`, `lockUntil`, `resetPasswordToken`, `resetPasswordExpiration`, `_verified`, `apiKey` or `enableAPIKey` changes nothing. Payload already denies the first six through field access, and the last three do not exist (verification and API keys are off). Checked from outside:
+  - the original password still works;
+  - one wrong password does not lock the account (it would have, had `loginAttempts` become 4);
+  - the planted reset token cannot reset the password;
+  - none of these keys appear in the stored record.
+- Only an administrator can change an email address, and the admin panel's permissions show the field read-only for a publisher and editable for an administrator. *(Failed before the change: the publisher changed their own email.)*
+
+**Watch:**
+- Payload's `sessions` field has `update: () => false` but no `create` rule. Only administrators can create accounts, and a planted session id is useless without a token signed with `PAYLOAD_SECRET`. Revisit if account creation is ever opened up.
+- The last-administrator rules, sign-in limits, cookie settings and password policy are the next commits of the Step 3 plan, not this one.
+
+## D-049 Content saving: only publishers change what the public sees; the Local API rule (2026-10-19)
+
+**Decision:**
+- **Editors save drafts only** (FR-CMS-06, SRS Section 10). Two layers:
+  - `canSaveContent` (create and update access) refuses an editor who sends `_status: 'published'`.
+  - `guardPublishedContent` (`src/access/guard-published-content.ts`), a `beforeOperation` hook on `create`, `update` and `restoreVersion`. For anyone without `content:publish` it refuses: a non-draft update of any published document (by id or in bulk); a draft save whose `_status` is not absent or `'draft'`; a non-boolean draft flag or missing data; a duplicate unless saved as a draft; restoring a version over a published document; and per-locale publish options. It **fails closed**: anything it does not recognise as safe is refused. Trusted server code (`overrideAccess: true`) passes; Payload never takes that value from a request.
+- **The Local API rule** (CLAUDE.md, Security and data rules): the Local API skips access control by default, so any query feeding a public page, search or the sitemap passes `overrideAccess: false` or filters to published documents. `overrideAccess: true` only in hooks, seed and migrations, never with request values.
+- **`allowAll` uses**, kept in step with `ALLOW_ALL_USES` in `tests/unit/config-access.spec.ts` (the audit fails on any other use, and on any use that is not a read):
+
+  | Use | Reason |
+  |---|---|
+  | `media.read` | Images are public (D-045). Revisit with the Step 4 draft-files decision. |
+
+**Why (group D results, 2026-10-18):**
+- Written as tests first, against `canSaveContent` alone. An editor could **change a published document by leaving `_status` out**, and **unpublish it by sending `_status: 'draft'`**. Payload runs create/update access on the request's `data` before it decides `_status`, without the stored document or the draft flag. A duplicate copies the original's `_status`, and a version restore is its own operation, so access never sees either.
+- With the hook, all 35 cases pass (`tests/e2e-db/drafts.spec.ts`, on the test-only `e2e-drafts` collection, D-050): creating, changing and unpublishing published documents, publishing drafts, bulk updates, version restores and duplicates, each through the Local API with a real user and through Payload's REST pipeline. Publishers and trusted code are allowed. Anonymous requests see only published documents and no versions, even when they send `overrideAccess` and `draft` in the query, headers and body. On the running server, an editor sending `overrideAccess` cannot change another account.
+- `tests/unit/config-access.spec.ts` requires the hook on every collection that uses `canSaveContent`, in the deployed config and with the test collections.
+
+**Not atomic:** the hook checks first ("is any target document published?") and Payload writes afterwards. Both run in the same transaction (`req`), but nothing is locked. So an editor's save of a draft can pass the check, a publisher can publish that same document in the same instant, and the editor's write then lands on the now-published document, where it can change or unpublish what the public sees. It needs an editor and a publisher saving the same document within milliseconds of each other. If it ever matters, take a transaction-scoped advisory lock per document in the hook, and in the publish path too (`src/lib/transaction-lock.ts`, as for the first user in D-044).
+
+**Step 4 notes:**
+- Hide or disable admin controls that return 403 for editors (for example Publish on a published document), so editors aren't shown actions they can't take.
+- Add one real HTTP test of these rules on a real content collection, and the test that a draft never appears on a public page, in search or in the sitemap.
+- Decide where draft documents' files live before building Documents (D-045 open question).
+- Watch the drafts test's second `payload run` in CI (time, silent exits: D-047).
+
+## D-050 A test-only drafts collection, with its tables in every database (2026-10-18)
+
+**Decision:**
+- `e2e-drafts` (`src/collections/test/E2EDrafts.ts`) is the smallest collection with drafts. It exists so the content rules (`canSaveContent`, `publishedOnly`) can be tested before Step 4 adds real content collections. Pulled forward from Step 3 plan commit 8.
+- It is registered only when `E2E_TEST_COLLECTIONS` is exactly `true`. The server already refuses that flag in production (`src/lib/env.ts`).
+- **Who sets the flag:** only the `migrate:create` script and test code. `build`, `start`, `dev`, `migrate`, `generate:types`, the Dockerfile, docker-compose, CI and both test servers never do. `tests/unit/test-flag.spec.ts` fails if the flag appears anywhere else.
+  - `generate:types` was meant to set it too, but Payload rewrites `payload-types.ts` on every development start without it, so the types would flip back and forth. The committed types describe the deployed config. Test code names the test collection with an explicit cast.
+  - `migrate:create` always sets it. Otherwise a later migration made without it would contain `DROP` statements for these tables.
+  - The test servers don't need it. The drafts test runs through the Local API in a `payload run` script that sets it for that process only. CI's test server is the production build, which must refuse the flag.
+- **The tables are in a normal migration** (`20261018_173528_e2e_drafts`), so **every database, production included, has them, empty**:
+  - `e2e_drafts` and `_e2e_drafts_v`, with two enum types and indexes;
+  - plus a nullable `e2e_drafts_id` column, foreign key and index on Payload's own `payload_locked_documents_rels`.
+  - With the flag off, nothing reads or writes them. Payload ignores columns its config doesn't define.
+- **Not conditional.** A migration's `up` is TypeScript and could check the flag. It doesn't, because the schema would then depend on an environment variable at migrate time. The database would stop matching the committed snapshot (`src/migrations/*.json`), which later `migrate:create` runs diff against and the post-migration check verifies.
+- If OGSERC wants the tables gone before launch, a normal migration drops them (step 13 launch checklist).
+
+**Tests:** `tests/unit/config-access.spec.ts` audits the config both as deployed and with the test collections. It checks that the collection is absent unless the flag is exactly `true`.
+
+## D-051 Checking the database after migrations (2026-10-19)
+
+### Part 1: `pnpm db:verify`
+
+**Decision:**
+- **`pnpm db:verify`** (`scripts/db-verify.ts`, which runs `scripts/db-verify-payload.ts` through `payload run`) checks that the database in `DATABASE_URL` has:
+  - every table the code's Payload config defines;
+  - a record in `payload_migrations` for every migration in `src/migrations`.
+
+  It prints the host and database name, then any missing tables or migrations, and exits non-zero if anything is missing.
+- **Where it runs:**
+  - In CI, straight after `pnpm migrate`.
+  - On a developer's machine after `pnpm migrate`.
+  - Against production only from a full checkout of the deployed commit. The production image has no `src/`, no Payload CLI and no TypeScript loader, so it cannot run there.
+- **`--show-target`** prints the host and database name and connects to nothing, so the target can be checked first.
+- **Read-only:**
+  - It refuses `NODE_ENV=production`, because Payload applies pending migrations on connect in production.
+  - It adds `-c default_transaction_read_only=on` to the connection's `options` parameter (`src/lib/db/read-only.ts`), merged with any existing value, so Postgres refuses every write, DDL statement and `CREATE DATABASE` in the session.
+  - It checks `SHOW transaction_read_only` on the live session before anything else and stops if it is not `on`. A server or pooler that ignored the option therefore causes a refusal, not an unprotected check.
+  - It checks that the live connection is the host and database in `DATABASE_URL`.
+- **It confirms itself (D-047):** the script writes a confirmation file, and the wrapper counts success only from a fresh one. Without one, the wrapper retries once and then exits non-zero.
+- **No secrets in output:** database names come only from `describeDatabase` (host and database name; unit-tested against many connection-string shapes). On an unexpected error it does not repeat the driver's message, which can name the database user.
+- The shared code moved out of `tests/` into `src/lib/db/` (`identity.ts`, `verify-schema.ts`), because the Docker context excludes `tests/` (D-046). Scripts run directly by Node import it with a `.ts` extension (`allowImportingTsExtensions`; tsconfig already has `noEmit`).
+
+**What it does not check:**
+- **Column-level drift:** missing, extra or changed columns, types, nullability and defaults.
+- Enums, indexes, constraints and foreign keys.
+- Tables that should not be there (the test-only tables from D-050 are expected, but are not required by the deployed config).
+- Data.
+- A migration file that was edited after it ran under the same name. The names are compared, not the contents.
+- Schemas other than `public`.
+- Anything newer than the checked-out commit. A checkout newer than production reports production's missing migrations, as it should.
+
+**Why:**
+- A migration that half-applied, a database restored from an older dump, or `prodMigrations` silently not running would otherwise show up only as errors on pages.
+- Table and migration names catch those cases cheaply. A full schema diff against the Drizzle snapshot would cover column drift, but needs much more code. Revisit if drift is ever seen.
+
+### Part 2: the startup check, the boot-time start, no database creation (2026-10-20)
+
+**Findings in Payload 3.90.2's source:**
+- **Migrations finish before the server checks anything.** `BasePayload.init` (`payload/dist/index.js`) awaits `db.connect()` before it runs `onInit`. The Postgres adapter's `connect()` (`@payloadcms/db-postgres/dist/connect.js`) ends by awaiting `migrate({ migrations: prodMigrations })` when `NODE_ENV` is production. A migration that throws makes Payload call `process.exit(1)` itself (`@payloadcms/drizzle/dist/migrate.js`).
+- **Payload starts lazily,** on the first `getPayload` call, which in a Next.js server means the first request. A failed start clears Payload's cached promise, so every later request starts it again: a new connection pool and another migration attempt each time.
+- **A retried `getPayload` skips `onInit`.** Payload keeps the cache entry from the failed attempt and treats the retry as "already initialised". So a check placed in `onInit` could be skipped after a retry.
+- **Payload creates a missing database.** `connect()` runs `CREATE DATABASE` when the database does not exist (`createDatabase.js`), unless `disableCreateDatabase` is set.
+- **No lock around migrations.** `migrate.js` reads `payload_migrations`, then runs each pending migration in its own transaction. Nothing (no advisory lock, no table lock) stops two servers from doing this at the same time.
+
+**Decision:**
+- **Start at boot** (`src/instrumentation-node.ts`, called from `register()`, production only, skipped during `next build`). Next.js awaits `register()` before the server takes requests, so migrations and the check run before any visitor arrives.
+- **The startup check** (`checkDatabaseAtStartup`, `src/lib/startup.ts`) runs right after `getPayload` resolves, so after `prodMigrations`.
+  - It verifies every table the config defines and every migration record (`verifyDatabaseSchema`, the same check as db:verify).
+  - If anything is missing, it logs one `ERROR` line naming only the missing tables and migrations, and the server exits with code 1.
+  - Then it logs the `SECURITY: there are no user accounts` error if there are none. That was in `onInit` and only appeared on the first request.
+  - It is not in `onInit`, because of the retry finding above.
+- **What happens on failure** (`startWithRetry`, `src/lib/boot.ts`):
+  - **schema incomplete:** exit 1 at once;
+  - **database missing:** exit 1 at once;
+  - **database unreachable** (Payload's "cannot connect to Postgres"): six attempts, with waits of 1, 2, 4, 8 and 15 seconds (about 30 seconds), then exit 1. A brief outage or database restart does not crash the server, and a long one does not keep it hanging;
+  - **anything else:** exit 1 at once.
+
+  The host's restart policy decides what happens after an exit. Each attempt takes at least about 30 seconds, so there is no tight crash loop.
+- **Messages:** every message from the startup code is fixed text plus attempt counts and table or migration names. None repeats an error's message, so none can contain a URL, user name or password. `tests/unit/boot.spec.ts` feeds in errors that do contain a URL, user and password, and checks that they never come out.
+- **`disableCreateDatabase: true`.** A mistyped database name now stops the server ("does not exist"). Before, it would have produced an empty database, run every migration into it, and left first-register open to anyone. Nothing relied on auto-creation: CI's container creates `ogserc`, the workflow creates `ogserc_e2e` with `psql`, docker-compose uses `POSTGRES_DB`, and Neon branches come with their database.
+- **Several instances:** because Payload takes no lock, two instances starting together can both run the same pending migration. One then fails and exits, and a migration that doesn't fail on a second run could apply twice. **Apply migrations in one deploy step before traffic starts** (RUNBOOK Section 3): run `pnpm migrate` from a full checkout of the deployed commit, or start one instance and scale out once it is healthy.
+- **On Vercel,** `register()` runs once per cold start of each server instance. That adds a few small queries to each cold start, and the instance-concurrency rule above applies.
+
+**Tested in CI** (e2e job, throwaway Postgres container only; each step prints the server's output and fails on any `postgres://` in it):
+- **A write in db:verify's read-only session is refused** (`scripts/ci/read-only-probe.ts`). `CREATE TABLE`, `INSERT` and `CREATE DATABASE` must each fail with SQLSTATE 25006, then a normal session confirms nothing was written.
+- **`pnpm build` with `DATABASE_URL` on a port where nothing listens** succeeds, so the build never connects. The same was shown locally on 2026-10-20.
+- **Incomplete database** (all migrations recorded, `media` dropped): the server exits non-zero with `Missing tables: media.` and the incomplete message.
+- **Missing database:** the server exits with the "does not exist" message, and the database was not created.
+- **Unreachable database** (port 5999): the server retries five times and exits with the unreachable message.
+- **Brief outage:** Postgres is stopped, the server starts and reports attempt 1, then Postgres is restarted. The server must report that it started and answer `/api/users/init` (which needs the database). A cleanup step restarts Postgres whatever happens.
+- A step that times out fails with "did not exit within …s" and prints the log.
+
+**Not verified:**
+- Vercel's cold-start behaviour.
+- Whether the boot-time `getPayload` shares its cached instance with the route handlers. Check for one `Database:` log line per server start in the CI server log.
+
+### Part 3: `pnpm migrate` must confirm itself (2026-10-20)
+
+**What happened:** on the first CI run of part 2 (a47ddb1), "Verify the database after migrations" failed. For `ogserc` on `localhost:5432` it reported all 10 tables missing and all 3 migrations unrecorded, straight after `pnpm migrate` had passed.
+
+**How the cause was decided** (the CI logs could not be read from the developer's machine, so this rests on the workflow file and Payload's source):
+- **Not a different database (b).** Neither step sets step-level variables, so both get the same job-level `DATABASE_URL`, `TEST_DATABASE_URL`, `SITE_URL` and `PAYLOAD_SECRET`. Neither finds a `.env` file in CI, and db:verify reported the database `pnpm migrate` targets.
+- **Not the wrong schema or place (c).** db:verify reads the `public` schema, where Payload's adapter creates its tables, with the same code that found 10 tables and 3 migrations on the Neon dev database. A missing `payload_migrations` table explains why all 3 migrations were reported as unrecorded.
+- **So (a): `payload migrate` exited 0 without applying anything.** That is the silent exit already seen with `payload run` (D-047), whose Watch note named `pnpm migrate` in CI as a likely case.
+- **Why no earlier run noticed:** before part 2, the production server applied `prodMigrations` itself on its first request during `pnpm test:e2e`, so the tables appeared anyway. db:verify is the first step that looks at `ogserc` before any server starts.
+- **Why the test database was fine:** its reset applies migrations through `payload run` with a confirmation file (D-047), and has been passing in CI.
+
+**Decision:**
+- **`pnpm migrate` is now `scripts/db-migrate.ts`.**
+  - It runs `scripts/db-migrate-payload.ts` through `payload run`.
+  - That script checks the live connection is the database in `DATABASE_URL`, applies the compiled migration list from `src/migrations` (the same list the server applies as `prodMigrations`), runs the same schema check as db:verify, and only then writes a confirmation file.
+  - The wrapper deletes the file before each attempt and counts success only from a fresh one, with one retry (migrating is idempotent). Otherwise it fails with "Exited with code 0 but did not confirm that it ran (attempt 2 of 2)".
+  - A migration that fails still makes Payload exit with code 1.
+  - `--show-target` works as for db:verify.
+- **Shared code:** both wrappers use `scripts/confirmed-run.ts`. The confirmation variable is now `DB_SCRIPT_CONFIRM_FILE` for both.
+- **Payload's own command** remains available as `pnpm payload migrate`, without this protection. Only use it to diagnose.
+- **db:verify stays a separate CI step.** It is read-only and independent of the migrate script, so a fault in the new migrate path is still caught.
+
+**Not verified:** why `payload migrate` stalled in CI. That needs the step's log. The fix does not depend on the reason.
+
+### Part 4: the boot check uses its own Payload instance (2026-10-20)
+
+**What happened:** on the CI run for 7c2a685, one database test failed: `tests/e2e-db/media.spec.ts` "HEIC and HEIF files are rejected". It expected the Media hook's staff message and got `{"errors":[{"message":"The following field is invalid: file"}]}` (400). The test had passed on every run before part 2.
+
+**Cause (from Payload 3.90.2's source and the production build output):**
+- Payload's REST error handler (`routeError` → `formatErrors`) includes an error's `name` and `data` (where the per-field messages are) only if `err instanceof ValidationError` or `APIError`. Otherwise it returns `{ errors: [{ message }] }`, exactly the body CI received. So the hook ran and threw its message, but the details were dropped.
+- `instanceof` failed because there were **two copies of Payload in one server process**. The production build bundles Payload into each server entry. The instrumentation entry has its own copy of Payload and of our config, Media hook included, in chunks separate from the API route's copy. That was confirmed by searching `.next/server/chunks` for Payload's `ValidationError` and the Media hook.
+- `getPayload` caches its instance on a **process-wide global** (`global._payload`). So the instance created at boot (part 2) was also the one every route handler got. Its hooks threw the instrumentation copy's `ValidationError`, which the route copy's `formatErrors` did not recognise.
+- Status codes and top-level messages survived, so only tests that read an error's details failed.
+- **Q: do the boot-time `getPayload` and the route handlers share one instance?** Yes, they did, and that was the bug.
+
+**Decision:**
+- The boot check (`startPayloadAtBoot`) creates its own instance (`new BasePayload().init({ config })`), runs the startup check, and closes it (`destroy()`, also after a failed attempt). It never calls `getPayload`.
+- Route handlers then start their own instance from their own bundle on the first request, as they did before part 2.
+- The migrations have already run at boot, so the second start finds nothing pending.
+- Expect **two `Database:` lines per server start**: one from the boot check, one when the first request starts the routes' instance.
+- Retries are cleaner too: each attempt is a fresh instance with its own `onInit` and its pool closed.
+
+**Tests that pin it:**
+- The media test, unchanged.
+- `tests/e2e-db/users.spec.ts` "a validation error keeps the details of the field that failed": a 400 from Payload's own field validation must keep the `roles` field path and a field-level message in `data.errors`. The test prints the status and body on every run.
+- `tests/unit/boot.spec.ts`: `src/instrumentation-node.ts` never calls `getPayload`, and it destroys its own instance in a `finally`.
+
+**Watch:** any other code that runs outside the route handlers and calls `getPayload` in the same process would hit the same problem. Examples: another `register()` step, or a job runner started at boot. Give it its own instance, or call it only from route code.
+
+**Error names in the production build (2026-10-20):**
+- The first version of that test also asserted `errors[0].name === 'ValidationError'`. It received `"A"`.
+- **Why:** Payload sets an error's name from its class (`this.name = this.constructor.name`, `payload/dist/errors/APIError.js`), and the production build minifies class names. In `.next/server/chunks` the class is `class A extends h.f{…"error:followingFieldsInvalid"…}`. So error names are not stable in production.
+- **The fix still works:** `formatErrors` only adds a `name` on its `instanceof` branch, which always includes `data`. The fallback branch of the part 4 bug had no `name` at all, so a name of "A" itself shows the error was recognised. The media tests (their message is only in `data.errors`) pass.
+- **Rule:** never compare an error's `name` or `constructor.name`, in code or tests. Compare status codes, `instanceof` against the same copy of Payload, or our own `code` property (as `classifyStartError` does).
+- **Checked on 2026-10-20:**
+  - The only such comparison in `src/`, `tests/` and `scripts/` was this assertion. Other matches are Playwright project names or a document's `name` field.
+  - The drafts scenario records `name: message` but only checks whether an error happened, and runs unbundled.
+  - Payload's only runtime name comparison is `formatErrors`' Mongoose fallback, which our errors never reach.
+- The Step 3 lockout rewrite (an `afterError` hook) must follow this rule.
+
+**Depends on Payload 3.90.2 (re-check after every Payload upgrade, including Dependabot PR #17):** the part 4 fix relies on Payload internals that a release may change:
+- `BasePayload` being exported, with `init({ config })` and `destroy()`;
+- `getPayload` caching on the process-wide `global._payload`;
+- `formatErrors` using `instanceof`;
+- the adapter's `connect()` applying `prodMigrations` before `init` resolves;
+- Payload being bundled separately into the instrumentation entry.
+
+After an upgrade, before merging:
+- read those parts of the new source;
+- rebuild and check `.next/server/chunks` again;
+- confirm in CI that the media and error-details tests pass, with two `Database:` lines per server start in the database test log.
+
+## D-052 Staff sign-in and account safety: sessions, cookies, CSRF, lockout, last administrator (2026-10-21)
+
+Step 3 plan commit 2, in seven code commits plus this one (`f881738`, `407ee4e`, `4b171f6`, `7a0caf7`, `4582f40`, `2f171dd`, `edf077a`, `71fa28e`). Each was tested in CI on the production build. The settings are pinned in the assembled config by `tests/unit/users-auth.spec.ts`.
+
+### What Payload 3.90.2 does (read in its source)
+
+- **Defaults:** `maxLoginAttempts` 5, `lockTime` 10 minutes, `tokenExpiration` 7200 s, sessions on, API keys off, cookie `SameSite=Lax`, HttpOnly always, `Secure` off.
+- **Sessions:** the token check (`auth/strategies/jwt.js`) only looks for the token's session id in the account's `sessions`; it never reads the session's age. Each refresh extends the session again, so an active session never ended.
+- **Password changes** end sessions already: an update that sets a password keeps only the caller's own session (`collections/operations/utilities/update.js`), and reset-password clears all. **A role change ended none.**
+- **Failed sign-ins:** an unknown email or a wrong password gives "The email or password provided is incorrect."; a locked account gives "This user is locked…". Both 401, so the message showed whether an account exists.
+- **CSRF** (`auth/extractJWT.js`): only cookie-authenticated requests are checked. The `Origin` header is compared as a string with the `csrf` list, to which Payload appends `serverURL` as written. Without `Origin`, `Sec-Fetch-Site` must be same-origin, same-site or none. The `Authorization` header is not checked.
+- **`removeTokenFromResponses`** removes the token from REST and Local API login, me, refresh and reset-password. First-register signs in through the Local API login, so it returns no token and an empty cookie too.
+- **Bulk update and delete** process their documents **in parallel** within one shared transaction (`collections/operations/update.js`, `delete.js`), unless the adapter's `bulkOperationsSingleTransaction` is on (it is off). A transaction always exists before `beforeOperation` runs, and `beforeOperation` runs before access is checked.
+- The Local API `unlock` is typed as needing a password but reads only the email (`auth/operations/unlock.js`).
+
+### Decision
+
+| Setting | Value | Why |
+|---|---|---|
+| Token | 1 hour (`tokenExpiration: 3600`) | Short-lived; the admin refreshes it while in use (below). |
+| Absolute session limit | 12 hours from sign-in (`limitSessionAge`, `src/lib/auth/session-cap.ts`) | A refresh is refused (403) unless the new token would end before 12 hours from sign-in, so no token outlives it. The start time is read from the database in the request's transaction. |
+| Token in responses | never (`removeTokenFromResponses: true`) | Only in the HttpOnly cookie, out of reach of page scripts. |
+| API keys | off (`useAPIKey: false`, explicit) | No long-lived credentials for staff. |
+| Cookie | `HttpOnly`, `SameSite=Strict`, `Secure` when `NODE_ENV=production` (unchanged) | The admin is same-origin, so the cookie is never needed cross-site. |
+| CSRF | `csrf: [origin of SITE_URL]`, and `serverURL` the same origin (`siteOrigin`, `src/lib/env.ts`) | Payload compares strings, so a `SITE_URL` with a trailing slash or path would have refused every cookie sign-in. Shown: with the raw value, the same-origin test failed. |
+| `SITE_URL` in production | must be https; plain http only for localhost, 127.0.0.1, [::1] | `Secure` cookies and passwords never sent unencrypted. CI and the Docker check use localhost. |
+| Lockout | 5 failures, 15 minutes | Slows password guessing; an administrator can unlock sooner. |
+| Failed sign-in reply | one fixed 401 body for every failure (`genericLoginError`, an `afterError` hook) | It says nothing about whether the account exists or is locked. Decided by the endpoint (POST `/api/users/login`) and the status (`error.status`), never the error's class or name (D-051). Shown: without it, the locked replies differed. |
+| Emergency unlock | `pnpm auth:unlock <email>` | For when no administrator can sign in. Same guards as `db:verify` (RUNBOOK 4.1). |
+| Role change | ends every session of that account (`endSessionsOnRoleChange`) | The person signs in again under the new roles. Shown: before, the old session still worked. |
+| Self-delete | refused (`isAdminNotSelf` delete access, plus a `beforeDelete` second layer) | Nobody removes themselves by mistake, alone or in a bulk delete. |
+| Last administrator | the whole operation is refused (409) if it would leave none (`protectLastAdministrator`, `src/lib/auth/last-administrator.ts`) | Decided once per operation over **all** its targets, under a transaction-scoped advisory lock, because bulk documents run in parallel and the lock is re-entrant within a session. The signed-in caller is not counted as removed when access is enforced, because Payload already refuses their own role change and deletion. Also applies to trusted code. |
+
+**Last administrator, shown in tests:**
+- Two administrators demoting, or deleting, each other at the same moment: one 200 and one 409 in every one of 5 rounds, and exactly one administrator left.
+- Without the rule, and again with the count but without the lock, the first round returned 200 and 200, leaving none.
+- A REST bulk demote or delete matching every administrator leaves exactly the sender; the same through the Local API with a user leaves exactly that user.
+- Trusted code removing every administrator is refused whole and changes nothing (rather than keeping exactly one: choosing who survives is not the code's job).
+
+### What the admin panel does (observed 2026-10-20, temporary 5-minute token, not committed)
+
+- **Refresh:** only on a page change in the token's last 2 minutes. Typing or scrolling does not count.
+- **Warning:** otherwise a "Stay logged in" dialog opens 1 minute before the end ("Stay logged in" / "Log out").
+- **At the end:** with no answer, it moves to `/admin/logout-inactivity`, then the login page.
+- **First user:** after "create first user" the screen goes to `/admin` and then cleanly to `/admin/login`, with no error; the new administrator signs in. (This corrects the plan, which said first-register would still return a token.)
+
+### Trade-offs and open items
+
+- **Anyone who knows a staff email can lock that account for 15 minutes at a time,** until rate limiting exists (Step 3 plan commit 4). Keep at least two administrators; `pnpm auth:unlock` is the emergency route (RUNBOOK 4.1).
+- **Timing:** unknown and locked accounts are answered faster than a wrong password, because no password hash is computed, so response time can still hint that an account exists. Rate limiting reduces how much can be learned this way; a constant-time reply is not implemented.
+- **Strict cookies:** a link to `/admin` opened from email or chat (a cross-site navigation) arrives without the cookie, so the page shows the login screen until it is reloaded or the person signs in.
+- **Open: unsaved work at sign-out.** The forced page change at the token's end, and the 12-hour limit's sign-out (a refused refresh, which goes straight to the inactivity page with **no** warning), can discard what someone typed in a long form. To be tested with a filled-in form before Step 4, then decide between a longer token (for example 4 hours; the owner leans this way for now), a refresh mechanism, or autosave or draft recovery. Also in STATUS.md.
+- **Unverified:** how the admin panel shows the last-administrator 409 (for example when demoting the last administrator from the edit screen).
+- **Re-test with two-factor authentication:** Strict cookies must be checked again with the 2FA plugin (its verification cookie and redirects, plan commit 6).
+
+### Watch (re-check after every Payload upgrade, including Dependabot PR #17)
+
+This decision relies on Payload 3.90.2 behaviour that a release may change:
+- the CSRF comparison in `extractJWT` and `serverURL` being appended to `csrf`;
+- `afterError` receiving the original error, and the HTTP status being `error.status`;
+- `beforeOperation` receiving `operation` (`update`/`delete` also for by-id), `overrideAccess`, and `args.id` or `args.where`, before access is checked;
+- bulk documents processed in parallel in one transaction;
+- the `sessions` array with `createdAt`, and refresh not checking a session's age;
+- `removeTokenFromResponses` covering the Local API login (and so first-register).
+
+The D-051 boot fix (its own `BasePayload` instance) still applies and has its own list in D-051.
+
 ## D-054 First deploy: OGSERC's VPS with Docker Compose and Caddy, as a closed preview (2026-10-28)
 
-(Numbered after D-053 on the Step 3 branch, which is not merged yet, so the numbers do not clash.)
+(Written on `main` while Step 3 was unmerged. D-053 is reserved for the Step 3 password policy, which the code already cites; it is written with that work.)
 
 **Decision:** The owner asked to host the site on OGSERC's own VPS (AlmaLinux 8.10, 2 vCPU, 4 GB RAM, 100 GB SSD) at `ogserc.org.ng` before Phase 1 is complete. `docker-compose.prod.yml` runs the app, PostgreSQL 17 and Caddy 2.11.7 on that server. Until Step 3 is merged, `deploy/Caddyfile` closes `/admin` and `/api` (404), sends `X-Robots-Tag: noindex, nofollow`, and shortens HSTS to one day without `includeSubDomains`. The image is built on the server. `deploy/backup-db.sh` keeps 14 days of nightly `pg_dump` files. Steps are in RUNBOOK Sections 5 and 6.
 

@@ -15,9 +15,11 @@ Every setting comes from environment variables. The full list, with explanations
 | `DATABASE_URL` | Yes | PostgreSQL connection string. Use `sslmode=verify-full` for hosted databases. |
 | `PAYLOAD_SECRET` | Yes | Long random string that signs login sessions. Different in every environment. Changing it logs everyone out. |
 | `SITE_URL` | Yes | Public address of the site, e.g. `https://example.gov.ng`, without a trailing slash. |
+| `MEDIA_DIR` | No | Local folder for uploaded images until S3 storage arrives in step 4. Default `media`. |
 | `S3_*` | From step 4 | S3-compatible file storage for uploads. |
 | `SMTP_*`, `EMAIL_FROM`, `CONTACT_FORM_TO` | From step 5 | Email for the contact form. |
 | `TURNSTILE_*` | From step 5 | Bot protection on forms. |
+| `TEST_DATABASE_URL` | Tests only | Database that `pnpm test:e2e:db` empties and uses (Section 3.1). Never set it on a deployed server. |
 | `UMAMI_WEBSITE_ID` | No | Turns on visitor statistics (D-077). Needed at build time; set only for the live site. |
 | `UMAMI_DB_PASSWORD`, `UMAMI_APP_SECRET`, `UMAMI_2FA_KEY` | VPS only | Umami's database password, session secret and two-factor key (Section 5, step I). |
 
@@ -86,21 +88,96 @@ The database structure only changes through migration files in `src/migrations/`
 ```sh
 pnpm migrate:create describe-the-change   # writes a new file in src/migrations/
 pnpm migrate                              # applies it to your dev database
+pnpm db:verify                            # checks, read-only, that every table and migration is there
 ```
 
 Review the generated file, then commit it with the code change.
 
+`pnpm migrate` applies the migrations, checks that every table and migration record is there, and counts as done only if it confirms that itself (it retries once). Payload's own command, `pnpm payload migrate`, once exited "successfully" in CI without applying anything (D-051), so don't rely on it. Use `pnpm migrate --show-target` first to see which database it will change; it connects to nothing.
+
 **Check what has run:** `pnpm migrate:status`
 
-**In production:** pending migrations run automatically when the server starts. To run them by hand instead (for example before switching traffic), set the production environment variables and run `pnpm migrate`.
+**The database must exist first.** The app never creates a database (`disableCreateDatabase`, D-051): a wrong name in `DATABASE_URL` stops the server instead of producing an empty database that anyone could claim through first-register. Create the database (a Neon branch has one; on Postgres, `createdb`) before the first `pnpm migrate`.
+
+**In production:** when a server starts, before it takes any request, it:
+1. connects to the database and applies pending migrations (Payload `prodMigrations`);
+2. checks that every table the code defines exists and every migration is recorded (the startup check, D-051);
+3. logs `SECURITY: there are no user accounts` if there are none (Section 4).
+
+The startup check is the main production safeguard. If it fails, the server exits with code 1 and logs one of these lines (they name tables and migrations only, never URLs, users or passwords):
+
+| Log line | Meaning and what to do |
+|---|---|
+| `Database check failed: Missing tables: …` / `Migrations not recorded: …`, then `[startup] Refusing to start: the database schema is incomplete` | The database is not what this release expects (a failed or partial migration, or a restore of an older dump). Do not route traffic to it. Restore the backup taken before the migration, or fix the migration, then redeploy. |
+| `[startup] Database not reachable (attempt n of 6); retrying in Xs.` | The database did not answer. The server waits about 30 seconds in all, so a brief outage or a database restart does not stop it. |
+| `[startup] Refusing to start: the database could not be reached after 6 attempts.` | The database stayed unreachable. Check `DATABASE_URL`, the provider's status and network rules. The host's restart policy will start the server again later. |
+| `[startup] Refusing to start: the database named in DATABASE_URL does not exist.` | Wrong database name, or the database was never created. Nothing was created. |
+| `[startup] Refusing to start: Payload failed to start (see the error above).` | Anything else; Payload's own error is logged just before. |
+
+**Several instances starting at once:** Payload 3.90.2 does **not** stop two servers from running the same migration at the same time (no lock; checked in its source, D-051). One of them then fails and exits, and a migration that does not fail on a second run could apply twice. So **apply migrations in one deploy step before traffic starts**: either run `pnpm migrate` from a full checkout of the deployed commit against the production database (the production image has no CLI), or start a single instance first and scale out only once it is healthy. Each later instance's startup check then confirms the result.
+
+**Checking production by hand (optional): `pnpm db:verify`.** The startup check already does this on every start; use db:verify only to look at a production database without starting a server, for example after a restore.
+- It needs a **read-only database role**. Create one at the provider for this purpose and use its connection string, not the app's.
+- Run it from a full checkout of the **deployed** commit, with `NODE_ENV` unset (it refuses production mode, in which Payload would migrate) and any `PAYLOAD_SECRET` of 32 or more characters (it is not used for reading).
+- First run `pnpm db:verify --show-target` and check the printed host and database name; it connects to nothing.
+- It also forces its own session read-only and stops if Postgres does not confirm that.
+- **Never paste production credentials into chat, an issue or a commit.** Set them in your own terminal only, and close it afterwards.
+- What it does not check (column-level drift and more) is listed in D-051.
 
 **Before any production migration:** take a database backup (Section 6).
+
+**Test-only tables (D-050):** every database, production included, has the empty tables `e2e_drafts` and `_e2e_drafts_v` and a nullable `e2e_drafts_id` column on `payload_locked_documents_rels`. They belong to a collection that is registered only in tests. When `E2E_TEST_COLLECTIONS` is off (always, on every host), the collection is not registered at all: there is no `/api/e2e-drafts` route, no admin screen and no Local API access to it, so the tables can only be reached with SQL. Leave them alone; never set `E2E_TEST_COLLECTIONS` on a host. `pnpm migrate:create` (and nothing else) sets it by itself, so new migrations keep these tables.
+
+### 3.1 Test database (`pnpm test:e2e:db`)
+
+Tests that sign in, change roles or upload files use their own database, which is **emptied at the start of every run** (D-044).
+
+**Set up once:** create a separate database, for example a Neon branch with a database named `ogserc_e2e`, and put its connection string in `.env` as `TEST_DATABASE_URL`. The name must contain `e2e` or `test`.
+
+**Check before the first run (touches no database):**
+
+```sh
+node --experimental-strip-types tests/support/test-db.ts
+```
+
+It prints only the host and database name. Make sure it is not your development database.
+
+**What a run does:**
+1. Refuses to start if `NODE_ENV` is production, the name lacks `e2e`/`test`, or the host and database equal those in `DATABASE_URL`.
+2. Refuses to start if anything is listening on port 3100, or if the previous run's test server process is still alive. The message says how to find and stop it. Nothing is reset in that case.
+3. Connects to `TEST_DATABASE_URL` only, checks `current_database()` and the host on the live connection, then drops and recreates the `public` schema in that database and applies every migration. It never runs `DROP DATABASE` and never connects to another database. It then checks every table, every migration record and that `users` is empty, and writes a confirmation. The server starts only if that confirmation exists: `payload run` can exit "successfully" without running the reset (D-047). Without it the reset is retried once, then the run fails.
+4. Starts its own server on port 3100 (never an existing one) with `DATABASE_URL` set to the test database. Locally it is a dev server building into `.next-e2e/`, so it does not clash with a dev server already running.
+5. Before any test, checks which database that server is actually connected to, prints it, and aborts if it is not the test database. It also aborts if the database already has a user account.
+6. Writes everything the reset and the server print to `test-results/e2e-db-server.log`, with secrets and database URLs removed. Look there first when a run fails.
+7. Stores test uploads in `ogserc-e2e-media` in the OS temp folder (`MEDIA_DIR`), never in the development `media/` folder, and prints its path. That folder is emptied before the server starts and again after the run. The run refuses to empty any folder outside the OS temp folder, without `e2e` in its name, or that is or contains the project's `media/` folder.
+
+**In CI:** the e2e job creates `ogserc_e2e` in its throwaway Postgres container and runs the same checks, with no exemptions.
 
 ## 4. First admin account
 
 On a brand-new, empty database, `/admin` shows a "create first user" screen that **anyone who reaches the site can use**. On every new database (staging or production), create the first administrator account yourself **before the site is reachable by anyone else**. Do this before pointing DNS at it or sharing the address.
 
+- While there are no accounts, a production server logs an error at startup beginning `SECURITY: there are no user accounts`. Treat it as urgent.
+- The first account always becomes an administrator. Only one can be created this way, even if two people submit the screen at the same moment.
+- After the screen creates the account it goes to the login page: sign in with the new account (it does not sign you in by itself).
+- Then create a **second administrator** (Section 4.1). The last administrator can never be demoted or deleted (the change is refused with "At least one administrator must remain"), and nobody can delete their own account.
+
+### 4.1 Locked accounts
+
+After **5 failed sign-ins in a row**, a staff account is locked for **15 minutes**. The reply is the same for every failed sign-in, so it never says whether an account exists or is locked.
+
+- **Normally:** wait 15 minutes, or ask an administrator to unlock it (Users, open the account, Unlock).
+- **Keep at least two administrators.** Until rate limiting exists (Step 3 plan, commit 4), **anyone who knows an administrator's email address can keep that account locked** by failing to sign in with it, 15 minutes at a time. With only one administrator, nobody could then sign in to unlock it.
+- **Emergency, when no administrator can sign in:** `pnpm auth:unlock <email>` clears the lock with Payload's own unlock (failed attempts back to 0). It changes nothing else.
+  - Run it from a full checkout of the deployed commit, with `DATABASE_URL` set to the target database in your own terminal only, `NODE_ENV` unset (it refuses production mode, in which Payload would migrate), and any `PAYLOAD_SECRET` of 32 or more characters.
+  - **First** run `pnpm auth:unlock --show-target` and check the printed host and database name; it connects to nothing. Without `DATABASE_URL` set in the terminal it reads `.env`, which is normally the development database.
+  - It checks that the live connection is that database, reads the account back to confirm the lock is gone, and prints only the host and database name. An unknown email changes nothing and exits with an error.
+  - Write down who ran it, when, and for which account. The audit log (Step 3 plan, commit 5) will record it once it exists.
+  - If the account keeps getting locked, someone is guessing its password: tell the account holder and look at the server log for the failed sign-ins.
+
 ## 5. Deploying *(to be completed in step 13)*
+
+**`SITE_URL` must be the public `https://` address.** A production server refuses to start if `SITE_URL` is not https (plain `http://` is accepted only for `localhost`, `127.0.0.1` and `[::1]`). On staging or production behind a proxy or load balancer that terminates HTTPS, set `SITE_URL` to the `https://` address visitors use, even though the app itself receives plain http.
 
 ### Vercel
 
@@ -113,7 +190,7 @@ docker build -t ogserc-portal .
 docker run --env-file .env -p 3000:3000 ogserc-portal
 ```
 
-The container listens on port 3000. Put it behind HTTPS (the host's load balancer, or a reverse proxy such as Caddy or nginx). Migrations run on startup.
+The container listens on port 3000. Put it behind HTTPS (the host's load balancer, or a reverse proxy such as Caddy or nginx). Migrations run on startup, then the startup check verifies the database; the container exits with code 1 if it fails (Section 3). With more than one instance, apply migrations before scaling out (Section 3).
 
 ### VPS with Docker Compose (AlmaLinux 8): the OGSERC server (D-054)
 
@@ -388,7 +465,7 @@ docker compose -f docker-compose.prod.yml start app
    ```
 4. **Copy storage files** from the old S3-compatible bucket to the new one *(commands added in step 4)*.
 5. **Update DNS** to point at the new host, and confirm HTTPS works.
-6. Run `pnpm migrate:status` against the new database to confirm it is up to date.
+6. Run `pnpm migrate:status` against the new database to confirm it is up to date, then `pnpm db:verify` (read-only role, Section 3) to confirm every table and migration record is there. The server's startup check repeats this when it starts.
 
 ## 8. Monitoring and incident response *(to be completed in step 13)*
 

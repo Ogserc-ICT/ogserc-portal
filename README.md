@@ -33,14 +33,15 @@ Requirements: Node.js 22 (see `.nvmrc`) and pnpm 10. Docker is optional (only fo
    ```sh
    cp .env.example .env
    ```
-   - `DATABASE_URL`: the connection string of your **hosted development database** (for example a Neon dev branch). Do not use the production database.
+   - `DATABASE_URL`: the connection string of your **hosted development database** (for example a Neon dev branch). Do not use the production database. **The database must already exist:** the app never creates one (D-051). A Neon branch comes with its database; on a local Postgres, run `createdb <name>` first.
    - `PAYLOAD_SECRET`: a long random string. Generate one with:
      ```sh
      node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
      ```
-3. Create the database tables:
+3. Create the database tables, then check them (read-only):
    ```sh
    pnpm migrate
+   pnpm db:verify
    ```
 4. Start the site:
    ```sh
@@ -59,10 +60,14 @@ Requirements: Node.js 22 (see `.nvmrc`) and pnpm 10. Docker is optional (only fo
 | `pnpm lint` | Check code with ESLint |
 | `pnpm typecheck` | Check TypeScript types |
 | `pnpm test:e2e` | Run Playwright browser and accessibility tests (starts the dev server if one isn't running) |
+| `pnpm test:e2e:db` | Run database-backed tests (sign-in, roles, uploads). **Empties `TEST_DATABASE_URL`** first; see `docs/RUNBOOK.md` Section 3.1 |
+| `pnpm test:unit` | Unit tests and the access audit of the Payload config (no browser, no database) |
 | `pnpm format` | Format code with Prettier |
-| `pnpm migrate` | Apply pending database migrations |
+| `pnpm migrate` | Apply pending database migrations, then confirm every table and migration is there (`--show-target` prints only which database, without connecting) |
 | `pnpm migrate:create <name>` | Create a migration after changing collections |
 | `pnpm migrate:status` | Show which migrations have run |
+| `pnpm db:verify` | Check, read-only, that every table and migration is in the database (`--show-target` prints only which database, without connecting); see `docs/RUNBOOK.md` Section 3 |
+| `pnpm auth:unlock <email>` | Emergency unlock of a staff account locked after failed sign-ins, when no administrator can sign in (`--show-target` first); see `docs/RUNBOOK.md` Section 4.1 |
 | `pnpm generate:types` | Regenerate `src/payload-types.ts` after changing collections |
 | `pnpm generate:importmap` | Regenerate the admin panel's component import map |
 | `pnpm hooks:install` | Use the repository's git hooks (blocks direct pushes to `main`); run once per clone |

@@ -40,6 +40,7 @@ const eslintConfig = [
       '.next-e2e/',
       'node_modules/',
       'playwright-report/',
+      'playwright-report-db/',
       'test-results/',
       'src/payload-types.ts',
       'src/app/(payload)/admin/importMap.js',

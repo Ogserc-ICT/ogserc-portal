@@ -1,14 +1,23 @@
 .git
 .github
 .next
+.next-e2e
 node_modules
 .env
 .env.*
 !.env.example
 docs
+# Tests and their configs stay out of the image. The Playwright configs import from tests/, and
+# `next build` type-checks every .ts file tsconfig.json includes, so they must go too (D-046).
 tests
+playwright*.config.ts
 playwright-report
+playwright-report-db
 test-results
+# Local-only files: development uploads, editor settings, TypeScript's incremental cache.
+media
+.claude
+*.tsbuildinfo
 *.md
 Dockerfile
 docker-compose.yml

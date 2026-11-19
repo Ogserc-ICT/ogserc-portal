@@ -51,5 +51,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
 EXPOSE 3000
 
-# Pending database migrations run automatically on startup (Payload prodMigrations).
+# On startup, before taking requests, pending database migrations run (Payload prodMigrations) and
+# the schema is verified; the server exits with code 1 if it is incomplete (docs/RUNBOOK.md Section 3).
 CMD ["node", "server.js"]

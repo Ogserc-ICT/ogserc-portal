@@ -36,7 +36,10 @@ Do not add new libraries without explaining why and getting approval. Prefer wha
 - `pnpm typecheck`: TypeScript check (generates Next.js route types first)
 - `pnpm test:e2e`: Playwright tests with axe accessibility checks (mobile 360px and desktop)
 - `pnpm migrate:create <name>`: create a migration after changing collections (schema push is off; see docs/DECISIONS.md D-008)
-- `pnpm migrate` / `pnpm migrate:status`: apply / list migrations
+- `pnpm migrate` / `pnpm migrate:status`: apply (and confirm every table and migration is there) / list migrations. Don't use `pnpm payload migrate`, which can exit 0 without applying anything (D-051)
+- `pnpm db:verify`: read-only check that every table and migration is in the database; `--show-target` prints only which database, without connecting
+- `pnpm auth:unlock <email>`: emergency unlock of a locked staff account (RUNBOOK 4.1); run `--show-target` first
+- `pnpm test:unit`: unit tests and the access audit of the Payload config (no database); `pnpm test:e2e:db`: database-backed tests, which empty `TEST_DATABASE_URL` first
 - `pnpm generate:types` and `pnpm generate:importmap`: regenerate Payload types and admin import map after collection changes
 - `pnpm audit --audit-level high`: dependency audit as run in CI
 
@@ -63,6 +66,8 @@ Before saying a task is done, run lint, typecheck, and the relevant tests, and f
 - Documents always show status (draft, published, superseded, revoked), and superseded documents remain accessible.
 - Use server components by default; use client components only when interactivity needs them.
 - Write small, focused functions. Add comments only where intent is not obvious.
+- Never compare an error's `name` or `constructor.name`, in code or tests: the production build minifies class names (Payload's `ValidationError` is named `A` there). Compare status codes, a `code` property we set ourselves, or `instanceof` against the same module (docs/DECISIONS.md D-051).
+- No in-memory state shared between startup code (`src/instrumentation*.ts`) and route handlers: no module-level variables, caches or singletons, and never `getPayload` at startup. The production build bundles them separately, with their own copies of Payload and our modules, while globals are shared, so mixing them breaks in ways tests in dev mode don't show (D-051). Shared state lives in the database.
 - Before writing Next.js code, consult the version-matched docs in node_modules/next/dist/docs/ (see AGENTS.md). If AGENTS.md ever conflicts with this file or docs/SRS.md, CLAUDE.md and the SRS take precedence.
 
 ## Motion and interactivity
@@ -90,7 +95,10 @@ Rules for anything that moves or responds to the pointer (SRS FR-WEB-08 to FR-WE
 - Check file uploads by content type and size, store them outside the app code, and never execute them.
 - Never log passwords, tokens, payment data, or complaint/whistleblowing content. Never show stack traces to users.
 - Never ask for, print, or paste real secrets in chat or code. If a secret appears anywhere, say so and tell the user to rotate it.
+- Never commit screenshots of terminals, dashboards, hosting or account settings, browser developer tools, or anything that shows secrets, connection strings, tokens, email addresses or other personal data. The only intended images are the site's own assets (`public/`, `src/assets/`), design-review captures of our own pages (`docs/design-review/`) and benchmark layout references (`docs/reference/`). Open and check every image before committing it, including those, and crop or blank anything personal (for example a logged-in name on a benchmark page). If a sensitive image was committed, say so: removing it needs a history rewrite, and anything it showed must be treated as exposed.
 - Enforce authorisation on the server for every collection and endpoint, not only in the UI.
+- Payload's Local API skips access control by default. Every query that feeds a public page, search or the sitemap must pass `overrideAccess: false` or filter explicitly to published documents. Use `overrideAccess: true` only in trusted server code (hooks, seed, migrations), never with values taken from the request. Step 4 must include a test proving a draft never appears on a public page, in search or in the sitemap (docs/DECISIONS.md D-049).
+- Every collection that uses `canSaveContent` also needs the `guardPublishedContent` hook, and every new `allowAll` must be added to the list in `tests/unit/config-access.spec.ts` and D-049 with its reason.
 - Payments (Phase 3): hosted checkout only, verify the provider's webhook signature, process each notification once, check amounts on the server, never touch card details.
 - Before each commit that touches auth, uploads, forms, or access control, run through this checklist and state the result: input validated? access control enforced? secrets absent? errors safe? new dependency justified?
 - Never invent regulatory content, fees, tariffs, licence data, or legal text. Use clearly marked placeholder content (for example "[OGSERC to supply]") until real content exists.
@@ -118,6 +126,7 @@ The site must be movable to any host that runs Node.js or Docker (a VPS, Railway
 7. Work on a branch and open a pull request for each slice; do not commit directly to `main`. Every CI check (lint, typecheck, dependency audit, build, Playwright with axe accessibility, secret scan, Docker build) must be green before merging. GitHub does not enforce this on the current plan, so it is a rule to follow, not a setting (see docs/RUNBOOK.md Section 2).
 8. Record important technical choices and the reasons in `docs/DECISIONS.md`.
 9. Include privacy-friendly analytics, a legal-pages footer (Privacy Policy and Terms of Service; cookies are a section of the Privacy Policy, docs/DECISIONS.md D-074), and PDF text extraction for search, as specified in the SRS.
+10. Update `docs/STATUS.md` at the end of each session: what was committed (with hashes), the latest CI results, open owner and OGSERC items, and the exact next step. Start each session by reading it.
 
 ## Build order (Phase 1)
 

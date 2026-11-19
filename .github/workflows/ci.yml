@@ -14,12 +14,12 @@ concurrency:
 
 jobs:
   quality:
-    name: Lint, typecheck, audit
+    name: Lint, typecheck, unit tests, audit
     runs-on: ubuntu-latest
     env:
       # Placeholders so the Payload config loads; these jobs never touch a database.
       DATABASE_URL: postgres://ci:ci@localhost:5432/ci
-      PAYLOAD_SECRET: ci-placeholder-not-a-secret
+      PAYLOAD_SECRET: ci-placeholder-not-a-secret-at-least-32-chars
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -30,6 +30,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      # Unit tests and the access audit of the assembled Payload config (no browser, no database).
+      - run: pnpm test:unit
       # Fails only on high or critical vulnerabilities; lower ones are handled by Dependabot.
       - run: pnpm audit --audit-level high
 
@@ -38,11 +40,26 @@ jobs:
     # blocked, the production build must not touch sharp and the homepage must still serve.
     name: Builds and serves without sharp (VPS workaround)
     runs-on: ubuntu-latest
+    # The server checks the database before it starts (D-051), as on the VPS.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       IMAGE_PROCESSING: 'off'
       NEXT_OUTPUT: standalone
       DATABASE_URL: postgres://ci:ci@localhost:5432/ci
-      PAYLOAD_SECRET: ci-placeholder-not-a-secret
+      PAYLOAD_SECRET: ci-placeholder-not-a-secret-at-least-32-chars
       SITE_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v7
@@ -52,8 +69,12 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Apply database migrations
+        run: pnpm migrate
       - name: Build with sharp blocked
+        # pipefail: without it, tee hides a failed build and the next step fails confusingly.
         run: |
+          set -o pipefail
           NODE_OPTIONS="--import ./scripts/block-sharp-binaries.mjs --max-old-space-size=8000" \
             pnpm exec next build 2>&1 | tee build.log
           if grep -q 'sharp' build.log; then echo "The build tried to load sharp"; exit 1; fi
@@ -89,6 +110,9 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgres://ogserc:ogserc@localhost:5432/ogserc
+      # Separate database in the same throwaway container for pnpm test:e2e:db, which empties it.
+      # It passes the same guard as a developer's (name contains "e2e", not DATABASE_URL).
+      TEST_DATABASE_URL: postgres://ogserc:ogserc@localhost:5432/ogserc_e2e
       SITE_URL: http://localhost:3000
       # A made-up ID so tests/e2e/analytics.spec.ts checks the tracker tag (D-077).
       UMAMI_WEBSITE_ID: 00000000-0000-4000-8000-000000000000
@@ -104,14 +128,62 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Apply database migrations
         run: pnpm migrate
-      - run: pnpm build
+      # Read-only: every table the code defines and every migration is recorded (D-051).
+      - name: Verify the database after migrations
+        run: pnpm db:verify
+      # The session option db:verify relies on must make Postgres refuse writes (D-051).
+      - name: A write in a read-only session is refused
+        run: bash scripts/ci/expect-read-only-refusal.sh
+      - name: Create the end-to-end test database
+        run: PGPASSWORD=ogserc psql -h localhost -U ogserc -d ogserc -c 'CREATE DATABASE ogserc_e2e'
+      # Nothing listens on port 5999, so the build succeeds only if it never connects to a database.
+      - name: Build without any database
+        run: pnpm build
+        env:
+          DATABASE_URL: postgres://build:build@127.0.0.1:5999/build
+      # The production build's startup (D-051). Each step prints the server's output.
+      - name: The server refuses to start on an incomplete database
+        run: |
+          export PGPASSWORD=ogserc
+          psql -h localhost -U ogserc -d ogserc -c 'CREATE DATABASE ogserc_incomplete'
+          DATABASE_URL=postgres://ogserc:ogserc@localhost:5432/ogserc_incomplete pnpm migrate
+          psql -h localhost -U ogserc -d ogserc_incomplete -c 'DROP TABLE media CASCADE'
+          DATABASE_URL=postgres://ogserc:ogserc@localhost:5432/ogserc_incomplete \
+            bash scripts/ci/expect-startup-refusal.sh 90 3201 'Database check failed: Missing tables: media.' \
+            'Refusing to start: the database schema is incomplete'
+      - name: The server refuses to start, without creating it, when the database does not exist
+        run: |
+          DATABASE_URL=postgres://ogserc:ogserc@localhost:5432/ogserc_missing \
+            bash scripts/ci/expect-startup-refusal.sh 90 3202 'Refusing to start: the database named in DATABASE_URL does not exist'
+          created=$(PGPASSWORD=ogserc psql -h localhost -U ogserc -d ogserc -tAc "select count(*) from pg_database where datname = 'ogserc_missing'")
+          if [ "$created" != 0 ]; then echo "::error::The server created the missing database."; exit 1; fi
+      - name: The server refuses to start after retrying an unreachable database
+        run: |
+          DATABASE_URL=postgres://ogserc:ogserc@127.0.0.1:5999/ogserc \
+            bash scripts/ci/expect-startup-refusal.sh 120 3203 'Database not reachable (attempt 5 of 6); retrying in 15s.' \
+            'Refusing to start: the database could not be reached after 6 attempts.'
+      - name: The server waits out a brief database outage
+        run: bash scripts/ci/expect-startup-after-outage.sh 3204
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+      - name: Restart Postgres if the outage step left it stopped
+        if: always()
+        run: |
+          docker start ${{ job.services.postgres.id }} >/dev/null
+          for _ in $(seq 1 30); do pg_isready -h localhost -U ogserc -d ogserc && exit 0; sleep 1; done
+          echo "::error::Postgres did not come back."; exit 1
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+      # Sign-in, roles and uploads, on ogserc_e2e with its own server (docs/RUNBOOK.md 3.1).
+      - run: pnpm test:e2e:db
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
-          path: playwright-report/
+          path: |
+            playwright-report/
+            playwright-report-db/
+            test-results/e2e-db-server.log
           retention-days: 7
 
   secret-scan:
@@ -163,10 +235,21 @@ jobs:
       - uses: docker/build-push-action@v7
         with:
           context: .
-          push: false
+          # Loaded into this runner's Docker only, for the check below; never pushed anywhere.
           load: true
+          push: false
           tags: ogserc-portal:ci
           build-args: |
             SITE_URL=https://example.org
+      # The password policy reads the common-passwords list at run time; the image must carry it
+      # unchanged, with its licence (data/common-passwords/SOURCE.md).
+      - name: The image carries the common-passwords list and its licence
+        run: |
+          for file in data/common-passwords/10k-most-common.txt data/common-passwords/LICENSE; do
+            expected=$(sha256sum "$file" | cut -d' ' -f1)
+            actual=$(docker run --rm --entrypoint sha256sum ogserc-portal:ci "/app/$file" | cut -d' ' -f1)
+            echo "$file: expected $expected, image $actual"
+            if [ -z "$actual" ] || [ "$actual" != "$expected" ]; then echo "::error::$file missing or changed in the image"; exit 1; fi
+          done
       - name: Image processing works without native sharp, as on the VPS (D-055)
         run: docker run -i --rm --entrypoint node ogserc-portal:ci --input-type=module - < scripts/check-sharp-wasm.mjs

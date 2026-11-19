@@ -22,7 +22,16 @@ const nextConfig: NextConfig = {
   // The Dockerfile sets NEXT_OUTPUT=standalone to get a self-contained server bundle.
   // Elsewhere `next start` is used, which does not support standalone output.
   output: process.env.NEXT_OUTPUT === 'standalone' ? 'standalone' : undefined,
+  // The database-backed end-to-end tests run a second dev server with its own build folder
+  // (playwright.db.config.ts), so it never clashes with a dev server already running. Only for
+  // that test server: production builds and `next start` always use the default `.next`.
+  distDir: process.env.E2E_TEST_SERVER === 'true' && process.env.NODE_ENV !== 'production' ? '.next-e2e' : '.next',
   poweredByHeader: false,
+  // The staff password policy reads this list at run time, so the standalone server must carry it,
+  // with its licence (data/common-passwords/SOURCE.md).
+  outputFileTracingIncludes: {
+    '/*': ['data/common-passwords/10k-most-common.txt', 'data/common-passwords/LICENSE'],
+  },
   images: {
     // IMAGE_PROCESSING=off (OGSERC's VPS, D-056): images are served as they are, because the
     // optimiser needs sharp. Read at build time, so the Docker build receives it as a build arg.
