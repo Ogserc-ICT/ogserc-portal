@@ -312,9 +312,57 @@ PAYLOAD_SECRET=any-long-random-string docker compose up --build
 /opt/ogserc/deploy/backup-db.sh
 ```
 With `HC_BACKUP_PING_URL` in `.env`, each run reports to Healthchecks.io: success, failure, or nothing arrived (Section 8, D-079).
-These copies are on the same server, so they do not survive losing it. **Open item:** copy them off the server every day (OGSERC to choose where), and test a restore before launch (step 13).
+These copies are on the same server, so they do not survive losing it. The off-server copy below covers that.
 
-**Two-year limit on visitor statistics (D-077).** The Privacy Policy promises that statistics are deleted after two years. `deploy/prune-analytics.sh` does this once a month, and it deletes only visitor data, never accounts, websites or reports. Dumps are kept for 14 days, so deleted data leaves the backups two weeks later. Off-server copies, once set up, must not be kept longer than that either. Install it once, as `deploy`, and check it with a dry run, which reports what it would delete and then undoes it:
+**Off-server copies (D-080).** After each nightly backup, `deploy/offsite-backup.sh` sends an encrypted copy to Backblaze B2 using restic, from its pinned Docker image.
+- **What is copied:** the latest site and statistics dumps, and `.env`.
+- **Kept:** 7 daily, 4 weekly and 3 monthly copies.
+- **Monitoring:** the Healthchecks.io backup check fails if this step fails.
+- **Encryption:** everything is encrypted on the server before upload with `OFFSITE_PASSWORD`. **Without that password nobody can open the copies, us included.** Keep it in OGSERC's password manager, separately from the server.
+
+Set up once:
+1. **Backblaze account.** At backblaze.com, sign up for B2 Cloud Storage with the shared OGSERC IT mailbox, choosing the **EU Central** region at sign-up. Turn on two-factor authentication.
+2. **Bucket.** Create a bucket with a unique name (for example `ogserc-backups-` plus a few random letters), set it to **Private**, and leave Object Lock off. Then set its *Lifecycle Settings* to **Keep only the last version of the file**, so copies restic deletes really go. Note the bucket's **Endpoint** (for example `s3.eu-central-003.backblazeb2.com`).
+3. **Application key.** Under *Application Keys → Add a New Application Key*, give it access to **that bucket only**, with **Read and Write**. Note the **keyID** and **applicationKey**; the key is shown only once.
+4. **Server settings.** As `deploy` in `/opt/ogserc`, run each `read` line on its own and paste the value when asked:
+   ```sh
+   read -r -p 'Endpoint: ' ep
+   read -r -p 'Bucket name: ' bk
+   read -r -p 'keyID: ' ki
+   read -r -p 'applicationKey: ' ks
+   ```
+   then:
+   ```sh
+   umask 077
+   sed -i '/^OFFSITE_/d' .env
+   printf 'OFFSITE_REPOSITORY=s3:https://%s/%s/ogserc\nOFFSITE_KEY_ID=%s\nOFFSITE_KEY_SECRET=%s\nOFFSITE_PASSWORD=%s\n' "$ep" "$bk" "$ki" "$ks" "$(openssl rand -hex 32)" >> .env
+   unset ep bk ki ks
+   grep '^OFFSITE_' .env | sed -E 's/=.*/=(set)/'
+   ```
+   Copy the updated `.env` into the password manager now. Its `OFFSITE_PASSWORD` is the encryption password.
+5. **Create the repository and make the first copy:**
+   ```sh
+   ./deploy/offsite-backup.sh init
+   ./deploy/backup-db.sh                       # ends with "offsite ok"
+   ./deploy/offsite-backup.sh snapshots
+   ```
+
+**Restore test.** `deploy/test-restore.sh` restores the latest off-server copy into a temporary database on the server, checks that it holds the site's tables, migrations and statistics, then removes everything it created. The live site is not touched. Run it before launch and then every three months; it ends with `RESTORE TEST PASSED`. `./deploy/offsite-backup.sh check` verifies the repository itself.
+
+**After losing the server:**
+1. Set up a new one (Section 5).
+2. Put the four `OFFSITE_*` lines from the password manager into an empty `/opt/ogserc/.env`.
+3. Restore the copy into a folder:
+   ```sh
+   cd /opt/ogserc && . ./deploy/restic-env.sh
+   mkdir -p /var/backups/ogserc/recovered
+   RESTIC_USER="$(id -u):$(id -g)" RESTIC_MOUNT=/var/backups/ogserc/recovered:/restore restic restore latest --host ogserc-vps --target /restore
+   ```
+4. Copy `recovered/data/env` over `.env`.
+5. Start the database (`up -d db`) and create Umami's (`./deploy/create-analytics-db.sh`).
+6. Restore each dump with `pg_restore` as below, then start the rest.
+
+**Two-year limit on visitor statistics (D-077).** The Privacy Policy promises that statistics are deleted after two years. `deploy/prune-analytics.sh` does this once a month, and it deletes only visitor data, never accounts, websites or reports. Dumps are kept for 14 days on the server and up to 3 months off it (D-080), so deleted data leaves every backup within 3 months. Install it once, as `deploy`, and check it with a dry run, which reports what it would delete and then undoes it:
 ```sh
 (crontab -l 2>/dev/null; echo '30 3 1 * * /opt/ogserc/deploy/prune-analytics.sh >> /var/backups/ogserc/prune-analytics.log 2>&1') | crontab -
 /opt/ogserc/deploy/prune-analytics.sh --dry-run
@@ -418,6 +466,7 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 | Domain registrar | Domain name registration | `<registrar>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | `<domain to be confirmed>` |
 | DNS / CDN / WAF | DNS records, DDoS and bot protection, Turnstile | `<e.g. Cloudflare>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 5 / 13 |
 | File storage | Uploaded documents and images (S3-compatible) | `<provider>` | `<account / bucket>` | `<name>`, `<name>` | `<password manager / vault>` | Step 4 |
+| Backup storage | Encrypted off-server backup copies (D-080) | Backblaze B2 (EU Central) | `<shared OGSERC IT mailbox>`, bucket `<name>` | `<name>`, `<name>` | `<password manager / vault>`, with `OFFSITE_PASSWORD` | Being set up |
 | Email sending | Contact form delivery (SMTP) | `<provider>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 5 |
 | Receiving mailbox | OGSERC inbox for contact form messages | `<provider>` | `<OGSERC mailbox address>` | `<name>` | Held by OGSERC | Step 5 |
 | Error and uptime monitoring | Alerts on downtime and errors | UptimeRobot (free plan) | `<shared OGSERC IT mailbox>` | `<name>`, `<name>` | `<password manager / vault>` | Uptime active; error alerts step 13 |
@@ -453,6 +502,10 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 **File storage**
 - Recover: through another account member, or the provider's recovery process.
 - Move: create the new bucket, copy all objects across with the provider's sync tool or any S3-compatible copy tool, update the `S3_*` variables, then check that documents download on the site. Commands are added in build step 4.
+
+**Backup storage (Backblaze B2)**
+- Recover: through another account member, or Backblaze's recovery process. The copies themselves open only with `OFFSITE_PASSWORD`, so losing the account does not expose them, but losing the password makes them unusable.
+- Move: create a bucket and key at the new S3-compatible provider, run `./deploy/offsite-backup.sh init` with the new `OFFSITE_REPOSITORY` and keys, and keep the old account until the new one holds 3 months of copies.
 
 **Email sending**
 - Recover: through another account member, or the provider's recovery process.
