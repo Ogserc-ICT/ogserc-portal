@@ -347,7 +347,7 @@ Set up once:
    ./deploy/offsite-backup.sh snapshots
    ```
 
-**Restore test.** `deploy/test-restore.sh` restores the latest off-server copy into a temporary database on the server, checks that it holds the site's tables, migrations and statistics, then removes everything it created. The live site is not touched. Run it before launch and then every three months; it ends with `RESTORE TEST PASSED`. `./deploy/offsite-backup.sh check` verifies the repository itself.
+**Restore test.** `deploy/test-restore.sh` restores the latest off-server copy into a temporary database on the server, checks that it holds the site's tables, migrations and statistics, then removes everything it created. The live site is not touched. Until Payload first starts on the server (Step 3, when `/admin` opens), the live site database has no tables; the test then checks that the copy is empty too and relies on the statistics database. Run it before launch and then every three months; it ends with `RESTORE TEST PASSED`. `./deploy/offsite-backup.sh check` verifies the repository itself.
 
 **After losing the server:**
 1. Set up a new one (Section 5).

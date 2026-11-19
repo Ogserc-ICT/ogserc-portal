@@ -47,10 +47,19 @@ query() { docker exec "$name" psql -U postgres -d "$1" -tAc "$2"; }
 docker exec "$name" createdb -U postgres restore_site
 docker exec -i "$name" pg_restore -U postgres -d restore_site --no-owner --no-acl < "$data/ogserc.dump" ||
   echo "(pg_restore reported warnings; checking the result)"
-tables=$(query restore_site "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'")
-migrations=$(query restore_site "SELECT count(*) FROM payload_migrations")
-echo "--- site database: $tables tables, $migrations migrations applied"
-[ "$tables" -gt 0 ] && [ "$migrations" -gt 0 ] || fail "the site database is empty"
+count_tables="SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'"
+tables=$(query restore_site "$count_tables")
+if [ "$tables" -eq 0 ]; then
+  # Payload creates its tables on first start-up, which the preview has not had while /admin and
+  # /api are closed. An empty copy is only correct if the live database is empty too (read-only).
+  live=$(docker compose -f docker-compose.prod.yml exec -T db psql -U ogserc -d ogserc -tAc "$count_tables")
+  [ "$live" -eq 0 ] || fail "the copy is empty but the live site database has $live tables"
+  echo "--- site database: empty, like the live one (Payload has not created its tables yet)"
+else
+  migrations=$(query restore_site "SELECT count(*) FROM payload_migrations")
+  echo "--- site database: $tables tables, $migrations migrations applied"
+  [ "$migrations" -gt 0 ] || fail "the site database has no migrations recorded"
+fi
 
 if [ -s "$data/umami.dump" ]; then
   docker exec "$name" createdb -U postgres restore_stats
