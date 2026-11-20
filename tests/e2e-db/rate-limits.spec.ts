@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 
 import { type APIRequestContext, type APIResponse, expect, request, test } from '@playwright/test'
 
+import { FORGOT_PASSWORD_OFF } from '../../src/lib/auth/no-forgot-password'
 import { RULES, tooManyMessage } from '../../src/lib/auth/rate-limit'
 import { createStaff, loadAdminAccount, newAccount, signIn, visitorAddress } from './support/auth'
 
@@ -78,22 +79,22 @@ test('a successful sign-in never counts against the email', async () => {
   }
 })
 
-test('forgotten password: limited per email and per address, with the same reply for known and unknown emails', async () => {
+test('forgotten password is refused for every email, known or not, without a limit or an audit entry (D-085)', async () => {
   const account = await createStaff(admin, 'rl-forgot', ['editor'])
   const forgot = async (ip: string, email: string) => (await from(ip)).post('/api/users/forgot-password', { data: { email } })
-  const unknown = newAccount('rl-forgot-nobody').email
-  for (let n = 1; n <= RULES.forgotEmail.limit; n++) {
-    expect((await forgot(address(), account.email)).status(), `known ${n}`).toBe(200)
-    expect((await forgot(address(), unknown)).status(), `unknown ${n}`).toBe(200)
-  }
-  const known = await expectLimited(await forgot(address(), account.email), 'forgotEmail', 'known email')
-  expect(await expectLimited(await forgot(address(), unknown), 'forgotEmail', 'unknown email')).toBe(known)
-
+  const replies: string[] = []
   const ip = address()
-  for (let n = 1; n <= RULES.forgotIp.limit; n++) {
-    expect((await forgot(ip, newAccount('rl-forgot-ip').email)).status(), `address ${n}`).toBe(200)
+  // More than the old limits, from one address: the refusal comes first, so nothing is counted.
+  for (const email of [...Array.from({ length: 6 }, () => account.email), newAccount('rl-forgot-nobody').email]) {
+    const response = await forgot(ip, email)
+    expect(response.status()).toBe(403)
+    replies.push(await response.text())
   }
-  await expectLimited(await forgot(ip, newAccount('rl-forgot-ip').email), 'forgotIp', 'over the address limit')
+  expect(new Set(replies).size, 'the same reply for every email').toBe(1)
+  expect(JSON.parse(replies[0]!)).toEqual({ errors: [{ message: FORGOT_PASSWORD_OFF }] })
+  const log = await admin.get(`/api/audit-log?where[targetLabel][equals]=${encodeURIComponent(account.email)}&depth=0&limit=50`)
+  const actions = ((await log.json()) as { docs: { action: string }[] }).docs.map((entry) => entry.action)
+  expect(actions).not.toContain('password.reset-requested')
 })
 
 test('reset links: limited per address, whatever the token', async () => {

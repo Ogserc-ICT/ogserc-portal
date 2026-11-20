@@ -5,6 +5,7 @@ import { isAdminNotSelf } from '../../src/access'
 import { passwordPolicyOnSave, refuseBulkPasswordChange } from '../../src/lib/auth/enforce-password-policy'
 import { genericLoginError } from '../../src/lib/auth/generic-login-error'
 import { protectLastAdministrator } from '../../src/lib/auth/last-administrator'
+import { publicErrorReply, refuseForgotPassword } from '../../src/lib/auth/no-forgot-password'
 import { countFailedLogins, limitAuthRequests, rateLimitReply } from '../../src/lib/auth/rate-limit'
 import { auditFailedLogin, noteLockBeforeLogin } from '../../src/lib/audit/hooks'
 import { endSessionsOnRoleChange } from '../../src/lib/auth/revoke-sessions'
@@ -56,17 +57,19 @@ for (const variant of ['deployed', 'with test collections']) {
     const config = configs[variant]!
     const users = config.collections.find((collection) => String(collection.slug) === 'users')!
     expect(users.hooks.beforeValidate[0]).toBe(passwordPolicyOnSave)
-    expect(users.hooks.beforeOperation[2]).toBe(refuseBulkPasswordChange)
+    expect(users.hooks.beforeOperation[3]).toBe(refuseBulkPasswordChange)
     expect(config.graphQL.disable).toBe(true)
   })
 
   // Rate limits run before any other work, and the failure count before the reply is replaced (D-081).
   test(`rate limit hooks come first (${variant})`, () => {
     const users = configs[variant]!.collections.find((collection) => String(collection.slug) === 'users')!
-    expect(users.hooks.beforeOperation[0]).toBe(limitAuthRequests)
-    expect(users.hooks.beforeOperation[1]).toBe(noteLockBeforeLogin)
+    // The forgotten-password refusal (no email, D-085) first, then the rate limits.
+    expect(users.hooks.beforeOperation[0]).toBe(refuseForgotPassword)
+    expect(users.hooks.beforeOperation[1]).toBe(limitAuthRequests)
+    expect(users.hooks.beforeOperation[2]).toBe(noteLockBeforeLogin)
     // Count and audit the failure, then write the 429 body, then the generic 401 body (D-081, D-083).
-    expect(users.hooks.afterError).toEqual([countFailedLogins, auditFailedLogin, rateLimitReply, genericLoginError])
+    expect(users.hooks.afterError).toEqual([countFailedLogins, auditFailedLogin, rateLimitReply, publicErrorReply, genericLoginError])
   })
 
   test(`serverURL and every CSRF origin are the normalised site origin (${variant})`, () => {

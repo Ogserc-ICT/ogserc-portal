@@ -1491,7 +1491,7 @@ OGSERC's legal advisers should review it with the rest of the policy (D-074).
 | Action | Per address | Per email |
 |---|---|---|
 | Sign in | 10 attempts in 15 minutes | 10 **failed** attempts in 15 minutes (counted in `afterError` on a 401) |
-| Forgotten password | 5 per hour | 3 per hour |
+| Forgotten password | 5 per hour | 3 per hour (inactive since D-085: the request is refused) |
 | Reset link | 10 per hour | none (the token is the secret) |
 
 Above a limit the reply is a 429 with `Retry-After` and one fixed message ("Too many attempts. Try again in N minutes."), the same whether or not the account exists. Counts live in a hidden `rate_limits` table (`src/collections/RateLimits.ts`, migration `20261120_054654_rate_limits`, deny-all access) and are written with parameterised SQL on the connection pool, outside the request's transaction. Only REST requests are limited; trusted server code (the Local API) is not. The visitor's address is the last entry of the header named in `CLIENT_IP_HEADER`, which production requires.
@@ -1578,4 +1578,16 @@ Its three endpoints (`/api/setup-totp`, `/api/verify-totp`, `/api/remove-totp`) 
 - `pnpm auth:reset-2fa <email>`, for when no administrator can sign in: the same safeguards as `pnpm auth:unlock` (D-052): `--show-target`, refuses production mode, checks that the live connection is the database in `DATABASE_URL`, reads the account back and confirms itself. Audited as server code.
 
 **Watch (re-check after every payload-totp or Payload upgrade):** the three endpoint paths and their `{ ok, message }` reply; `verify-totp` validating with `window: 1`; the strategy reading its cookie through `next/headers`; the access wrapper's checks on `_strategy` and `hasTotp`; Payload catching a strategy's error and trying the next strategy; new advisories at https://github.com/GeorgeHulpoi/payload-totp/security. The Postgres adapter's `db.updateOne` is an upsert (insert, then update on conflict), so a partial row with a column of the main table fails Postgres's NOT NULL check before the conflict is seen: the reset clears the secret with `payload.update` (access overridden, as the plugin saves it) and uses `db.updateOne` only for `sessions`, which live in their own table (CI caught this).
+
+## D-085 The site sends no email; forgotten passwords are reset by an administrator (2026-11-20)
+
+**Decision (owner, 2026-11-20):** In Phase 1 the site sends no email at all: no mail provider (Brevo, Postmark and Amazon SES were offered) and not OGSERC's Microsoft 365 (offered through Microsoft Graph, since Microsoft turns off password-based SMTP sending by default at the end of December 2026).
+- **`src/lib/email/no-send.ts`** is Payload's email adapter: it sends nothing and logs one fixed line. Payload's default without an adapter writes every email it would send to the log, password-reset links included (NFR-SEC-20), which the live preview did until this change (harmless only because `/api` was closed).
+- **Forgotten passwords:** `POST /api/users/forgot-password` is refused with 403 and one fixed message ("Password resets by email are switched off. Ask an administrator to set a new password for you."), the same for every email, so it shows nothing about which accounts exist. `refuseForgotPassword` runs first in `beforeOperation`, so the request does no other work and is not counted or audited. An administrator sets a temporary password instead (RUNBOOK 4.3), which already ends every session of the account; the person changes it after signing in, with two-factor sign-in as usual. Trusted server code can still issue reset tokens (the tests use it); the reset-link endpoint stays, with its policy, limit and audit.
+- **The contact form** keeps its `mailto:` link (D-059): the visitor's own email program sends the message to OGSERC's inbox.
+- **`publicErrorReply`** writes the reply for errors marked for the visitor, because the production build's formatter loses the message of an error thrown from our code (D-051, D-081).
+
+**Why:** no outside service or account to run, no secrets to rotate, no SPF/DKIM changes for a new sender, nothing personal sent to another processor, and one way in fewer for attackers. A small staff team can ask an administrator. Running our own mail server on the VPS was ruled out: cloud addresses are widely blocked or sent to spam, and hosts often block outgoing mail.
+
+**Costs:** no self-service password reset; at least two administrators must exist (already required), so one can always reset the other. **Phase 2** (public accounts, complaint updates) needs real email: decide the route then, and replace this adapter (the forgotten-password limits in D-081 are kept, inactive, for that).
 

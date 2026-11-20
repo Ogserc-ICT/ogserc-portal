@@ -12,6 +12,7 @@ import { RateLimits } from './collections/RateLimits'
 import { TEST_COLLECTIONS, testCollectionsEnabled } from './collections/test'
 import { Users } from './collections/Users'
 import { twoFactor } from './lib/auth/two-factor'
+import { noSendEmail } from './lib/email/no-send'
 import { assertServerEnv, csrfOrigins, siteOrigin } from './lib/env'
 import { queryLimits } from './lib/query-limits'
 import { onPayloadInit } from './lib/startup'
@@ -66,6 +67,8 @@ export const portalConfig = async ({
     },
     collections: [Users, Media, AuditLog, RateLimits, ...(withTestCollections ? TEST_COLLECTIONS : [])],
     editor: lexicalEditor(),
+    // The site sends no email (D-085); this also keeps Payload from writing emails to the log.
+    email: noSendEmail,
     secret: requireEnv('PAYLOAD_SECRET'),
     typescript: {
       outputFile: path.resolve(dirname, 'payload-types.ts'),
