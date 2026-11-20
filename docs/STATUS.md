@@ -7,23 +7,23 @@ Updated 2026-11-20. Plan for Step 3: `docs/step-3-plan.md`.
   real content added through `content/*` branches since 2026-10-29, Umami statistics (D-077), search engine indexing (D-078),
   a server log report with disk and backup alerts (D-079) and encrypted off-server backups to Backblaze B2 (D-080; first copy
   and restore test passed 2026-11-19).
-- **Step 3 is partly on `main`.** The owner merged draft PR #16 on 2026-11-19 (`5b6cded`): plan commits 1 and 2 and most of
-  commit 3. The VPS has **not** been deployed since, so it still runs the code from before that merge.
+- **Step 3's security work is merged and deployed** (2026-11-20, `0db390f`): roles, password policy and breach check (D-053),
+  rate limits (D-081), audit log (D-083), two-factor sign-in with an administrator reset and an emergency command (D-084).
+  On the VPS all six migrations ran, the startup check passed, the audit clean-up cron is installed and dry-run clean, and the
+  restore test passed with the full site database (15 tables, 6 migrations). `/admin` and `/api` are still closed (404).
 - **Step 3 plan commit 3 (password policy) is complete:** PRs #51 and #53 (breach check, fail-open) merged.
 - **Step 3 plan commit 4 (rate limiting, D-081):** PR #54 merged.
 - **Step 3 plan commit 5 (audit log, D-083):** PR #55 merged.
 - **Step 3 plan commit 6 (two-factor sign-in, D-084):** part A merged (PR #56); part B (administrator reset, emergency command) on branch `feat/step-3-two-factor-reset`, PR #57.
 
-## Before the next deploy (any deploy now includes Step 3 so far)
-- The server's `PAYLOAD_SECRET` must be at least 32 characters, or the app refuses to start. Owner to check its length
-  (`awk` on `/opt/ogserc/.env`, printing only the length) and replace it if shorter.
-- On first start, Payload creates its tables in the live database (migrations run at boot). Afterwards rerun
-  `deploy/test-restore.sh`, which then checks the site database in full.
-- `CLIENT_IP_HEADER` is required in production (D-081); `docker-compose.prod.yml` sets it, so nothing to add to the server's `.env`.
-- The server needs outbound HTTPS to `api.pwnedpasswords.com` for the breach check (D-053); if blocked, it is skipped with a warning.
-- After that deploy, install the monthly `deploy/prune-audit.sh` cron job and dry-run it (RUNBOOK Section 6, D-083).
-- After that deploy, each administrator sets up two-factor sign-in on first sign-in (RUNBOOK 4.2); keep at least two.
-- `/admin` and `/api` stay closed in the Caddyfile until Step 3 is complete (D-054, RUNBOOK Section 11).
+## Before reopening `/admin`
+- The email adapter (plan commit 7): until it exists, forgotten-password links go nowhere. Needs the owner's choice of OGSERC's
+  Microsoft 365 or a sending service (D-059); the contact form uses the same.
+- Create the first administrator yourself on the "create first user" screen, then a second administrator, before anyone else can
+  reach the site's `/admin` (RUNBOOK Section 4); each sets up an authenticator app at first sign-in (RUNBOOK 4.2).
+- Check sign-in, the code step and the Strict session cookie in a real browser (D-052).
+- The server needs outbound HTTPS to `api.pwnedpasswords.com` for the breach check (D-053); if blocked it is skipped with a warning.
+- Then remove the `/admin` and `/api` block in `deploy/Caddyfile` (D-054, RUNBOOK Section 11) and restart Caddy.
 
 ## Remaining Step 3 plan commits
 6. Re-test Strict cookies with 2FA in a real browser at the first deploy (D-052).
@@ -75,5 +75,5 @@ When Step 3 is complete: reopen `/admin` in `deploy/Caddyfile`.
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-Merge PR #57 when its CI is green. Then decide plan commits 7 (email adapter) to 9 (docs): what is still needed before the first
-deploy that includes Step 3, and plan that deploy: PAYLOAD_SECRET length, deploy, cron job, reopen `/admin`, administrators set up 2FA.
+The owner chooses how the site sends email (Microsoft 365 or a sending service); then plan commit 7, the email adapter. Otherwise
+Step 4 (content collections) can start, with `/admin` still closed.
