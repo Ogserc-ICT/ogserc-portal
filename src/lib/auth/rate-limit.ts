@@ -193,6 +193,18 @@ export const countFailedLogin = (createLimiter: (req: PayloadRequest) => Limiter
   return hook
 }
 
+/**
+ * afterError on the staff collection: writes the reply for a 429 itself. Payload's formatter
+ * recognises its error classes by `instanceof` and by name, and class names are minified in the
+ * production build, so it would answer "An unknown error occurred." (D-051). Decided by status
+ * only; nothing else in this collection answers 429. Retry-After is already on req.responseHeaders.
+ */
+export const rateLimitReply: AfterErrorHook = ({ error }) => {
+  const { status, message } = error as { status?: unknown; message?: unknown }
+  if (status !== 429 || typeof message !== 'string') return
+  return { response: { errors: [{ message }] }, status: 429 }
+}
+
 /** The hooks the staff collection uses (src/collections/Users.ts), with the Postgres store. */
 export const limitAuthRequests = rateLimitAuth()
 export const countFailedLogins = countFailedLogin()

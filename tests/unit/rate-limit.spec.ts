@@ -7,6 +7,7 @@ import {
   limiter,
   rateKey,
   rateLimitAuth,
+  rateLimitReply,
   RULES,
   type Store,
   tooManyMessage,
@@ -208,5 +209,15 @@ test.describe('hooks', () => {
     const result = await countFailedLogin(failing as never)({ collection: { slug: 'users' }, error: { status: 401 }, req } as never)
     expect(result).toBeUndefined()
     expect(errors).toEqual(['Rate limit: a failed sign-in could not be counted.'])
+  })
+
+  test('a 429 gets its own message as the reply; other errors are left to Payload', () => {
+    const reply = (error: unknown) => rateLimitReply({ collection: { slug: 'users' }, error, req: {} } as never)
+    expect(reply({ status: 429, message: tooManyMessage(3) })).toEqual({
+      response: { errors: [{ message: tooManyMessage(3) }] },
+      status: 429,
+    })
+    expect(reply({ status: 401, message: 'x' })).toBeUndefined()
+    expect(reply({ status: 429 })).toBeUndefined()
   })
 })

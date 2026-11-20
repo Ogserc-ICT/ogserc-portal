@@ -1506,6 +1506,7 @@ Above a limit the reply is a 429 with `Retry-After` and one fixed message ("Too 
 - **Production refuses to start without `CLIENT_IP_HEADER`:** without it every visitor would share one address limit, and one person could block sign-in for everyone. `docker-compose.prod.yml` sets it to `X-Forwarded-For`; another host sets the header its own proxy uses.
 - **Postgres, not memory:** counts survive a restart and would be shared by several app instances. The table stays small: about one request in 20 deletes ended windows.
 - **No new library and no outside service.**
+- **The 429's body is written by an `afterError` hook (`rateLimitReply`), decided by status:** in the production build Payload's formatter does not recognise the thrown error (class names are minified, D-051) and answered "An unknown error occurred." CI caught this; the status and `Retry-After` were already right.
 
 **Not covered (planned elsewhere):** limits on the rest of the admin area and API, and bot protection, come with Turnstile (Step 5) and the firewall/CDN layer (Step 13). The two-factor code check gets its own limit with 2FA (Step 3 plan commit 6). Someone who knows a staff email can still trigger that account's 15-minute lockout (D-052).
 
