@@ -19,6 +19,7 @@ import {
   auditUserChange,
   auditUserDelete,
   noteLockBeforeLogin,
+  notePasswordChange,
 } from '../lib/audit/hooks'
 import { protectLastAdministrator } from '../lib/auth/last-administrator'
 import { countFailedLogins, limitAuthRequests, rateLimitReply } from '../lib/auth/rate-limit'
@@ -98,7 +99,7 @@ export const Users: CollectionConfig = {
   },
   hooks: {
     // The password policy first, so it never runs while the first-user lock is held.
-    beforeValidate: [passwordPolicyOnSave, firstUserIsAdministrator],
+    beforeValidate: [passwordPolicyOnSave, firstUserIsAdministrator, notePasswordChange],
     // Rate limits first, so a limited request does no other work (D-081).
     beforeOperation: [
       limitAuthRequests,

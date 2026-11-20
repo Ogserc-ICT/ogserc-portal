@@ -72,11 +72,23 @@ export const auditAuthOperations: Hook<'afterOperation'> = async ({ args, operat
   return result
 }
 
+const PASSWORD_SET = 'auditPasswordSet'
+
+/**
+ * beforeValidate: notes that an update sets a password. Payload hashes it and removes it from the
+ * data before afterChange runs, so afterChange cannot see it. One account per request: a bulk
+ * password change is refused (refuseBulkPasswordChange).
+ */
+export const notePasswordChange: Hook<'beforeValidate'> = ({ data, operation, req }) => {
+  if (operation === 'update' && (data as { password?: unknown } | undefined)?.password) req.context[PASSWORD_SET] = true
+  return data
+}
+
 /**
  * Account created, changed or given a new password, with field names only. Saves that change no
  * listed field (Payload storing a reset token or a session, for example) leave no entry.
  */
-export const auditUserChange: Hook<'afterChange'> = async ({ data, doc, operation, previousDoc, req }) => {
+export const auditUserChange: Hook<'afterChange'> = async ({ doc, operation, previousDoc, req }) => {
   const actor = requestActor(req)
   const target = userTarget(doc as UserDoc)
   if (operation === 'create') {
@@ -89,7 +101,8 @@ export const auditUserChange: Hook<'afterChange'> = async ({ data, doc, operatio
   }
   const others = fields.filter((field) => field !== 'roles')
   if (others.length > 0) await recordAudit(req, { action: 'user.updated', actor, target, details: { fields: others } })
-  if ((data as { password?: unknown } | undefined)?.password) {
+  if (req.context?.[PASSWORD_SET] === true) {
+    delete req.context[PASSWORD_SET]
     const self = actor !== null && actor !== undefined && String(actor.id) === String(target.id)
     await recordAudit(req, { action: 'password.changed', actor, target, details: { via: self ? 'own account' : 'set by another account' } })
   }

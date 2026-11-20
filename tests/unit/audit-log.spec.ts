@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { auditFailedLogin, auditLogin, auditUserChange, contentAuditHooks, noteLockBeforeLogin } from '../../src/lib/audit/hooks'
+import { auditFailedLogin, auditLogin, auditUserChange, contentAuditHooks, noteLockBeforeLogin, notePasswordChange } from '../../src/lib/audit/hooks'
 import { auditData, changedFields, DETAIL_KEYS, safeDetails } from '../../src/lib/audit/record'
 
 // The audit log hooks with a fake Payload that records what would be written (D-083). The database
@@ -84,9 +84,13 @@ test.describe('what can be written', () => {
 test.describe('account events', () => {
   const doc = { id: 5, email: 'kemi@example.org', roles: ['editor'] }
   const admin = { id: 1, email: 'admin@example.org', collection: 'users' }
+  /** As Payload runs it: beforeValidate sees the password, then afterChange runs without it. */
   const change = (args: Record<string, unknown>, user: Record<string, unknown> | undefined = admin) => {
     const fake = fakeReq({ user })
-    return { ...fake, run: auditUserChange({ data: {}, doc, previousDoc: doc, operation: 'update', ...args, req: fake.req } as never) }
+    const all = { data: {}, doc, previousDoc: doc, operation: 'update', ...args, req: fake.req }
+    notePasswordChange(all as never)
+    const { password: _hashedAway, ...data } = all.data as Record<string, unknown>
+    return { ...fake, run: auditUserChange({ ...all, data } as never) }
   }
 
   test('a new account records who created it and its roles, in the request transaction', async () => {

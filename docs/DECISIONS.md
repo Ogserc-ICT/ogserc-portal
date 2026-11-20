@@ -1524,7 +1524,7 @@ Above a limit the reply is a 429 with `Retry-After` and one fixed message ("Too 
 | Sign-in failed (wrong password, account locked, unknown account), limited (429), account locked | `afterError` on the login endpoint; the lock state is read before the attempt (`noteLockBeforeLogin`) so "this attempt locked it" is told from "it was already locked" |
 | Signed out | `afterLogout` |
 | Password reset requested / completed | `afterForgotPassword` (Payload runs it only for an email that has an account) / `afterOperation` for `resetPassword` |
-| Password changed (own, or set by another account) | `afterChange` when the update carried a password |
+| Password changed (own, or set by another account) | `beforeValidate` notes that the update carries a password (`notePasswordChange`), because Payload hashes it and removes it from the data before `afterChange`, which then records it |
 | Account created / updated (field names) / roles changed (old and new) / deleted | `afterChange`, `afterDelete` |
 | Account unlocked (admin panel or API, or server code such as `pnpm auth:unlock`) | `afterOperation` for `unlock` |
 | Image uploaded / changed (field names) / deleted | `afterChange`, `afterDelete` on Media (`contentAuditHooks`, which Step 4's collections will reuse) |
@@ -1543,5 +1543,5 @@ Each entry holds the time, the actor (a link to the account and a copy of its em
 
 **Not covered yet:** two-factor events (Step 3 plan commit 6, which adds them to the action list with a migration); content changes on Step 4's collections; a staff privacy notice about this log, which is OGSERC's to write (the public Privacy Policy covers visitors, not staff).
 
-**Watch (re-check after Payload upgrades):** `afterLogin` also running for `resetPassword`; `afterForgotPassword` running only for known accounts and receiving `args.req`; `afterOperation` for `resetPassword` and `unlock` running after the commit; `forgotPassword` saving the account through `payload.update` (so `afterChange` sees it); failed sign-ins incrementing `loginAttempts` outside any transaction (Payload 3.90.2, `auth/operations/login.js`).
+**Watch (re-check after Payload upgrades):** `afterLogin` also running for `resetPassword`; `afterForgotPassword` running only for known accounts and receiving `args.req`; `afterOperation` for `resetPassword` and `unlock` running after the commit; `forgotPassword` saving the account through `payload.update` (so `afterChange` sees it); failed sign-ins incrementing `loginAttempts` outside any transaction (Payload 3.90.2, `auth/operations/login.js`); the plain password being gone from `data` by `afterChange` (CI caught this: the first version looked for it there and recorded nothing).
 
