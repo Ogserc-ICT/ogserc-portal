@@ -88,15 +88,29 @@ test('an account that has never set it up can only set it up', async () => {
   expect((await owing.post('/api/media', { data: {} })).status()).toBe(403)
 })
 
+/**
+ * Where the admin panel sends this request: an HTTP redirect's Location, or the target of the
+ * redirect Next.js streams in the page (a redirect made while rendering arrives with status 200).
+ */
+async function adminRedirect(context: APIRequestContext, path: string): Promise<string | undefined> {
+  const response = await context.get(path, { maxRedirects: 0 })
+  if (response.status() >= 300 && response.status() < 400) return response.headers().location
+  const html = await response.text()
+  const meta = html.match(/__next-page-redirect[^>]*url=([^"'>]+)/)?.[1]
+  return meta ?? html.match(/NEXT_REDIRECT;[a-z]+;([^;"\\]+)/)?.[1]
+}
+
 test('the admin panel sends a session that owes a code to the code page, which loads', async () => {
   const account = await enrolledEditor('2fa-panel')
   const token = await passwordOnlyToken(baseURL, account)
-  const browser = await as({ Cookie: sessionCookies(token) })
-  const panel = await browser.get('/admin', { maxRedirects: 0 })
-  expect([302, 303, 307, 308], `status ${panel.status()}`).toContain(panel.status())
-  expect(panel.headers().location ?? '').toContain('/admin/verify-totp')
-  // Loads without redirecting again: proxy.ts passes the path to the plugin's screens.
-  expect((await browser.get('/admin/verify-totp', { maxRedirects: 0 })).status()).toBe(200)
+  const owing = await as({ Cookie: sessionCookies(token) })
+  expect(await adminRedirect(owing, '/admin'), 'a session that owes a code').toContain('/admin/verify-totp')
+  // Control: without a session the panel sends the visitor to sign in instead.
+  expect(await adminRedirect(await as({}), '/admin'), 'no session').toContain('/admin/login')
+  // The code page itself loads without redirecting again: proxy.ts passes it the path.
+  const page = await owing.get('/admin/verify-totp', { maxRedirects: 0 })
+  expect(page.status()).toBe(200)
+  expect(await adminRedirect(owing, '/admin/verify-totp'), 'no redirect loop').toBeUndefined()
 })
 
 test('a wrong code is refused, a correct one accepted once, and both are audited', async () => {
