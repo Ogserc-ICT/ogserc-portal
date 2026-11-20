@@ -130,6 +130,10 @@ must set up 2FA at next login.
    limit is 10, above the lockout's 5, so the lockout's single reply (D-052) still shows; counts are written outside the
    request's transaction; production requires `CLIENT_IP_HEADER`; the TOTP limit moves to commit 6.
 5. Audit log + hooks + migration.
+   **Done** (2026-11-20, D-083). Differences from the design above: the email typed for an unknown account is never stored;
+   "account locked" is detected from the lock state read before the attempt; refused sign-ins are written outside the request's
+   transaction; image events are included (Media); retention (owner, 2026-11-20): addresses and browsers blanked after 90 days,
+   entries deleted after 2 years, by `deploy/prune-audit.sh`. 2FA events come with commit 6.
 6. 2FA plugin, guards, admin reset, emergency CLI + migration.
 7. Email adapter (dev console / prod drop).
 8. Test-only collection (`E2E_TEST_COLLECTIONS=true`) + migration, test user seeding, Playwright auth tests.

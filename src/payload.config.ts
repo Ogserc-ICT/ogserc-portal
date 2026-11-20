@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url'
 
 import { denyByDefault } from './access/deny-by-default'
 import { hardenPayloadInternals } from './access/payload-internals'
+import { AuditLog } from './collections/AuditLog'
 import { Media } from './collections/Media'
 import { RateLimits } from './collections/RateLimits'
 import { TEST_COLLECTIONS, testCollectionsEnabled } from './collections/test'
@@ -55,7 +56,7 @@ export const portalConfig = async ({ withTestCollections }: { withTestCollection
         baseDir: path.resolve(dirname),
       },
     },
-    collections: [Users, Media, RateLimits, ...(withTestCollections ? TEST_COLLECTIONS : [])],
+    collections: [Users, Media, AuditLog, RateLimits, ...(withTestCollections ? TEST_COLLECTIONS : [])],
     editor: lexicalEditor(),
     secret: requireEnv('PAYLOAD_SECRET'),
     typescript: {

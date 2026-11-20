@@ -1,8 +1,11 @@
 import { type CollectionBeforeOperationHook, type CollectionConfig, ValidationError } from 'payload'
 
 import { allowAll, isEditorOrAbove, isPublisherOrAbove, userCan } from '../access'
+import { contentAuditHooks } from '../lib/audit/hooks'
 import { IMAGE_MIME_TYPES, imageUploadProblem } from '../lib/uploads/image-signature'
 import { MAX_IMAGE_BYTES } from '../lib/uploads/limits'
+
+const mediaAudit = contentAuditHooks('media')
 
 /**
  * Checks every uploaded file by its content before Payload stores it: an accepted image type,
@@ -35,6 +38,9 @@ export const Media: CollectionConfig = {
   },
   hooks: {
     beforeOperation: [acceptOnlyRealImages],
+    // The audit log (D-083), in the request's transaction.
+    afterChange: [mediaAudit.afterChange],
+    afterDelete: [mediaAudit.afterDelete],
   },
   fields: [
     {

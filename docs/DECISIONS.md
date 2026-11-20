@@ -1511,3 +1511,37 @@ Above a limit the reply is a 429 with `Retry-After` and one fixed message ("Too 
 **Not covered (planned elsewhere):** limits on the rest of the admin area and API, and bot protection, come with Turnstile (Step 5) and the firewall/CDN layer (Step 13). The two-factor code check gets its own limit with 2FA (Step 3 plan commit 6). Someone who knows a staff email can still trigger that account's 15-minute lockout (D-052).
 
 **Watch (re-check after Payload upgrades):** `beforeOperation` running before the password check for `login`, `forgotPassword` and `resetPassword`; `afterError` receiving the 401 with `req.data` parsed; the error route adding `req.responseHeaders` to its reply (Payload 3.90.2, `utilities/routeError.js`); `forgotPassword` answering 200 whether or not the account exists.
+
+## D-083 Audit log of sign-ins, account changes and images (2026-11-20)
+
+(D-082 is reserved for the image-processing "option A" decision of 2026-11-18, still to be written.)
+
+**Decision:** An `audit-log` collection (`src/collections/AuditLog.ts`), written only by server hooks (`src/lib/audit/`), records:
+
+| Event | Where it is caught |
+|---|---|
+| Sign-in succeeded | `afterLogin`, only for the login endpoint (a reset link also signs in, but is recorded as a reset) |
+| Sign-in failed (wrong password, account locked, unknown account), limited (429), account locked | `afterError` on the login endpoint; the lock state is read before the attempt (`noteLockBeforeLogin`) so "this attempt locked it" is told from "it was already locked" |
+| Signed out | `afterLogout` |
+| Password reset requested / completed | `afterForgotPassword` (Payload runs it only for an email that has an account) / `afterOperation` for `resetPassword` |
+| Password changed (own, or set by another account) | `beforeValidate` notes that the update carries a password (`notePasswordChange`), because Payload hashes it and removes it from the data before `afterChange`, which then records it |
+| Account created / updated (field names) / roles changed (old and new) / deleted | `afterChange`, `afterDelete` |
+| Account unlocked (admin panel or API, or server code such as `pnpm auth:unlock`) | `afterOperation` for `unlock` |
+| Image uploaded / changed (field names) / deleted | `afterChange`, `afterDelete` on Media (`contentAuditHooks`, which Step 4's collections will reuse) |
+
+Each entry holds the time, the actor (a link to the account and a copy of its email), the target (type, id, and the email or file name at the time), the internet address and browser, and `details` built from an allow-list: changed field names, old and new roles, a reason, and how it was done. Administrators can read it, with filters; nobody, administrators included, can create, change or delete an entry through the admin panel or API.
+
+**Retention (owner's choice, 2026-11-20):** `deploy/prune-audit.sh`, run monthly by cron, blanks the address and browser after 90 days and deletes entries after 2 years. Both are `.env` settings (`AUDIT_IP_RETENTION_DAYS`, `AUDIT_RETENTION_DAYS`), so OGSERC can change them without a code change (NFR-SEC-19). The statements are in `deploy/prune-audit.sql`, which the database test runs against the test database too. Dumps are kept 14 days on the server and up to 3 months off it (D-080), so removed data leaves every backup within 3 months.
+
+**Why:**
+- **In the request's transaction for successful changes:** a change is never saved without its entry, nor an entry without its change; if the entry cannot be written, the change fails.
+- **On its own for refused sign-ins:** their transaction is rolled back, which would remove the entry; a failure to write it is logged with fixed text and does not change the reply.
+- **What is never stored:** passwords, hashes, salts, tokens, reset links, sessions, file contents, and the email typed for an unknown account (people sometimes type a password there). Every value passes through `auditData`, which only builds known fields, caps text at 320 characters and drops any `details` key not on the list, so a later mistake in a hook cannot write a secret. Saves that change none of the listed fields (Payload storing a reset token or a session) leave no entry.
+- **Address and browser** come from `CLIENT_IP_HEADER` (D-081) and the `User-Agent` header. They are personal data, hence the 90-day blanking.
+- **Copies of the email and file name:** an entry still reads correctly after the account or image is deleted (the account link is set to empty on delete).
+- **Unknown emails at "forgot password"** leave no entry, because Payload stops before its hook; repeated requests are still rate limited (D-081).
+
+**Not covered yet:** two-factor events (Step 3 plan commit 6, which adds them to the action list with a migration); content changes on Step 4's collections; a staff privacy notice about this log, which is OGSERC's to write (the public Privacy Policy covers visitors, not staff).
+
+**Watch (re-check after Payload upgrades):** `afterLogin` also running for `resetPassword`; `afterForgotPassword` running only for known accounts and receiving `args.req`; `afterOperation` for `resetPassword` and `unlock` running after the commit; `forgotPassword` saving the account through `payload.update` (so `afterChange` sees it); failed sign-ins incrementing `loginAttempts` outside any transaction (Payload 3.90.2, `auth/operations/login.js`); the plain password being gone from `data` by `afterChange` (CI caught this: the first version looked for it there and recorded nothing).
+
