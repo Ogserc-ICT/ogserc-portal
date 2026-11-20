@@ -65,11 +65,12 @@ export default defineConfig({
       dependencies: ['first-user'],
       use: { ...devices['Desktop Chrome'] },
     },
+    { name: 'rate-limits', testMatch: 'rate-limits.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     // Must run last: it demotes the run's administrator, leaving one administrator the others don't know.
     {
       name: 'last-admin',
       testMatch: 'last-admin.spec.ts',
-      dependencies: ['first-user', 'media', 'users', 'drafts', 'password-policy'],
+      dependencies: ['first-user', 'media', 'users', 'drafts', 'password-policy', 'rate-limits'],
       use: { ...devices['Desktop Chrome'] },
     },
   ],
@@ -94,6 +95,9 @@ export default defineConfig({
       SITE_URL: `${baseURL}/portal/`,
       // Tests never call Have I Been Pwned; the breach check has its own unit tests (D-053).
       PASSWORD_BREACH_CHECK: 'off',
+      // Each sign-in helper sends its own made-up address here, so tests do not share one
+      // sign-in limit; the rate-limit tests send a fixed one (D-081).
+      CLIENT_IP_HEADER: 'X-Forwarded-For',
       // Local dev server only: build into .next-e2e (next.config.ts). CI uses the production build.
       ...(isCI ? {} : { E2E_TEST_SERVER: 'true' }),
     },

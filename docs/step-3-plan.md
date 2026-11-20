@@ -126,6 +126,9 @@ must set up 2FA at next login.
    above: no replacement endpoint; a `beforeOperation` hook checks the password on Payload's own reset, before it hashes it
    (D-053). HIBP added the same day as its own commit (`src/lib/auth/breach-check.ts`, fail-open).
 4. Rate limiting + migration.
+   **Done** (2026-11-20, D-081). Differences from the design above: per email, sign-in counts only failed attempts and the
+   limit is 10, above the lockout's 5, so the lockout's single reply (D-052) still shows; counts are written outside the
+   request's transaction; production requires `CLIENT_IP_HEADER`; the TOTP limit moves to commit 6.
 5. Audit log + hooks + migration.
 6. 2FA plugin, guards, admin reset, emergency CLI + migration.
 7. Email adapter (dev console / prod drop).

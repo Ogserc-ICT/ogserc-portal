@@ -11,6 +11,7 @@ import { ROLES } from '../access/roles'
 import { passwordPolicyOnReset, passwordPolicyOnSave, refuseBulkPasswordChange } from '../lib/auth/enforce-password-policy'
 import { genericLoginError, LOCK_MINUTES, MAX_LOGIN_ATTEMPTS } from '../lib/auth/generic-login-error'
 import { protectLastAdministrator } from '../lib/auth/last-administrator'
+import { countFailedLogins, limitAuthRequests, rateLimitReply } from '../lib/auth/rate-limit'
 import { endSessionsOnRoleChange } from '../lib/auth/revoke-sessions'
 import { limitSessionAge } from '../lib/auth/session-cap'
 import { lockForTransaction } from '../lib/transaction-lock'
@@ -88,10 +89,19 @@ export const Users: CollectionConfig = {
   hooks: {
     // The password policy first, so it never runs while the first-user lock is held.
     beforeValidate: [passwordPolicyOnSave, firstUserIsAdministrator],
-    beforeOperation: [refuseBulkPasswordChange, passwordPolicyOnReset, limitSessionAge, protectLastAdministrator],
+    // Rate limits first, so a limited request does no other work (D-081).
+    beforeOperation: [
+      limitAuthRequests,
+      refuseBulkPasswordChange,
+      passwordPolicyOnReset,
+      limitSessionAge,
+      protectLastAdministrator,
+    ],
     beforeDelete: [refuseSelfDelete],
     afterChange: [endSessionsOnRoleChange],
-    afterError: [genericLoginError],
+    // The failure is counted before genericLoginError replaces the reply; rateLimitReply writes
+    // the 429's body, which Payload's formatter cannot in the production build (D-081).
+    afterError: [countFailedLogins, rateLimitReply, genericLoginError],
   },
   fields: [
     // Overrides only the access of Payload's built-in email field; it is deep-merged with the

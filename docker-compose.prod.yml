@@ -33,6 +33,9 @@ services:
       DATABASE_URL: postgres://ogserc:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/ogserc
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:?Set PAYLOAD_SECRET in .env}
       SITE_URL: ${SITE_URL:?Set SITE_URL in .env}
+      # Caddy sets this header to the visitor's address and ignores any value the visitor sends,
+      # so sign-in limits count each visitor separately (D-081). Required in production.
+      CLIENT_IP_HEADER: X-Forwarded-For
     depends_on:
       db:
         condition: service_healthy

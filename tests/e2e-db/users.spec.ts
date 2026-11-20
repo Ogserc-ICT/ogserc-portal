@@ -14,6 +14,7 @@ import {
   signIn,
   signInToken,
   type TestAccount,
+  visitorAddress,
 } from './support/auth'
 import { LOCK_MINUTES, LOGIN_FAILED_MESSAGE, MAX_LOGIN_ATTEMPTS } from '../../src/lib/auth/generic-login-error'
 import { databaseIdentity, describeDatabase } from '../../src/lib/db/identity'
@@ -215,7 +216,7 @@ test.describe('internal auth fields', () => {
     expect((await attemptLogin(baseURL, account.email, fakeSecret())).status).toBe(401)
     expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(200)
     // resetPasswordToken not stored: it cannot be used to set a new password.
-    const anonymous = await request.newContext({ baseURL })
+    const anonymous = await request.newContext({ baseURL, extraHTTPHeaders: visitorAddress() })
     opened.push(anonymous)
     const reset = await anonymous.post('/api/users/reset-password', {
       data: { token: resetToken, password: fakeSecret() },
@@ -244,7 +245,7 @@ test.describe('sessions and cookies', () => {
 
   test('the session token is only in the cookie, which is HttpOnly, SameSite=Strict and lasts an hour', async () => {
     const account = await createStaff(admin, 'cookie', ['editor'])
-    const anonymous = await request.newContext({ baseURL })
+    const anonymous = await request.newContext({ baseURL, extraHTTPHeaders: visitorAddress() })
     opened.push(anonymous)
     const response = await anonymous.post('/api/users/login', { data: { email: account.email, password: account.password } })
     expect(response.status()).toBe(200)
@@ -327,7 +328,7 @@ test.describe('sessions and cookies', () => {
   })
 
   test('an API key header signs nobody in', async () => {
-    const anonymous = await request.newContext({ baseURL })
+    const anonymous = await request.newContext({ baseURL, extraHTTPHeaders: visitorAddress() })
     opened.push(anonymous)
     const headers = { Authorization: `users API-Key ${fakeSecret()}` }
     const me = await anonymous.get('/api/users/me', { headers })
@@ -567,7 +568,7 @@ test.describe('failed sign-ins and lockout', () => {
     for (let n = 1; n <= MAX_LOGIN_ATTEMPTS; n++) await attemptLogin(baseURL, account.email, fakeSecret())
     expect((await attemptLogin(baseURL, account.email, account.password)).status).toBe(401)
 
-    const anonymous = await request.newContext({ baseURL })
+    const anonymous = await request.newContext({ baseURL, extraHTTPHeaders: visitorAddress() })
     opened.push(anonymous)
     expect((await anonymous.post('/api/users/unlock', { data: { email: account.email } })).status()).toBe(403)
     expect((await editor.post('/api/users/unlock', { data: { email: account.email } })).status()).toBe(403)
@@ -602,7 +603,7 @@ test.describe('failed sign-ins and lockout', () => {
   })
 
   test('a sign-in with a missing password still says which field is missing', async () => {
-    const anonymous = await request.newContext({ baseURL })
+    const anonymous = await request.newContext({ baseURL, extraHTTPHeaders: visitorAddress() })
     opened.push(anonymous)
     const response = await anonymous.post('/api/users/login', { data: { email: newAccount('x').email } })
     expect(response.status()).toBe(400)

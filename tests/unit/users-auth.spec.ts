@@ -5,6 +5,7 @@ import { isAdminNotSelf } from '../../src/access'
 import { passwordPolicyOnSave, refuseBulkPasswordChange } from '../../src/lib/auth/enforce-password-policy'
 import { genericLoginError } from '../../src/lib/auth/generic-login-error'
 import { protectLastAdministrator } from '../../src/lib/auth/last-administrator'
+import { countFailedLogins, limitAuthRequests, rateLimitReply } from '../../src/lib/auth/rate-limit'
 import { endSessionsOnRoleChange } from '../../src/lib/auth/revoke-sessions'
 import { limitSessionAge } from '../../src/lib/auth/session-cap'
 import { siteOrigin } from '../../src/lib/env'
@@ -46,8 +47,17 @@ for (const variant of ['deployed', 'with test collections']) {
     const config = configs[variant]!
     const users = config.collections.find((collection) => String(collection.slug) === 'users')!
     expect(users.hooks.beforeValidate[0]).toBe(passwordPolicyOnSave)
-    expect(users.hooks.beforeOperation[0]).toBe(refuseBulkPasswordChange)
+    expect(users.hooks.beforeOperation[1]).toBe(refuseBulkPasswordChange)
     expect(config.graphQL.disable).toBe(true)
+  })
+
+  // Rate limits run before any other work, and the failure count before the reply is replaced (D-081).
+  test(`rate limit hooks come first (${variant})`, () => {
+    const users = configs[variant]!.collections.find((collection) => String(collection.slug) === 'users')!
+    expect(users.hooks.beforeOperation[0]).toBe(limitAuthRequests)
+    expect(users.hooks.afterError.indexOf(countFailedLogins)).toBe(0)
+    expect(users.hooks.afterError.indexOf(rateLimitReply)).toBe(1)
+    expect(users.hooks.afterError.indexOf(genericLoginError)).toBeGreaterThan(1)
   })
 
   test(`serverURL and every CSRF origin are the normalised site origin (${variant})`, () => {

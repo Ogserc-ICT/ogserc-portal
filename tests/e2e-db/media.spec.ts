@@ -5,7 +5,7 @@ import path from 'node:path'
 import { type APIRequestContext, expect, request, test } from '@playwright/test'
 import sharp from 'sharp'
 
-import { createStaff, loadAdminAccount, signIn, type TestAccount } from './support/auth'
+import { createStaff, loadAdminAccount, signIn, type TestAccount, visitorAddress } from './support/auth'
 
 // Media accepts only real JPEG, PNG, WebP and AVIF images of 10 MB or less, checked by content
 // (NFR-SEC-08, D-045). Editors upload; only publishers and administrators replace or delete.
@@ -163,7 +163,7 @@ test('a real image over 10 MB is rejected, saying how large it is', async () => 
 })
 
 test('someone signed out gets only the generic denial, never the rule that failed', async ({ baseURL }) => {
-  const anonymous = await request.newContext({ baseURL })
+  const anonymous = await request.newContext({ baseURL, extraHTTPHeaders: visitorAddress() })
   try {
     await expectGenericDenial(await upload(anonymous, 'page.png', 'image/png', HTML))
     await expectGenericDenial(await upload(anonymous, 'photo.png', 'image/png', await image('jpeg')))

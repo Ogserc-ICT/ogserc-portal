@@ -66,6 +66,11 @@ export function checkServerEnv(env: Env): EnvCheck {
     }
   }
 
+  // Without it every visitor shares one sign-in limit, so one person could block everyone (D-081).
+  if (production && !isBuildPhase(env) && !env.CLIENT_IP_HEADER?.trim()) {
+    errors.push('CLIENT_IP_HEADER is required in production (for example X-Forwarded-For behind Caddy).')
+  }
+
   if (env.PASSWORD_BREACH_CHECK === 'off' && production && !isBuildPhase(env)) {
     warnings.push('PASSWORD_BREACH_CHECK=off: staff passwords are not checked against known data breaches (D-053).')
   }

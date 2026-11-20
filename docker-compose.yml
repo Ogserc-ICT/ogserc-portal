@@ -16,6 +16,9 @@ services:
       DATABASE_URL: postgres://ogserc:ogserc@db:5432/ogserc
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:?Set PAYLOAD_SECRET in your shell before running docker compose}
       SITE_URL: http://localhost:3000
+      # Required in production mode (D-081). Locally nothing sets it, so all requests share one
+      # sign-in limit; on a server the proxy sets it (docker-compose.prod.yml).
+      CLIENT_IP_HEADER: X-Forwarded-For
     depends_on:
       db:
         condition: service_healthy
