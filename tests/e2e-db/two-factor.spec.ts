@@ -45,11 +45,12 @@ async function enrolledEditor(label: string): Promise<TestAccount> {
 }
 
 async function twoFactorEntries(email: string) {
-  const response = await admin.get(`/api/audit-log?where[targetLabel][equals]=${encodeURIComponent(email)}&where[action][like]=2fa&sort=createdAt&limit=50&depth=0`)
+  // Filtered here: `action` is a Postgres enum, which a text match (`like`) cannot search.
+  const response = await admin.get(`/api/audit-log?where[targetLabel][equals]=${encodeURIComponent(email)}&sort=createdAt&limit=100&depth=0`)
   expect(response.status()).toBe(200)
-  return ((await response.json()) as { docs: { action: string; details?: { reason?: string } | null }[] }).docs.map(
-    (entry) => [entry.action, entry.details?.reason],
-  )
+  return ((await response.json()) as { docs: { action: string; details?: { reason?: string } | null }[] }).docs
+    .filter((entry) => entry.action.startsWith('2fa.'))
+    .map((entry) => [entry.action, entry.details?.reason])
 }
 
 test.beforeAll(async ({ baseURL: url }) => {
