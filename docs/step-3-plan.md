@@ -135,6 +135,9 @@ must set up 2FA at next login.
    transaction; image events are included (Media); retention (owner, 2026-11-20): addresses and browsers blanked after 90 days,
    entries deleted after 2 years, by `deploy/prune-audit.sh`. 2FA events come with commit 6.
 6. 2FA plugin, guards, admin reset, emergency CLI + migration.
+   **Part A done** (2026-11-20, D-084): payload-totp 3.0.7 (3.0.6 fixed the brute-force advisory with its own code lock),
+   forced set-up, the four guards (address limit, no code reuse, secret size, audit), proxy.ts, test helpers and tests.
+   Part B: the administrator reset and the emergency command.
 7. Email adapter (dev console / prod drop).
 8. Test-only collection (`E2E_TEST_COLLECTIONS=true`) + migration, test user seeding, Playwright auth tests.
 9. Docs: README, RUNBOOK (first admin, 2FA reset, email), DECISIONS (D-044+), CLAUDE.md "Authentication and access",

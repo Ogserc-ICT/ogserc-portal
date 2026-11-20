@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { canSaveContent, isEditorOrAbove, isPublisherOrAbove, publishedOnly } from '../../access'
 import { guardPublishedContent } from '../../access/guard-published-content'
+import { PUBLIC_READ, publicOrTwoFactor } from '../../access/two-factor'
 
 /**
  * Test-only: the smallest drafts-enabled collection, so the content access rules (`canSaveContent`,
@@ -13,8 +14,10 @@ export const E2EDrafts: CollectionConfig = {
   slug: 'e2e-drafts',
   admin: { hidden: true },
   versions: { drafts: true },
+  // Published documents stay readable by visitors; staff (who also see drafts) need a verified code (D-084).
+  custom: PUBLIC_READ,
   access: {
-    read: publishedOnly,
+    read: publicOrTwoFactor(publishedOnly),
     readVersions: isEditorOrAbove,
     create: canSaveContent,
     update: canSaveContent,

@@ -9,8 +9,8 @@ import {
   createStaff,
   loadAdminAccount,
   newAccount,
-  SESSION_COOKIE,
   sessionCookie,
+  sessionCookies,
   signIn,
   signInToken,
   type TestAccount,
@@ -169,6 +169,9 @@ test.describe('roles', () => {
   test('an account with no roles is refused everywhere', async () => {
     test.setTimeout(120_000) // includes a `payload run` against the test database
     const account = await createStaff(admin, 'roles-none', ['editor'])
+    // Two-factor sign-in is set up first (D-084): an account with no roles cannot save a secret,
+    // so without this it could not get past the code step and the rules below would go untested.
+    await as(account)
     await runTestDbScript('tests/support/strip-roles.ts', [account.email])
     expect((await stored(account.email)).roles ?? []).toEqual([])
 
@@ -450,7 +453,7 @@ test.describe('cross-site requests with the session cookie (CSRF)', () => {
   })
 
   async function withCookie(headers: Record<string, string>): Promise<APIRequestContext> {
-    const context = await request.newContext({ baseURL, extraHTTPHeaders: { Cookie: `${SESSION_COOKIE}=${token}`, ...headers } })
+    const context = await request.newContext({ baseURL, extraHTTPHeaders: { Cookie: sessionCookies(token), ...headers } })
     opened.push(context)
     return context
   }

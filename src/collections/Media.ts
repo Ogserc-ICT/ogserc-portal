@@ -1,6 +1,7 @@
 import { type CollectionBeforeOperationHook, type CollectionConfig, ValidationError } from 'payload'
 
 import { allowAll, isEditorOrAbove, isPublisherOrAbove, userCan } from '../access'
+import { PUBLIC_READ } from '../access/two-factor'
 import { contentAuditHooks } from '../lib/audit/hooks'
 import { IMAGE_MIME_TYPES, imageUploadProblem } from '../lib/uploads/image-signature'
 import { MAX_IMAGE_BYTES } from '../lib/uploads/limits'
@@ -29,6 +30,8 @@ export const acceptOnlyRealImages: CollectionBeforeOperationHook =({ args, opera
 
 export const Media: CollectionConfig = {
   slug: 'media',
+  // Images are public, so reading them stays open to visitors who are not signed in (D-084).
+  custom: PUBLIC_READ,
   access: {
     read: allowAll,
     create: isEditorOrAbove,

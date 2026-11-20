@@ -21,6 +21,10 @@ export const RULES = {
   forgotIp: { limit: 5, windowSeconds: 60 * 60 },
   forgotEmail: { limit: 3, windowSeconds: 60 * 60 },
   resetIp: { limit: 10, windowSeconds: 60 * 60 },
+  /** Two-factor code checks (set-up, verify, remove) from one address (D-084). */
+  totpIp: { limit: 10, windowSeconds: 15 * 60 },
+  /** A two-factor code accepted once may not be used again while it is still valid (D-084). */
+  totpUsed: { limit: 1, windowSeconds: 90 },
 } as const satisfies Record<string, Rule>
 
 export type RuleName = keyof typeof RULES
@@ -109,6 +113,8 @@ type Limiter = {
   check: (rule: RuleName, value: string) => Promise<void>
   /** Counts one attempt without refusing (a failure that has already happened). */
   record: (rule: RuleName, value: string) => Promise<void>
+  /** Counts one use and says whether it was the first in the rule's window. Atomic, so two at once cannot both be first. */
+  first: (rule: RuleName, value: string) => Promise<boolean>
 }
 
 type Options = { store?: Store; now?: () => Date; sweepChance?: number; random?: () => number }
@@ -133,6 +139,9 @@ export function limiter(req: PayloadRequest, options: Options = {}): Limiter {
     },
     async record(rule, value) {
       await store.hit(key(rule, value), RULES[rule].windowSeconds)
+    },
+    async first(rule, value) {
+      return (await store.hit(key(rule, value), RULES[rule].windowSeconds)).count === 1
     },
   }
 }

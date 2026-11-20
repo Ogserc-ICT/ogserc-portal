@@ -162,7 +162,7 @@ On a brand-new, empty database, `/admin` shows a "create first user" screen that
 
 - While there are no accounts, a production server logs an error at startup beginning `SECURITY: there are no user accounts`. Treat it as urgent.
 - The first account always becomes an administrator. Only one can be created this way, even if two people submit the screen at the same moment.
-- After the screen creates the account it goes to the login page: sign in with the new account (it does not sign you in by itself).
+- After the screen creates the account it goes to the login page: sign in with the new account (it does not sign you in by itself). You are then asked to set up two-factor sign-in (Section 4.2) before anything else.
 - Then create a **second administrator** (Section 4.1). The last administrator can never be demoted or deleted (the change is refused with "At least one administrator must remain"), and nobody can delete their own account.
 
 ### 4.1 Locked accounts
@@ -170,13 +170,23 @@ On a brand-new, empty database, `/admin` shows a "create first user" screen that
 After **5 failed sign-ins in a row**, a staff account is locked for **15 minutes**. The reply is the same for every failed sign-in, so it never says whether an account exists or is locked.
 
 - **Normally:** wait 15 minutes, or ask an administrator to unlock it (Users, open the account, Unlock).
-- **Keep at least two administrators.** Until rate limiting exists (Step 3 plan, commit 4), **anyone who knows an administrator's email address can keep that account locked** by failing to sign in with it, 15 minutes at a time. With only one administrator, nobody could then sign in to unlock it.
+- **Keep at least two administrators.** **Anyone who knows an administrator's email address can keep that account locked** by failing to sign in with it, 15 minutes at a time. Rate limiting (D-081) slows this but cannot prevent it. With only one administrator, nobody could then sign in to unlock it.
 - **Emergency, when no administrator can sign in:** `pnpm auth:unlock <email>` clears the lock with Payload's own unlock (failed attempts back to 0). It changes nothing else.
   - Run it from a full checkout of the deployed commit, with `DATABASE_URL` set to the target database in your own terminal only, `NODE_ENV` unset (it refuses production mode, in which Payload would migrate), and any `PAYLOAD_SECRET` of 32 or more characters.
   - **First** run `pnpm auth:unlock --show-target` and check the printed host and database name; it connects to nothing. Without `DATABASE_URL` set in the terminal it reads `.env`, which is normally the development database.
   - It checks that the live connection is that database, reads the account back to confirm the lock is gone, and prints only the host and database name. An unknown email changes nothing and exits with an error.
-  - Write down who ran it, when, and for which account. The audit log (Step 3 plan, commit 5) will record it once it exists.
+  - Write down who ran it, when, and for which account. The audit log records it as "Account unlocked" by server code (D-083).
   - If the account keeps getting locked, someone is guessing its password: tell the account holder and look at the server log for the failed sign-ins.
+
+### 4.2 Two-factor sign-in
+
+Every staff account signs in with a password **and** a 6-digit code from an authenticator app on the person's phone (D-084). Any authenticator app works: Microsoft Authenticator, Google Authenticator, or similar.
+
+- **Setting it up (once per person):** after the first sign-in, the admin panel shows a QR code. Scan it with the app, then type the 6-digit code the app shows. Until this is done the account can do nothing else.
+- **Every sign-in after that:** password, then the current code from the app. A code works only once, so if one is refused as already used, wait for the next one (they change every 30 seconds).
+- **Wrong codes:** after 5 wrong codes the account's code check is locked for 15 minutes, and one internet address gets 10 code checks per 15 minutes. The audit log records every code accepted or refused, with the reason.
+- **New or lost phone:** there are no recovery codes. An administrator resets the person's two-factor sign-in, and they set it up again on the new phone (Step 3 plan commit 6, part B, adds the reset button and an emergency command for the last administrator). This is another reason to keep at least two administrators.
+- **Check the phone's clock:** codes depend on the time. If every code is refused, set the phone's date and time to automatic.
 
 ## 5. Deploying *(to be completed in step 13)*
 

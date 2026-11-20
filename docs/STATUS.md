@@ -11,7 +11,8 @@ Updated 2026-11-20. Plan for Step 3: `docs/step-3-plan.md`.
   commit 3. The VPS has **not** been deployed since, so it still runs the code from before that merge.
 - **Step 3 plan commit 3 (password policy) is complete:** PRs #51 and #53 (breach check, fail-open) merged.
 - **Step 3 plan commit 4 (rate limiting, D-081):** PR #54 merged.
-- **Step 3 plan commit 5 (audit log, D-083):** branch `feat/step-3-audit-log`, PR #55.
+- **Step 3 plan commit 5 (audit log, D-083):** PR #55 merged.
+- **Step 3 plan commit 6 (two-factor sign-in, D-084):** part A on branch `feat/step-3-two-factor`, PR #56; part B (administrator reset, emergency command) next.
 
 ## Before the next deploy (any deploy now includes Step 3 so far)
 - The server's `PAYLOAD_SECRET` must be at least 32 characters, or the app refuses to start. Owner to check its length
@@ -21,10 +22,11 @@ Updated 2026-11-20. Plan for Step 3: `docs/step-3-plan.md`.
 - `CLIENT_IP_HEADER` is required in production (D-081); `docker-compose.prod.yml` sets it, so nothing to add to the server's `.env`.
 - The server needs outbound HTTPS to `api.pwnedpasswords.com` for the breach check (D-053); if blocked, it is skipped with a warning.
 - After that deploy, install the monthly `deploy/prune-audit.sh` cron job and dry-run it (RUNBOOK Section 6, D-083).
+- After that deploy, each administrator sets up two-factor sign-in on first sign-in (RUNBOOK 4.2); keep at least two.
 - `/admin` and `/api` stay closed in the Caddyfile until Step 3 is complete (D-054, RUNBOOK Section 11).
 
 ## Remaining Step 3 plan commits
-6. 2FA (payload-totp, guards, admin reset, emergency CLI), with a rate limit on code checks and its audit log events (migration for the new actions). Re-test Strict cookies with it (D-052).
+6. 2FA part B: the administrator reset (`POST /api/users/:id/reset-2fa`, a button on the account screen) and `pnpm auth:reset-2fa <email>`. Re-test Strict cookies with 2FA in a real browser (D-052).
 7. Email adapter.
 8. Auth e2e tests.
 9. Docs.
@@ -73,5 +75,4 @@ When Step 3 is complete: reopen `/admin` in `deploy/Caddyfile`.
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-Merge PR #55 when its CI is green. Then plan commit 6, two-factor authentication, on a new branch from `main` (propose its plan first;
-`payload-totp` and an admin reset without recovery codes were approved in the plan; check the plugin's current version and advisories).
+Merge PR #56 when its CI is green. Then plan commit 6 part B (administrator reset and emergency command) on a new branch from `main`.

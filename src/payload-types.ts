@@ -71,6 +71,7 @@ export interface Config {
     media: Media;
     'audit-log': AuditLog;
     'rate-limits': RateLimit;
+    'totp-attempts': TotpAttempt;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -82,6 +83,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     'audit-log': AuditLogSelect<false> | AuditLogSelect<true>;
     'rate-limits': RateLimitsSelect<false> | RateLimitsSelect<true>;
+    'totp-attempts': TotpAttemptsSelect<false> | TotpAttemptsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -132,6 +134,8 @@ export interface User {
    * Administrator: manages users and settings. Publisher: approves and publishes content. Editor: drafts content.
    */
   roles: ('administrator' | 'publisher' | 'editor')[];
+  totpSecret?: string | null;
+  hasTotp?: boolean | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -193,6 +197,11 @@ export interface AuditLog {
     | 'user.updated'
     | 'user.roles-changed'
     | 'user.deleted'
+    | '2fa.enrolled'
+    | '2fa.verified'
+    | '2fa.failed'
+    | '2fa.removed'
+    | '2fa.reset'
     | 'media.created'
     | 'media.updated'
     | 'media.deleted';
@@ -242,6 +251,15 @@ export interface RateLimit {
   key: string;
   count: number;
   expiresAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "totp-attempts".
+ */
+export interface TotpAttempt {
+  id: string;
+  attempts: number;
+  lockUntil?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -332,6 +350,8 @@ export interface PayloadMigration {
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
   roles?: T;
+  totpSecret?: T;
+  hasTotp?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -393,6 +413,15 @@ export interface RateLimitsSelect<T extends boolean = true> {
   key?: T;
   count?: T;
   expiresAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "totp-attempts_select".
+ */
+export interface TotpAttemptsSelect<T extends boolean = true> {
+  id?: T;
+  attempts?: T;
+  lockUntil?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

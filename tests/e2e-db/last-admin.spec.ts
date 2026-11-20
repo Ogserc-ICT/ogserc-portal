@@ -1,6 +1,6 @@
 import { type APIRequestContext, expect, test } from '@playwright/test'
 
-import { createStaff, loadAdminAccount, signIn, type TestAccount } from './support/auth'
+import { createStaff, loadAdminAccount, signInOnce, type TestAccount } from './support/auth'
 import { runTestDbScript } from './support/db-script'
 
 // At least one administrator must always remain (Step 3 plan, D-052): checked once per operation,
@@ -16,7 +16,8 @@ let survivor: TestAccount
 const opened: APIRequestContext[] = []
 
 async function as(account: TestAccount): Promise<APIRequestContext> {
-  const context = await signIn(baseURL, account)
+  // The same administrators sign in many times here, faster than 2FA codes come (D-084).
+  const context = await signInOnce(baseURL, account)
   opened.push(context)
   return context
 }

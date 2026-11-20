@@ -1545,3 +1545,33 @@ Each entry holds the time, the actor (a link to the account and a copy of its em
 
 **Watch (re-check after Payload upgrades):** `afterLogin` also running for `resetPassword`; `afterForgotPassword` running only for known accounts and receiving `args.req`; `afterOperation` for `resetPassword` and `unlock` running after the commit; `forgotPassword` saving the account through `payload.update` (so `afterChange` sees it); failed sign-ins incrementing `loginAttempts` outside any transaction (Payload 3.90.2, `auth/operations/login.js`); the plain password being gone from `data` by `afterChange` (CI caught this: the first version looked for it there and recorded nothing).
 
+## D-084 Two-factor sign-in for staff with payload-totp, guarded (2026-11-20)
+
+**Decision:** Staff sign in with their password and then a 6-digit code from an authenticator app (NFR-SEC-01), using `payload-totp@3.0.7` (MIT, pinned exactly; the plugin and an administrator reset without recovery codes were chosen in the Step 3 plan) with `forceSetup: true` on `users`. Codes are SHA-1, 6 digits, 30 seconds, issuer "OGSERC", which every common authenticator app supports. A staff session that has not entered this session's code gets **no access** to any collection, through the admin panel or the API; an account that has never set it up can only read its own account, to set it up. The plugin is registered in `src/lib/auth/two-factor.ts` and runs last (`order` = `Number.MAX_SAFE_INTEGER`, with `denyByDefault` one below), so it wraps every rule that `denyByDefault` leaves.
+
+Its three endpoints (`/api/setup-totp`, `/api/verify-totp`, `/api/remove-totp`) are wrapped (`guardTotpEndpoint`) with what the plugin lacks:
+
+| Gap in the plugin | Guard |
+|---|---|
+| A code can be used again within its window (about 90 seconds) | A code accepted for an account is refused for 90 seconds (the `rate_limits` table, marked before the plugin checks it, so two requests with one code cannot both pass) |
+| Set-up accepts any secret the browser sends | Secrets under 160 bits are refused (the plugin's own screen generates 256) |
+| No limit per address | 10 code checks per address per 15 minutes (D-081), on top of the plugin's own lock after 5 wrong codes (3.0.6) |
+| No audit entries | `2fa.enrolled`, `2fa.verified`, `2fa.failed` (wrong code, code already used, too many attempts, set-up key too short), `2fa.removed` (D-083); `2fa.reset` is for the administrator reset |
+
+`guardTotpEndpoints` fails the build if the plugin no longer has exactly those three endpoints, so an upgrade cannot quietly drop a guard.
+
+**Public reads:** the plugin's wrapper refuses visitors who are not signed in. Media keeps public reads with `PUBLIC_READ` (`custom.totp.disableAccessWrapper.read`). A read that differs between the public and staff (`publishedOnly`, from Step 4) uses `publicOrTwoFactor`: visitors get the public rule, signed-in users go through the 2FA check. `users.admin` (may this user open the admin panel) is not wrapped and must not be: a session that owes a code has to reach the panel to enter it, and the plugin's screens send it to the code page.
+
+**`src/proxy.ts`:** the plugin's admin screens need the current path, which a server component cannot read; the proxy passes it as a request header (overwriting any value the browser sends), for `/admin` only, so public pages never run it.
+
+**Why this plugin:** it covers the admin screens (QR code, set-up, verify), the API and the Local API, keeps access rules in one place, and its four published advisories (brute force, another collection overwriting a secret, an open redirect, set-up enforced only in the admin panel) were fixed in 3.0.5 and 3.0.6. Writing our own would mean writing and maintaining those screens and the session handling. It adds `otpauth`, `qrcode` and `jsonwebtoken`; `pnpm audit` is unchanged.
+
+**Accepted limits (owner informed 2026-11-20):**
+- **The secret is stored unencrypted** in `users.totp_secret`. The database is not reachable from the internet, the API never returns it (tested), and the off-server copies are encrypted (D-080).
+- **The "code entered" cookie is not tied to one sign-in.** It is signed with `PAYLOAD_SECRET`, names only the account, expires with the 1-hour session and is deleted at sign-out. Misusing it needs the cookie and the password.
+- **No recovery codes** (Step 3 plan): a lost phone needs an administrator reset, or, for the last administrator, the emergency command (Step 3 plan commit 6, part B). Keep at least two administrators.
+
+**Tests:** every database test signs in through `tests/e2e-db/support/auth.ts`, which now sets up and enters codes (RFC 6238 with `node:crypto`, no extra library). `tests/unit/config-access.spec.ts` audits the rules as written with 2FA off (`portalConfig({ twoFactorSignIn: false })`, which only tests use) and, by behaviour, that on the live config a session owing a code gets only public reads and the admin shell. The drafts scenario builds its config with 2FA off, because its in-process REST requests have no Next.js request for the plugin to read its cookie from; the last-administrator probe marks its administrator as verified (`_strategy: 'totp'`).
+
+**Watch (re-check after every payload-totp or Payload upgrade):** the three endpoint paths and their `{ ok, message }` reply; `verify-totp` validating with `window: 1`; the strategy reading its cookie through `next/headers`; the access wrapper's checks on `_strategy` and `hasTotp`; Payload catching a strategy's error and trying the next strategy; new advisories at https://github.com/GeorgeHulpoi/payload-totp/security.
+
