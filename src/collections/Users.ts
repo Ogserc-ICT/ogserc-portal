@@ -10,6 +10,16 @@ import { fieldCan, isAdmin, isAdminNotSelf, isAdminOrSelf, isStaff, userCan } fr
 import { ROLES } from '../access/roles'
 import { passwordPolicyOnReset, passwordPolicyOnSave, refuseBulkPasswordChange } from '../lib/auth/enforce-password-policy'
 import { genericLoginError, LOCK_MINUTES, MAX_LOGIN_ATTEMPTS } from '../lib/auth/generic-login-error'
+import {
+  auditAuthOperations,
+  auditFailedLogin,
+  auditForgotPassword,
+  auditLogin,
+  auditLogout,
+  auditUserChange,
+  auditUserDelete,
+  noteLockBeforeLogin,
+} from '../lib/audit/hooks'
 import { protectLastAdministrator } from '../lib/auth/last-administrator'
 import { countFailedLogins, limitAuthRequests, rateLimitReply } from '../lib/auth/rate-limit'
 import { endSessionsOnRoleChange } from '../lib/auth/revoke-sessions'
@@ -92,16 +102,23 @@ export const Users: CollectionConfig = {
     // Rate limits first, so a limited request does no other work (D-081).
     beforeOperation: [
       limitAuthRequests,
+      noteLockBeforeLogin,
       refuseBulkPasswordChange,
       passwordPolicyOnReset,
       limitSessionAge,
       protectLastAdministrator,
     ],
     beforeDelete: [refuseSelfDelete],
-    afterChange: [endSessionsOnRoleChange],
-    // The failure is counted before genericLoginError replaces the reply; rateLimitReply writes
+    // The audit log (D-083): in the request's transaction, except for refused sign-ins.
+    afterChange: [endSessionsOnRoleChange, auditUserChange],
+    afterDelete: [auditUserDelete],
+    afterLogin: [auditLogin],
+    afterLogout: [auditLogout],
+    afterForgotPassword: [auditForgotPassword],
+    afterOperation: [auditAuthOperations],
+    // The failure is counted and audited before genericLoginError replaces the reply; rateLimitReply writes
     // the 429's body, which Payload's formatter cannot in the production build (D-081).
-    afterError: [countFailedLogins, rateLimitReply, genericLoginError],
+    afterError: [countFailedLogins, auditFailedLogin, rateLimitReply, genericLoginError],
   },
   fields: [
     // Overrides only the access of Payload's built-in email field; it is deep-merged with the

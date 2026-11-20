@@ -69,6 +69,7 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    'audit-log': AuditLog;
     'rate-limits': RateLimit;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -79,6 +80,7 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    'audit-log': AuditLogSelect<false> | AuditLogSelect<true>;
     'rate-limits': RateLimitsSelect<false> | RateLimitsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -170,6 +172,68 @@ export interface Media {
   focalY?: number | null;
 }
 /**
+ * A record of sign-ins and changes. Read-only: entries cannot be edited or deleted.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "audit-log".
+ */
+export interface AuditLog {
+  id: number;
+  action:
+    | 'login.succeeded'
+    | 'login.failed'
+    | 'login.limited'
+    | 'account.locked'
+    | 'account.unlocked'
+    | 'logout'
+    | 'password.reset-requested'
+    | 'password.reset-completed'
+    | 'password.changed'
+    | 'user.created'
+    | 'user.updated'
+    | 'user.roles-changed'
+    | 'user.deleted'
+    | 'media.created'
+    | 'media.updated'
+    | 'media.deleted';
+  /**
+   * Who did it. Empty for a visitor who is not signed in, or for server code.
+   */
+  actor?: (number | null) | User;
+  /**
+   * A copy, so the entry still reads correctly if the account is deleted.
+   */
+  actorEmail?: string | null;
+  targetType?: ('user' | 'media') | null;
+  targetId?: string | null;
+  /**
+   * The account's email or the image's file name, at the time.
+   */
+  targetLabel?: string | null;
+  /**
+   * Blanked after 90 days.
+   */
+  ipAddress?: string | null;
+  /**
+   * The browser. Blanked after 90 days.
+   */
+  userAgent?: string | null;
+  /**
+   * Only field names, roles and reasons; never values of secrets.
+   */
+  details?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "rate-limits".
  */
@@ -210,6 +274,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'audit-log';
+        value: number | AuditLog;
       } | null)
     | ({
         relationTo: 'rate-limits';
@@ -299,6 +367,23 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "audit-log_select".
+ */
+export interface AuditLogSelect<T extends boolean = true> {
+  action?: T;
+  actor?: T;
+  actorEmail?: T;
+  targetType?: T;
+  targetId?: T;
+  targetLabel?: T;
+  ipAddress?: T;
+  userAgent?: T;
+  details?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
