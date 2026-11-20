@@ -114,7 +114,7 @@ test('never on your own account; an unknown or malformed id is not found', async
   }
 })
 
-test("the reset also clears a code lock from too many wrong codes", async () => {
+test('too many wrong codes lock the account; the reset unlocks it and clears the code count', async () => {
   const { account } = await enrolled('reset-lock')
   const token = await passwordOnlyToken(baseURL, account)
   const right = totpCode(account.totpSecret!, 1)
@@ -126,8 +126,11 @@ test("the reset also clears a code lock from too many wrong codes", async () => 
 
   expect((await admin.post(`/api/users/${await idOf(account.email)}/reset-2fa`)).status()).toBe(200)
   forgetTotpSecret(account)
-  opened.push(await signIn(baseURL, account)) // set-up
-  opened.push(await signIn(baseURL, account)) // a code check, which a remaining lock would refuse
+  opened.push(await signIn(baseURL, account)) // password (a remaining lock would refuse it), then set-up
+  opened.push(await signIn(baseURL, account)) // a code check, which a remaining code count would refuse
+  const response = await admin.get(`/api/audit-log?where[targetLabel][equals]=${encodeURIComponent(account.email)}&sort=createdAt&limit=100&depth=0`)
+  const actions = ((await response.json()) as { docs: { action: string }[] }).docs.map((entry) => entry.action)
+  expect(actions.slice(actions.indexOf('2fa.reset') - 1, actions.indexOf('2fa.reset') + 1)).toEqual(['account.unlocked', '2fa.reset'])
 })
 
 test.describe('the emergency command pnpm auth:reset-2fa', () => {

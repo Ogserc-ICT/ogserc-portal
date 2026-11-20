@@ -23,12 +23,14 @@ export const RESET_MESSAGES = {
   forbidden: 'Only an administrator who has entered their own code can reset two-factor sign-in.',
 } as const
 
-type Account = { id: number | string; email?: unknown; totpSecret?: unknown }
+type Account = { id: number | string; email?: unknown; totpSecret?: unknown; lockUntil?: unknown }
 
 /**
- * Clears the account's secret and the plugin's wrong-code count, and ends every session it has,
- * then records `2fa.reset`: all in the request's transaction, so the change and its audit entry are
- * saved together or not at all. Returns false if there is no such account.
+ * Clears the account's secret and the plugin's wrong-code count, ends every session it has, and
+ * unlocks it if it is locked (the plugin locks the account after too many wrong codes, as Payload
+ * does after wrong passwords), then records `2fa.reset`: all in the request's transaction, so the
+ * change and its audit entries are saved together or not at all. Returns false if there is no such
+ * account.
  */
 export async function resetTwoFactor(req: PayloadRequest, id: number | string, via: string): Promise<boolean> {
   const { payload } = req
@@ -40,6 +42,12 @@ export async function resetTwoFactor(req: PayloadRequest, id: number | string, v
   // Sessions live in their own table; the adapter clears them as endSessionsOnRoleChange does.
   await payload.db.updateOne({ collection: 'users', id: account.id, data: { sessions: [] }, req, returning: false })
   await payload.db.deleteMany({ collection: TOTP_ATTEMPTS, where: { id: { equals: String(account.id) } }, req })
+  // A person who mistyped codes on a new phone would otherwise stay locked out after the reset.
+  // Payload's own unlock, so its audit entry ("Account unlocked") is written as for any unlock.
+  if (typeof account.lockUntil === 'string' && Date.parse(account.lockUntil) > Date.now() && typeof account.email === 'string') {
+    // Payload types `data` as login data; its unlock operation reads only the email.
+    await payload.unlock({ collection: 'users', data: { email: account.email } as { email: string; password: string }, overrideAccess: true, req })
+  }
   const actor = req.user?.collection === 'users' ? (req.user as { id: number | string; email?: unknown }) : null
   await recordAudit(req, {
     action: '2fa.reset',
