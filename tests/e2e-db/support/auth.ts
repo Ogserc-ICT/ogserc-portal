@@ -10,7 +10,14 @@ import { type APIRequestContext, expect, request } from '@playwright/test'
 // the account's first sign-in, entered on every later one.
 
 /** `totpSecret` is set once the helpers have set up two-factor sign-in for the account. */
-export type TestAccount = { email: string; password: string; name: string; totpSecret?: string }
+export type TestAccount = {
+  email: string
+  password: string
+  name: string
+  totpSecret?: string
+  /** Only for the run's administrator, in the admin file: a verified session to reuse. */
+  session?: { token: string; cookie: string }
+}
 
 /** A new account with a random password and an address that can never receive mail. */
 export function newAccount(label: string): TestAccount {
@@ -141,11 +148,14 @@ export function markVerified(token: string, cookie: string): void {
   verifiedSessions.set(token, cookie)
 }
 
+/** Rounds of codes to try before giving up: each new 30-second period brings one unused code. */
+const CODE_ROUNDS = 5
+
 /**
  * Completes two-factor sign-in for a password-only session: sets it up on the account's first
- * sign-in, otherwise enters a code. A code can be used only once (D-084), so if this account
- * already used the current one, the next or previous one (both still accepted) is tried, and as a
- * last resort the next period is awaited.
+ * sign-in, otherwise enters a code. A code can be used only once (D-084), and the codes for the
+ * previous, current and next period are all accepted, so it tries the newest first and, if this
+ * account has used all three, waits for the next period.
  */
 export async function completeTwoFactor(baseURL: string, account: TestAccount, token: string): Promise<void> {
   const secret = await secretOf(account)
@@ -157,20 +167,19 @@ export async function completeTwoFactor(baseURL: string, account: TestAccount, t
     markVerified(token, setup.cookie!)
     return
   }
-  for (const steps of [0, 1, -1, 'wait', 0] as const) {
-    if (steps === 'wait') {
-      const period = TOTP_PERIOD_SECONDS * 1000
-      await new Promise((resolve) => setTimeout(resolve, period - (Date.now() % period) + 200))
-      continue
+  const period = TOTP_PERIOD_SECONDS * 1000
+  for (let round = 1; round <= CODE_ROUNDS; round++) {
+    for (const steps of [1, 0, -1]) {
+      const verify = await totpRequest(baseURL, token, '/verify-totp', { token: totpCode(secret, steps) })
+      if (verify.ok && verify.cookie) {
+        markVerified(token, verify.cookie)
+        return
+      }
+      expect(verify.message, `2FA code refused for ${account.email}: ${verify.status} ${verify.message}`).toMatch(/already been used/)
     }
-    const verify = await totpRequest(baseURL, token, '/verify-totp', { token: totpCode(secret, steps) })
-    if (verify.ok && verify.cookie) {
-      markVerified(token, verify.cookie)
-      return
-    }
-    expect(verify.message, `2FA code refused for ${account.email}: ${verify.status} ${verify.message}`).toMatch(/already been used/)
+    await new Promise((resolve) => setTimeout(resolve, period - (Date.now() % period) + 200))
   }
-  throw new Error(`No unused 2FA code was accepted for ${account.email}.`)
+  throw new Error(`No unused 2FA code was accepted for ${account.email} in ${CODE_ROUNDS} periods.`)
 }
 
 /** Signs in with the password only: the session exists but owes a code, so it has no access. */
@@ -180,11 +189,38 @@ export async function passwordOnlyToken(baseURL: string, account: TestAccount): 
   return token!
 }
 
-/** Signs in fully (password, then 2FA) and returns the session token, failing the test if refused. */
+/**
+ * Signs in fully (password, then 2FA) and returns the session token, failing the test if refused.
+ * The run's administrator signs in at the start of nearly every test file, faster than an
+ * authenticator gives out new codes (one per 30 seconds, each usable once), so its verified
+ * session is kept in the admin file and reused while it is still valid.
+ */
 export async function signInToken(baseURL: string, account: TestAccount): Promise<string> {
+  const admin = await adminOnFile()
+  const isAdmin = admin?.email === account.email
+  if (isAdmin && admin.session && (await stillSignedIn(baseURL, account, admin.session))) {
+    markVerified(admin.session.token, admin.session.cookie)
+    return admin.session.token
+  }
   const token = await passwordOnlyToken(baseURL, account)
   await completeTwoFactor(baseURL, account, token)
+  if (isAdmin) await saveAdminAccount({ ...(await adminOnFile())!, session: { token, cookie: verifiedSessions.get(token)! } })
   return token
+}
+
+/** Whether a saved session still acts as this account. */
+async function stillSignedIn(baseURL: string, account: TestAccount, session: { token: string; cookie: string }) {
+  const context = await request.newContext({
+    baseURL,
+    extraHTTPHeaders: { Authorization: `JWT ${session.token}`, Cookie: `${TOTP_COOKIE}=${session.cookie}` },
+  })
+  try {
+    const response = await context.get('/api/users/me')
+    const body = (await response.json().catch(() => ({}))) as { user?: { email?: string } | null }
+    return response.ok() && body.user?.email === account.email
+  } finally {
+    await context.dispose()
+  }
 }
 
 /**
