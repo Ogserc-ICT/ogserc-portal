@@ -63,6 +63,8 @@ jobs:
       SITE_URL: http://localhost:3000
       # Required in production mode (D-081); the sign-in tests send their own addresses in it.
       CLIENT_IP_HEADER: X-Forwarded-For
+      # CI keeps uploads in a folder; production needs S3 storage (D-086).
+      MEDIA_STORAGE: local
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -118,6 +120,8 @@ jobs:
       SITE_URL: http://localhost:3000
       # Required in production mode (D-081); the sign-in tests send their own addresses in it.
       CLIENT_IP_HEADER: X-Forwarded-For
+      # CI keeps uploads in a folder; production needs S3 storage (D-086).
+      MEDIA_STORAGE: local
       # A made-up ID so tests/e2e/analytics.spec.ts checks the tracker tag (D-077).
       UMAMI_WEBSITE_ID: 00000000-0000-4000-8000-000000000000
     steps:

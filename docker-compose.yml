@@ -19,6 +19,8 @@ services:
       # Required in production mode (D-081). Locally nothing sets it, so all requests share one
       # sign-in limit; on a server the proxy sets it (docker-compose.prod.yml).
       CLIENT_IP_HEADER: X-Forwarded-For
+      # Local only: uploads stay inside the container and go when it is rebuilt (D-086).
+      MEDIA_STORAGE: local
     depends_on:
       db:
         condition: service_healthy

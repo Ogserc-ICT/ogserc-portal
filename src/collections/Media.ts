@@ -46,6 +46,10 @@ export const Media: CollectionConfig = {
     afterDelete: [mediaAudit.afterDelete],
   },
   fields: [
+    // Where the file is in the S3 bucket. The S3 storage adapter adds this field itself, replacing
+    // this one, but only when it is enabled; defining it here keeps the database schema the same
+    // with or without S3 settings (D-086). Same definition as @payloadcms/plugin-cloud-storage.
+    { name: '_objectKey', type: 'text', admin: { hidden: true, readOnly: true } },
     {
       name: 'alt',
       type: 'text',

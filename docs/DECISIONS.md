@@ -1591,3 +1591,18 @@ Its three endpoints (`/api/setup-totp`, `/api/verify-totp`, `/api/remove-totp`) 
 
 **Costs:** no self-service password reset; at least two administrators must exist (already required), so one can always reset the other. **Phase 2** (public accounts, complaint updates) needs real email: decide the route then, and replace this adapter (the forgotten-password limits in D-081 are kept, inactive, for that).
 
+## D-086 Uploaded files in a Backblaze B2 bucket through Payload's S3 adapter (2026-11-20)
+
+**Decision (owner approved 2026-11-20):** Uploaded files (Media images now, documents from Step 4) are stored in an S3-compatible bucket through Payload's official adapter `@payloadcms/storage-s3@3.90.2` (MIT, pinned to Payload's version; it brings Amazon's S3 client libraries). On OGSERC's VPS the bucket is a **second, separate Backblaze B2 bucket** in the account that holds the backups (D-080), with its own key limited to that bucket. Files never touch the server's disk.
+- **Settings:** `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (`src/lib/uploads/s3-settings.ts`, `src/lib/uploads/storage.ts`). All five or none. Path-style URLs, which every S3-compatible provider accepts, so changing provider is a change of settings (portability rules).
+- **Production refuses to start** with no S3 settings unless `MEDIA_STORAGE=local` says local files are acceptable (only CI and the local Docker check set it), and with some but not all of them. `docker-compose.prod.yml` refuses to start the app without them.
+- **Without settings** (development, CI), files go to a local folder (`MEDIA_DIR`) as before.
+- **Schema the same either way:** the adapter adds a hidden `_objectKey` field (migration `20261120_210425_media_object_key`) only when enabled, so Media defines the same field itself, which the adapter replaces. Without it, a migration generated without S3 settings would drop the column.
+- **Serving:** files keep going through Payload (`/api/media/file/...`), so read access still applies (private files for draft documents, D-045, Step 4). The bucket stays private.
+
+**Why this, not a Docker volume:** the app container had no storage of its own, so every upload would have been lost at the next deploy and never backed up. A volume would need adding to the backups and copying at every move; a bucket survives deploys and host moves, and D-013 already chose S3-compatible storage.
+
+**Protection against deletion:** the bucket keeps previous versions of changed or deleted files for 90 days (B2 lifecycle rule), so a file deleted or replaced by mistake can be restored from the Backblaze console. The files are **not** in the restic off-server copies (D-080): those hold the databases and `.env`. The database dump names every file, and Backblaze stores each file redundantly. Copying the bucket elsewhere as well can be added if OGSERC wants a second copy.
+
+**Data note:** images and, later, documents are published material, held in the EU (Backblaze EU Central) like the backups.
+

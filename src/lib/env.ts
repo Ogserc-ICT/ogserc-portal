@@ -1,6 +1,8 @@
 // Startup checks for server configuration. Pure, so the rules can be unit tested; messages name
 // the variable but never include its value.
 
+import { s3Settings } from './uploads/s3-settings'
+
 export type EnvCheck = { errors: string[]; warnings: string[] }
 
 /** process.env, or any plain set of variables (tests). */
@@ -64,6 +66,14 @@ export function checkServerEnv(env: Env): EnvCheck {
     else if (url.protocol !== 'https:' && !(url.protocol === 'http:' && LOCAL_HOSTS.has(url.hostname))) {
       errors.push('SITE_URL must use https in production (http is allowed only for localhost).')
     }
+  }
+
+  // Uploads (D-086): all five S3 settings or none; and in production none only with an explicit
+  // MEDIA_STORAGE=local, because files on the container's disk are lost at every deploy.
+  const storage = s3Settings(env)
+  if (storage && 'missing' in storage) errors.push(`S3 storage is half configured: set ${storage.missing.join(', ')} too, or none of them.`)
+  if (production && !isBuildPhase(env) && !storage && env.MEDIA_STORAGE !== 'local') {
+    errors.push('Uploads need S3 storage in production (the S3_* settings), or MEDIA_STORAGE=local where losing them at each deploy is acceptable (CI only).')
   }
 
   // Without it every visitor shares one sign-in limit, so one person could block everyone (D-081).
