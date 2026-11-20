@@ -22,6 +22,7 @@ import {
   notePasswordChange,
 } from '../lib/audit/hooks'
 import { protectLastAdministrator } from '../lib/auth/last-administrator'
+import { publicErrorReply, refuseForgotPassword } from '../lib/auth/no-forgot-password'
 import { countFailedLogins, limitAuthRequests, rateLimitReply } from '../lib/auth/rate-limit'
 import { resetTwoFactorEndpoint } from '../lib/auth/reset-two-factor'
 import { endSessionsOnRoleChange } from '../lib/auth/revoke-sessions'
@@ -103,8 +104,10 @@ export const Users: CollectionConfig = {
   hooks: {
     // The password policy first, so it never runs while the first-user lock is held.
     beforeValidate: [passwordPolicyOnSave, firstUserIsAdministrator, notePasswordChange],
-    // Rate limits first, so a limited request does no other work (D-081).
+    // Forgotten-password requests refused first (no email, D-085), then rate limits, so a refused or
+    // limited request does no other work (D-081).
     beforeOperation: [
+      refuseForgotPassword,
       limitAuthRequests,
       noteLockBeforeLogin,
       refuseBulkPasswordChange,
@@ -122,7 +125,7 @@ export const Users: CollectionConfig = {
     afterOperation: [auditAuthOperations],
     // The failure is counted and audited before genericLoginError replaces the reply; rateLimitReply writes
     // the 429's body, which Payload's formatter cannot in the production build (D-081).
-    afterError: [countFailedLogins, auditFailedLogin, rateLimitReply, genericLoginError],
+    afterError: [countFailedLogins, auditFailedLogin, rateLimitReply, publicErrorReply, genericLoginError],
   },
   fields: [
     // Overrides only the access of Payload's built-in email field; it is deep-merged with the

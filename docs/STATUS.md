@@ -17,8 +17,6 @@ Updated 2026-11-20. Plan for Step 3: `docs/step-3-plan.md`.
 - **Step 3 plan commit 6 (two-factor sign-in, D-084):** part A merged (PR #56); part B (administrator reset, emergency command) on branch `feat/step-3-two-factor-reset`, PR #57.
 
 ## Before reopening `/admin`
-- The email adapter (plan commit 7): until it exists, forgotten-password links go nowhere. Needs the owner's choice of OGSERC's
-  Microsoft 365 or a sending service (D-059); the contact form uses the same.
 - Create the first administrator yourself on the "create first user" screen, then a second administrator, before anyone else can
   reach the site's `/admin` (RUNBOOK Section 4); each sets up an authenticator app at first sign-in (RUNBOOK 4.2).
 - Check sign-in, the code step and the Strict session cookie in a real browser (D-052).
@@ -27,7 +25,7 @@ Updated 2026-11-20. Plan for Step 3: `docs/step-3-plan.md`.
 
 ## Remaining Step 3 plan commits
 6. Re-test Strict cookies with 2FA in a real browser at the first deploy (D-052).
-7. Email adapter.
+7. No email (D-085): branch `feat/step-3-no-email`; forgotten passwords are reset by an administrator (RUNBOOK 4.3).
 8. Auth e2e tests.
 9. Docs.
 When Step 3 is complete: reopen `/admin` in `deploy/Caddyfile`.
@@ -75,5 +73,5 @@ When Step 3 is complete: reopen `/admin` in `deploy/Caddyfile`.
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-The owner chooses how the site sends email (Microsoft 365 or a sending service); then plan commit 7, the email adapter. Otherwise
-Step 4 (content collections) can start, with `/admin` still closed.
+Merge the no-email PR when its CI is green, and deploy it (it replaces Payload's default, which logs emails). Then either reopen
+`/admin` (first two administrators, authenticator apps, real-browser check, Caddyfile) or start Step 4 with `/admin` still closed.

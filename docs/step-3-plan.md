@@ -139,6 +139,8 @@ must set up 2FA at next login.
    forced set-up, the four guards (address limit, no code reuse, secret size, audit), proxy.ts, test helpers and tests.
    **Part B done** (2026-11-20): the administrator reset (endpoint and button) and `pnpm auth:reset-2fa`.
 7. Email adapter (dev console / prod drop).
+   **Done differently** (2026-11-20, D-085): the owner chose no email at all. A no-send adapter everywhere, and forgotten-password
+   requests refused; an administrator sets a temporary password instead.
 8. Test-only collection (`E2E_TEST_COLLECTIONS=true`) + migration, test user seeding, Playwright auth tests.
 9. Docs: README, RUNBOOK (first admin, 2FA reset, email), DECISIONS (D-044+), CLAUDE.md "Authentication and access",
    `.env.example`.

@@ -18,6 +18,8 @@ export const RULES = {
   loginIp: { limit: 10, windowSeconds: 15 * 60 },
   /** Failed sign-ins for one email, known or not. Above the lockout (5), so the lockout still shows. */
   loginEmail: { limit: 10, windowSeconds: 15 * 60 },
+  // Forgotten-password limits: inactive while that request is refused (no email, D-085); kept for
+  // when email returns (Phase 2).
   forgotIp: { limit: 5, windowSeconds: 60 * 60 },
   forgotEmail: { limit: 3, windowSeconds: 60 * 60 },
   resetIp: { limit: 10, windowSeconds: 60 * 60 },

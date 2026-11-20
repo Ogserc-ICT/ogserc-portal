@@ -129,9 +129,8 @@ test('account changes record who did them, and field names, roles and reasons on
   ])
 })
 
-test('a reset link request and its use, and an unlock, are recorded', async () => {
+test('a reset link issued by server code and its use, and an unlock, are recorded', async () => {
   const account = await staff('audit-reset')
-  expect((await (await from(address())).post('/api/users/forgot-password', { data: { email: account.email } })).status()).toBe(200)
   const { token } = (await runTestDbScript('tests/support/password-probe.ts', ['issue-token', account.email])) as { token: string }
   secrets.push(token)
   const password = randomBytes(18).toString('hex')
@@ -144,8 +143,8 @@ test('a reset link request and its use, and an unlock, are recorded', async () =
 
   const entries = await entriesFor(account.email)
   const seen = entries.map((entry) => entry.action)
-  // Two reset requests: the forgot-password form, then the token the test issues itself.
-  expect(seen.filter((action) => action === 'password.reset-requested')).toHaveLength(2)
+  // Forgotten-password requests over the API are refused (no email, D-085); server code can still issue a token.
+  expect(seen.filter((action) => action === 'password.reset-requested')).toHaveLength(1)
   expect(seen).toContain('password.reset-completed')
   expect(seen).not.toContain('login.succeeded')
   const unlock = entries.find((entry) => entry.action === 'account.unlocked')

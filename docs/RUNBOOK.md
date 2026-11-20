@@ -17,7 +17,7 @@ Every setting comes from environment variables. The full list, with explanations
 | `SITE_URL` | Yes | Public address of the site, e.g. `https://example.gov.ng`, without a trailing slash. |
 | `MEDIA_DIR` | No | Local folder for uploaded images until S3 storage arrives in step 4. Default `media`. |
 | `S3_*` | From step 4 | S3-compatible file storage for uploads. |
-| `SMTP_*`, `EMAIL_FROM`, `CONTACT_FORM_TO` | From step 5 | Email for the contact form. |
+| `SMTP_*`, `EMAIL_FROM`, `CONTACT_FORM_TO` | Not used | The site sends no email (D-085); the contact form uses a `mailto:` link (D-059). |
 | `TURNSTILE_*` | From step 5 | Bot protection on forms. |
 | `AUDIT_IP_RETENTION_DAYS`, `AUDIT_RETENTION_DAYS` | No | Audit log retention, read by `deploy/prune-audit.sh` (D-083): blank the address and browser after this many days (default 90) and delete entries after this many (default 730). |
 | `CLIENT_IP_HEADER` | Yes in production | The request header that carries the visitor's address, set by the proxy in front of the app. Sign-in rate limits count each address separately (D-081); the server refuses to start in production without it. `docker-compose.prod.yml` sets `X-Forwarded-For` for Caddy. On another host, use the header its proxy sets (and make sure the proxy replaces any value the visitor sends). |
@@ -162,7 +162,7 @@ On a brand-new, empty database, `/admin` shows a "create first user" screen that
 
 - While there are no accounts, a production server logs an error at startup beginning `SECURITY: there are no user accounts`. Treat it as urgent.
 - The first account always becomes an administrator. Only one can be created this way, even if two people submit the screen at the same moment.
-- After the screen creates the account it goes to the login page: sign in with the new account (it does not sign you in by itself). You are then asked to set up two-factor sign-in (Section 4.2) before anything else.
+- After the screen creates the account it goes to the login page: sign in with the new account (it does not sign you in by itself). You are then asked to set up two-factor sign-in (Section 4.2) before anything else. Write the password down in the password manager: there is no email reset (Section 4.3).
 - Then create a **second administrator** (Section 4.1). The last administrator can never be demoted or deleted (the change is refused with "At least one administrator must remain"), and nobody can delete their own account.
 
 ### 4.1 Locked accounts
@@ -188,6 +188,15 @@ Every staff account signs in with a password **and** a 6-digit code from an auth
 - **New or lost phone:** there are no recovery codes. Another administrator opens the person's account in the admin panel and presses **Reset two-factor sign-in**. The person is signed out everywhere and sets it up again on the new phone at their next sign-in. An administrator cannot reset their own: ask another administrator. This is another reason to keep at least two administrators.
 - **Emergency, when no administrator can sign in** (for example the only administrator lost their phone): `pnpm auth:reset-2fa <email>` does the same reset from a terminal. It works like `pnpm auth:unlock` (Section 4.1): run it from a full checkout of the deployed commit with `DATABASE_URL` set in your own terminal only and `NODE_ENV` unset; **first** run `pnpm auth:reset-2fa --show-target` and check the host and database name. The audit log records it as "Two-factor sign-in reset" by server code. Write down who ran it, when and why.
 - **Check the phone's clock:** codes depend on the time. If every code is refused, set the phone's date and time to automatic.
+
+### 4.3 Forgotten passwords
+
+The site sends no email (D-085), so "Forgot password?" in the admin panel answers: *Password resets by email are switched off. Ask an administrator to set a new password for you.*
+
+1. **An administrator** opens the person's account in the admin panel, sets a new temporary password (at least 12 characters; the usual password rules apply), and saves. This signs the person out everywhere.
+2. **Tell them the temporary password in person or by phone,** never by email or chat.
+3. **The person signs in** with it and their authenticator code, then sets their own password straight away (their account screen, *Change password*).
+4. If **both** administrators are locked out of their passwords, a developer can set one through a `payload run` script against the database, as for the emergency commands in 4.1 and 4.2. Keeping two administrators makes this unlikely.
 
 ## 5. Deploying *(to be completed in step 13)*
 
