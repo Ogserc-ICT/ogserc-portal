@@ -12,7 +12,7 @@ Updated 2026-11-20. Plan for Step 3: `docs/step-3-plan.md`.
 - **Step 3 plan commit 3 (password policy) is complete:** PRs #51 and #53 (breach check, fail-open) merged.
 - **Step 3 plan commit 4 (rate limiting, D-081):** PR #54 merged.
 - **Step 3 plan commit 5 (audit log, D-083):** PR #55 merged.
-- **Step 3 plan commit 6 (two-factor sign-in, D-084):** part A on branch `feat/step-3-two-factor`, PR #56; part B (administrator reset, emergency command) next.
+- **Step 3 plan commit 6 (two-factor sign-in, D-084):** part A merged (PR #56); part B (administrator reset, emergency command) on branch `feat/step-3-two-factor-reset`, PR #57.
 
 ## Before the next deploy (any deploy now includes Step 3 so far)
 - The server's `PAYLOAD_SECRET` must be at least 32 characters, or the app refuses to start. Owner to check its length
@@ -26,7 +26,7 @@ Updated 2026-11-20. Plan for Step 3: `docs/step-3-plan.md`.
 - `/admin` and `/api` stay closed in the Caddyfile until Step 3 is complete (D-054, RUNBOOK Section 11).
 
 ## Remaining Step 3 plan commits
-6. 2FA part B: the administrator reset (`POST /api/users/:id/reset-2fa`, a button on the account screen) and `pnpm auth:reset-2fa <email>`. Re-test Strict cookies with 2FA in a real browser (D-052).
+6. Re-test Strict cookies with 2FA in a real browser at the first deploy (D-052).
 7. Email adapter.
 8. Auth e2e tests.
 9. Docs.
@@ -75,4 +75,5 @@ When Step 3 is complete: reopen `/admin` in `deploy/Caddyfile`.
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-Merge PR #56 when its CI is green. Then plan commit 6 part B (administrator reset and emergency command) on a new branch from `main`.
+Merge PR #57 when its CI is green. Then decide plan commits 7 (email adapter) to 9 (docs): what is still needed before the first
+deploy that includes Step 3, and plan that deploy: PAYLOAD_SECRET length, deploy, cron job, reopen `/admin`, administrators set up 2FA.
