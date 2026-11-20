@@ -666,5 +666,5 @@ Build step 2 added temporary placeholders so OGSERC could review the design befo
 - [x] Privacy Policy section 7 covers cookies and visitor statistics: wording approved by the owner on 2026-11-18 (D-077). OGSERC's legal advisers to review it with the rest of the policy (D-074).
 - [ ] `stats.<domain>`'s one-day HSTS lengthened with the main site's (D-077).
 - [x] The monthly `deploy/prune-analytics.sh` cron job installed on the VPS, and its dry run clean (Section 6; done 2026-11-18).
-- [ ] The monthly `deploy/prune-audit.sh` cron job installed on the VPS after the first deploy that includes Step 3, and its dry run clean (Section 6, D-083).
+- [x] The monthly `deploy/prune-audit.sh` cron job installed on the VPS after the first deploy that includes Step 3, and its dry run clean (Section 6, D-083; done 2026-11-20).
 - [ ] `IMAGE_PROCESSING=off` gone from the VPS's `.env` once its CPU shows `sse4_1` and `sse4_2` (D-056), then the setting, its CI job and `scripts/block-sharp-binaries.mjs` removed from the code, and D-055's `@img/sharp-wasm32` reconsidered.
