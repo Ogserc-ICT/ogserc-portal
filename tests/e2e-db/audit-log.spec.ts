@@ -53,7 +53,8 @@ async function staff(label: string, roles: string[] = ['editor']): Promise<TestA
 async function entriesFor(label: string): Promise<Entry[]> {
   const response = await admin.get(`/api/audit-log?where[targetLabel][equals]=${encodeURIComponent(label)}&sort=createdAt&limit=100&depth=0`)
   expect(response.status(), (await response.text()).slice(0, 300)).toBe(200)
-  return ((await response.json()) as { docs: Entry[] }).docs
+  // Two-factor events (D-084) have their own tests; these lists are about everything else.
+  return ((await response.json()) as { docs: Entry[] }).docs.filter((entry) => !entry.action.startsWith('2fa.'))
 }
 
 

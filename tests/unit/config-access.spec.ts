@@ -25,9 +25,17 @@ let payloadDefaults: Set<unknown>
 
 const slugsOf = (config: SanitizedConfig): string[] => config.collections.map((c) => String(c.slug))
 
+/** A rule wrapped by publicOrTwoFactor, unwrapped; anything else as it is. */
+const asWritten = (fn: unknown): unknown => (fn as { inner?: unknown } | undefined)?.inner ?? fn
+
+/** The deployed config, with two-factor sign-in wrapping every rule (D-084). */
+let live: SanitizedConfig
+
 test.beforeAll(async () => {
-  configs.deployed = await configPromise
-  configs['with test collections'] = await portalConfig({ withTestCollections: true })
+  // The rules as written: the identity checks below compare them with the helpers in src/access.
+  configs.deployed = await portalConfig({ withTestCollections: false, twoFactorSignIn: false })
+  configs['with test collections'] = await portalConfig({ withTestCollections: true, twoFactorSignIn: false })
+  live = await configPromise
   // Payload's defaults are not exported, so build a throwaway config with no access rules and
   // collect the functions Payload fills in.
   const probe = await buildConfig({
@@ -112,7 +120,7 @@ for (const name of ['deployed', 'with test collections'] as const) {
       const uses: string[] = []
       for (const entity of [...configs[name].collections, ...configs[name].globals]) {
         for (const [op, fn] of Object.entries(entity.access as Record<string, unknown>)) {
-          if (fn === allowAll) uses.push(`${entity.slug}.${op}`)
+          if (asWritten(fn) === allowAll) uses.push(`${entity.slug}.${op}`)
         }
       }
       expect(uses.sort()).toEqual(Object.keys(ALLOW_ALL_USES).sort())
@@ -121,7 +129,7 @@ for (const name of ['deployed', 'with test collections'] as const) {
 
     test('publishedOnly is used only on collections with drafts', () => {
       for (const collection of configs[name].collections) {
-        if (collection.access.read !== publishedOnly) continue
+        if (asWritten(collection.access.read) !== publishedOnly) continue
         const versions = collection.versions as { drafts?: unknown } | false
         expect(Boolean(versions && versions.drafts), `${collection.slug} uses publishedOnly without drafts`).toBe(true)
       }
@@ -136,10 +144,12 @@ for (const name of ['deployed', 'with test collections'] as const) {
       }
     })
 
-    test('denyByDefault runs after every other plugin', () => {
+    test('denyByDefault runs after every other plugin except two-factor sign-in, which runs last', () => {
       const plugins = [...(configs[name].plugins ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-      expect(plugins.at(-1)).toBe(denyByDefault)
+      expect(plugins.at(-2)).toBe(denyByDefault)
+      expect(plugins.at(-1)!.order).toBe(Number.MAX_SAFE_INTEGER)
       expect(plugins.filter((plugin) => plugin.order === denyByDefault.order)).toHaveLength(1)
+      expect(plugins.filter((plugin) => plugin.order === Number.MAX_SAFE_INTEGER)).toHaveLength(1)
     })
   })
 }
@@ -156,4 +166,58 @@ test('REST depth is capped', () => {
 test('API keys are off for staff accounts', () => {
   const users = configs.deployed.collections.find((c) => c.slug === 'users')!
   expect(users.auth.useAPIKey).toBeFalsy()
+})
+
+// --- Two-factor sign-in (D-084) ----------------------------------------------------------------
+// Behaviour, not identity: on the live config every rule is wrapped, so call each one as a staff
+// session that has not entered this session's code and check that it gets nothing. Payload's own
+// collections are wrapped by the plugin when Payload starts (onInit), which needs a database, so
+// they are covered by the database tests instead.
+test.describe('two-factor sign-in', () => {
+  type Session = { hasTotp: boolean; _strategy: string }
+  const administrator = (session: Session) => ({ id: 1, collection: 'users', email: 'a@example.org', roles: ['administrator'], ...session })
+  let liveWithTests: SanitizedConfig
+  test.beforeAll(async () => {
+    liveWithTests = await portalConfig({ withTestCollections: true })
+  })
+
+  /** "slug.operation" for every rule that does not refuse this user outright. */
+  async function allowed(config: SanitizedConfig, user: unknown): Promise<string[]> {
+    const open: string[] = []
+    for (const collection of config.collections.filter((c) => !String(c.slug).startsWith('payload-'))) {
+      for (const [op, fn] of Object.entries(collection.access as Record<string, unknown>)) {
+        if (typeof fn !== 'function') continue
+        const result = await (fn as (args: unknown) => unknown)({ req: { user, payload: { config } }, id: undefined, data: undefined })
+        if (result !== false) open.push(`${collection.slug}.${op}`)
+      }
+    }
+    return open.sort()
+  }
+
+  // users.admin (may this user open the admin panel) is not wrapped, and must not be: a session
+  // that owes a code has to reach the panel to enter it, and the plugin's screens send it to the
+  // code page. Everything the panel shows or changes is behind the wrapped rules.
+  test('an administrator who has set it up but not entered a code gets only public reads', async () => {
+    const user = administrator({ hasTotp: true, _strategy: 'local-jwt' })
+    expect(await allowed(live, user)).toEqual(['media.read', 'users.admin'])
+    expect(await allowed(liveWithTests, user)).toEqual(['media.read', 'users.admin'])
+  })
+
+  test('an administrator who has never set it up can read only their own account, to set it up', async () => {
+    const user = administrator({ hasTotp: false, _strategy: 'local-jwt' })
+    expect(await allowed(live, user)).toEqual(['media.read', 'users.admin', 'users.read'])
+    const users = live.collections.find((c) => c.slug === 'users')!
+    const result = await (users.access.read as (args: unknown) => unknown)({ req: { user, payload: { config: live } } })
+    expect(JSON.stringify(result)).toContain('"equals":1')
+  })
+
+  test('a verified administrator gets the rules as written', async () => {
+    const user = administrator({ hasTotp: true, _strategy: 'totp' })
+    expect(await allowed(live, user)).toEqual(expect.arrayContaining(['users.read', 'users.create', 'media.create', 'audit-log.read']))
+  })
+
+  test('visitors who are not signed in still read public images and published test documents', async () => {
+    const open = await allowed(liveWithTests, null)
+    expect(open).toEqual(['e2e-drafts.read', 'media.read'])
+  })
 })

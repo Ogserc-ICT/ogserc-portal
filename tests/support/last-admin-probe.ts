@@ -65,7 +65,11 @@ async function main(): Promise<void> {
     ? (await payload.find({ collection: 'users', where: { email: { equals: callerEmail } }, limit: 1, depth: 0 })).docs[0]
     : undefined
   if (asUser && !user) fail(`No account ${callerEmail}.`)
-  const access = asUser ? { overrideAccess: false, user: { ...user!, collection: 'users' as const } } : { overrideAccess: true }
+  // `_strategy: 'totp'` is how the two-factor plugin marks a session that has entered its code
+  // (D-084): the administrator here is a verified one, so the rule under test is the only refusal.
+  const access = asUser
+    ? { overrideAccess: false, user: { ...user!, collection: 'users' as const, _strategy: 'totp' } }
+    : { overrideAccess: true }
 
   let outcome: { refused: boolean; status?: number; errors?: number }
   try {

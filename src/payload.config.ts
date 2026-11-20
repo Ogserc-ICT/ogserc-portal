@@ -11,6 +11,7 @@ import { Media } from './collections/Media'
 import { RateLimits } from './collections/RateLimits'
 import { TEST_COLLECTIONS, testCollectionsEnabled } from './collections/test'
 import { Users } from './collections/Users'
+import { twoFactor } from './lib/auth/two-factor'
 import { assertServerEnv, csrfOrigins, siteOrigin } from './lib/env'
 import { queryLimits } from './lib/query-limits'
 import { onPayloadInit } from './lib/startup'
@@ -41,7 +42,14 @@ async function loadSharp() {
  * the default export decides it with testCollectionsEnabled. Exported so the unit tests can audit both.
  * hardenPayloadInternals runs on the finished config, after Payload adds its own collections.
  */
-export const portalConfig = async ({ withTestCollections }: { withTestCollections: boolean }) => {
+export const portalConfig = async ({
+  withTestCollections,
+  twoFactorSignIn = true,
+}: {
+  withTestCollections: boolean
+  /** Always on when deployed. Off only for the unit tests that audit the access rules as written. */
+  twoFactorSignIn?: boolean
+}) => {
   const sharp = await loadSharp()
   return buildConfig({
     // The normalised origin, so links and the CSRF list never carry a trailing slash or path.
@@ -88,9 +96,10 @@ export const portalConfig = async ({ withTestCollections }: { withTestCollection
     },
     telemetry: false,
     onInit: onPayloadInit,
-    // denyByDefault runs after every other plugin (its `order` is the highest), so it also covers
-    // collections that plugins add. Keep it last here too, for readers.
-    plugins: [queryLimits, denyByDefault],
+    // denyByDefault runs after every other plugin but two-factor sign-in (by `order`), so it also
+    // covers collections that plugins add; twoFactor runs last and wraps every access rule (D-084).
+    // Keep them in that order here too, for readers.
+    plugins: [queryLimits, denyByDefault, twoFactor({ enabled: twoFactorSignIn })],
   }).then(hardenPayloadInternals)
 }
 

@@ -9,8 +9,8 @@ import {
   createStaff,
   loadAdminAccount,
   newAccount,
-  SESSION_COOKIE,
   sessionCookie,
+  sessionCookies,
   signIn,
   signInToken,
   type TestAccount,
@@ -450,7 +450,7 @@ test.describe('cross-site requests with the session cookie (CSRF)', () => {
   })
 
   async function withCookie(headers: Record<string, string>): Promise<APIRequestContext> {
-    const context = await request.newContext({ baseURL, extraHTTPHeaders: { Cookie: `${SESSION_COOKIE}=${token}`, ...headers } })
+    const context = await request.newContext({ baseURL, extraHTTPHeaders: { Cookie: sessionCookies(token), ...headers } })
     opened.push(context)
     return context
   }

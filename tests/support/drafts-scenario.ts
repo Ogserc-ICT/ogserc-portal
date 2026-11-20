@@ -79,11 +79,15 @@ async function main(): Promise<void> {
     fail(`DATABASE_URL (${describeDatabase(connectingTo)}) is not the test database (${describeDatabase(target)}).`)
   }
 
-  const [{ getPayload, handleEndpoints }, { default: config }, { connectedDatabase }] = await Promise.all([
+  const [{ getPayload, handleEndpoints }, { portalConfig }, { connectedDatabase }] = await Promise.all([
     import('payload'),
     import('../../src/payload.config'),
     import('../../src/lib/startup'),
   ])
+  // Two-factor sign-in off: this scenario is about the content rules, and its in-process REST
+  // requests have no Next.js request, so the 2FA cookie could never be read (D-084). 2FA has its
+  // own tests (tests/e2e-db/two-factor.spec.ts). The schema is the same with it on or off.
+  const config = await portalConfig({ withTestCollections: true, twoFactorSignIn: false })
   const payload: Payload = await getPayload({ config })
   const live = await connectedDatabase(payload)
   if (!sameDatabase(live, target)) fail(`The live connection is ${describeDatabase(live)}. Nothing was changed.`)

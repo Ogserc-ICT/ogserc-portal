@@ -23,6 +23,12 @@ test.beforeAll(async () => {
   configs['with test collections'] = await portalConfig({ withTestCollections: true })
 })
 
+/** The rule as written: two-factor sign-in wraps every access rule (D-084), so compare unwrapped. */
+let unwrapped: SanitizedConfig
+test.beforeAll(async () => {
+  unwrapped = await portalConfig({ withTestCollections: false, twoFactorSignIn: false })
+})
+
 for (const variant of ['deployed', 'with test collections']) {
   test(`staff sign-in settings (${variant})`, () => {
     const users = configs[variant]!.collections.find((collection) => String(collection.slug) === 'users')
@@ -39,7 +45,9 @@ for (const variant of ['deployed', 'with test collections']) {
     expect(users!.hooks.beforeOperation).toContain(limitSessionAge)
     expect(users!.hooks.beforeOperation).toContain(protectLastAdministrator)
     expect(users!.hooks.afterChange).toContain(endSessionsOnRoleChange)
-    expect(users!.access.delete).toBe(isAdminNotSelf)
+    const asWritten = unwrapped.collections.find((collection) => String(collection.slug) === 'users')!
+    expect(asWritten.access.delete).toBe(isAdminNotSelf)
+    expect(users!.access.delete, 'wrapped by two-factor sign-in').not.toBe(isAdminNotSelf)
     expect(users!.hooks.beforeDelete.length).toBeGreaterThan(0)
   })
 

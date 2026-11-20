@@ -60,6 +60,7 @@
     "graphql": "16.14.2",
     "next": "16.4.6",
     "payload": "3.90.2",
+    "payload-totp": "3.0.7",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "sharp": "0.35.5"

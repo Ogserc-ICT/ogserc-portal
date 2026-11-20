@@ -36,4 +36,7 @@ const denyMissingAccess: Plugin = (config: Config): Config => ({
 
 // Payload sorts plugins by `order` before running them, so the highest order (not array
 // position alone) is what makes this run after every plugin that adds collections.
-export const denyByDefault: Plugin = Object.assign(denyMissingAccess, { order: Number.MAX_SAFE_INTEGER })
+// One below the two-factor plugin (src/lib/auth/two-factor.ts), which must wrap the access this
+// leaves: running after it would see the wrapped functions as present and leave Payload's
+// "any logged-in user" default inside them (D-084).
+export const denyByDefault: Plugin = Object.assign(denyMissingAccess, { order: Number.MAX_SAFE_INTEGER - 1 })
