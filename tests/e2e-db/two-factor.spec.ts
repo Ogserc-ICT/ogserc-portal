@@ -81,7 +81,10 @@ test('an account that has never set it up can only set it up', async () => {
   const account = await createStaff(admin, '2fa-new', ['editor'])
   const token = await passwordOnlyToken(baseURL, account)
   const owing = await as(asUser(token))
-  expect((await owing.get('/api/users?limit=5')).status(), 'other accounts').not.toBe(200)
+  // Its own account only, which the set-up screen needs; never anyone else's.
+  const list = await owing.get('/api/users?limit=50&depth=0')
+  expect(list.status()).toBe(200)
+  expect(((await list.json()) as { docs: { email: string }[] }).docs.map((user) => user.email)).toEqual([account.email])
   expect((await owing.post('/api/media', { data: {} })).status()).toBe(403)
 })
 
