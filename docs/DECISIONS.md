@@ -1010,7 +1010,7 @@ Step 3 plan commit 2, in seven code commits plus this one (`f881738`, `407ee4e`,
 
 ### Trade-offs and open items
 
-- **Anyone who knows a staff email can lock that account for 15 minutes at a time,** until rate limiting exists (Step 3 plan commit 4). Keep at least two administrators; `pnpm auth:unlock` is the emergency route (RUNBOOK 4.1).
+- **Anyone who knows a staff email can lock that account for 15 minutes at a time.** Rate limiting (D-081) slows guessing but cannot prevent this: any per-account protection can be triggered by someone else. Two-factor authentication (Step 3 plan commit 6) makes a guessed password useless on its own. Keep at least two administrators; `pnpm auth:unlock` is the emergency route (RUNBOOK 4.1).
 - **Timing:** unknown and locked accounts are answered faster than a wrong password, because no password hash is computed, so response time can still hint that an account exists. Rate limiting reduces how much can be learned this way; a constant-time reply is not implemented.
 - **Strict cookies:** a link to `/admin` opened from email or chat (a cross-site navigation) arrives without the cookie, so the page shows the login screen until it is reloaded or the person signs in.
 - **Open: unsaved work at sign-out.** The forced page change at the token's end, and the 12-hour limit's sign-out (a refused refresh, which goes straight to the inactivity page with **no** warning), can discard what someone typed in a long form. To be tested with a filled-in form before Step 4, then decide between a longer token (for example 4 hours; the owner leans this way for now), a refresh mechanism, or autosave or draft recovery. Also in STATUS.md.
@@ -1483,3 +1483,30 @@ OGSERC's legal advisers should review it with the rest of the policy (D-074).
 **Risks the owner should know:**
 - **Losing the password:** if `OFFSITE_PASSWORD` is lost, the copies cannot be opened by anyone. It is kept in the password manager, separately from the server.
 - **Attackers on the server:** someone who takes over the server could use the bucket key to delete the copies. B2 Object Lock (write-once retention) would prevent that, and can be added later if wanted.
+
+## D-081 Rate limits on staff sign-in, forgotten passwords and reset links (2026-11-20)
+
+**Decision:** Fixed-window limits, checked in `beforeOperation` on the Users collection before any other work (`src/lib/auth/rate-limit.ts`):
+
+| Action | Per address | Per email |
+|---|---|---|
+| Sign in | 10 attempts in 15 minutes | 10 **failed** attempts in 15 minutes (counted in `afterError` on a 401) |
+| Forgotten password | 5 per hour | 3 per hour |
+| Reset link | 10 per hour | none (the token is the secret) |
+
+Above a limit the reply is a 429 with `Retry-After` and one fixed message ("Too many attempts. Try again in N minutes."), the same whether or not the account exists. Counts live in a hidden `rate_limits` table (`src/collections/RateLimits.ts`, migration `20261120_054654_rate_limits`, deny-all access) and are written with parameterised SQL on the connection pool, outside the request's transaction. Only REST requests are limited; trusted server code (the Local API) is not. The visitor's address is the last entry of the header named in `CLIENT_IP_HEADER`, which production requires.
+
+**Why:**
+- **Outside the transaction:** a refused sign-in rolls its transaction back, which would undo a count made inside it, so failures would never add up.
+- **Failed sign-ins only, per email:** a correct password never uses up the allowance, so staff are not slowed by someone else's guesses from elsewhere. Every attempt counts per address.
+- **10 per email, above the lockout's 5:** Payload's lockout still protects real accounts at 5 and keeps its single reply (D-052). The email limit adds a limit for addresses that do not exist (which never lock), so after 10 tries known and unknown addresses get the same 429.
+- **The same 429 for known and unknown accounts** on every action, so a limit never shows that an account exists.
+- **HMAC keys:** the table never holds an address or email in readable form; `PAYLOAD_SECRET` keys the HMAC, so keys change if the secret is rotated, which simply resets the counts.
+- **The last entry of `X-Forwarded-For`:** behind Caddy every request comes from Caddy, so the socket address is useless. Caddy sets the header itself and does not trust a value sent by the visitor; even where a proxy appends, the last entry is the one our own proxy added, and anything earlier can be made up. An unparseable value falls into one shared "unknown" bucket rather than being trusted.
+- **Production refuses to start without `CLIENT_IP_HEADER`:** without it every visitor would share one address limit, and one person could block sign-in for everyone. `docker-compose.prod.yml` sets it to `X-Forwarded-For`; another host sets the header its own proxy uses.
+- **Postgres, not memory:** counts survive a restart and would be shared by several app instances. The table stays small: about one request in 20 deletes ended windows.
+- **No new library and no outside service.**
+
+**Not covered (planned elsewhere):** limits on the rest of the admin area and API, and bot protection, come with Turnstile (Step 5) and the firewall/CDN layer (Step 13). The two-factor code check gets its own limit with 2FA (Step 3 plan commit 6). Someone who knows a staff email can still trigger that account's 15-minute lockout (D-052).
+
+**Watch (re-check after Payload upgrades):** `beforeOperation` running before the password check for `login`, `forgotPassword` and `resetPassword`; `afterError` receiving the 401 with `req.data` parsed; the error route adding `req.responseHeaders` to its reply (Payload 3.90.2, `utilities/routeError.js`); `forgotPassword` answering 200 whether or not the account exists.

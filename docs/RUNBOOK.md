@@ -19,6 +19,7 @@ Every setting comes from environment variables. The full list, with explanations
 | `S3_*` | From step 4 | S3-compatible file storage for uploads. |
 | `SMTP_*`, `EMAIL_FROM`, `CONTACT_FORM_TO` | From step 5 | Email for the contact form. |
 | `TURNSTILE_*` | From step 5 | Bot protection on forms. |
+| `CLIENT_IP_HEADER` | Yes in production | The request header that carries the visitor's address, set by the proxy in front of the app. Sign-in rate limits count each address separately (D-081); the server refuses to start in production without it. `docker-compose.prod.yml` sets `X-Forwarded-For` for Caddy. On another host, use the header its proxy sets (and make sure the proxy replaces any value the visitor sends). |
 | `PASSWORD_BREACH_CHECK` | No | `off` stops checking new staff passwords against Have I Been Pwned (D-053). Leave it unset on servers; the server warns at startup if it is `off` in production. The server must be able to reach `api.pwnedpasswords.com` over HTTPS; if it cannot, passwords are accepted on the other rules and a warning is logged. |
 | `TEST_DATABASE_URL` | Tests only | Database that `pnpm test:e2e:db` empties and uses (Section 3.1). Never set it on a deployed server. |
 | `UMAMI_WEBSITE_ID` | No | Turns on visitor statistics (D-077). Needed at build time; set only for the live site. |
