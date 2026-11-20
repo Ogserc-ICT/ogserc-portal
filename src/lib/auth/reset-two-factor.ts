@@ -36,18 +36,20 @@ export async function resetTwoFactor(req: PayloadRequest, id: number | string, v
   const { payload } = req
   const account = (await payload.db.findOne({ collection: 'users', where: { id: { equals: id } }, req })) as Account | null
   if (!account) return false
+  // A person who mistyped codes on a new phone would otherwise stay locked out after the reset.
+  // Payload's own unlock, so its audit entry ("Account unlocked") is written as for any unlock.
+  // First, before this transaction touches the plugin's code count: the plugin's unlock hook resets
+  // that row on its own connection, which would wait forever for a row this transaction holds.
+  if (typeof account.lockUntil === 'string' && Date.parse(account.lockUntil) > Date.now() && typeof account.email === 'string') {
+    // Payload types `data` as login data; its unlock operation reads only the email.
+    await payload.unlock({ collection: 'users', data: { email: account.email } as { email: string; password: string }, overrideAccess: true, req })
+  }
   // The secret through Payload's own update, as the plugin saves it: the adapter's updateOne is an
   // upsert, which Postgres refuses for a partial row (NOT NULL is checked before the conflict).
   await payload.update({ collection: 'users', id: account.id, data: { totpSecret: null }, overrideAccess: true, req, depth: 0 })
   // Sessions live in their own table; the adapter clears them as endSessionsOnRoleChange does.
   await payload.db.updateOne({ collection: 'users', id: account.id, data: { sessions: [] }, req, returning: false })
   await payload.db.deleteMany({ collection: TOTP_ATTEMPTS, where: { id: { equals: String(account.id) } }, req })
-  // A person who mistyped codes on a new phone would otherwise stay locked out after the reset.
-  // Payload's own unlock, so its audit entry ("Account unlocked") is written as for any unlock.
-  if (typeof account.lockUntil === 'string' && Date.parse(account.lockUntil) > Date.now() && typeof account.email === 'string') {
-    // Payload types `data` as login data; its unlock operation reads only the email.
-    await payload.unlock({ collection: 'users', data: { email: account.email } as { email: string; password: string }, overrideAccess: true, req })
-  }
   const actor = req.user?.collection === 'users' ? (req.user as { id: number | string; email?: unknown }) : null
   await recordAudit(req, {
     action: '2fa.reset',
