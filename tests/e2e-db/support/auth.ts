@@ -287,3 +287,23 @@ export function forgetTotpSecret(account: TestAccount): void {
   delete account.totpSecret
   secretsByEmail.delete(account.email)
 }
+
+/** Verified sessions this process may hand out again, by email (signInOnce). */
+const reusableSessions = new Map<string, string>()
+
+/**
+ * Like signIn, but reuses this account's verified session from earlier in the same test file
+ * while it still works (an account gets one new 2FA code per 30 seconds, each usable once).
+ * For tests that sign the same account in many times and do not test sessions themselves; a
+ * session that no longer works (account deleted, demoted, or signed out) is replaced by a new one.
+ */
+export async function signInOnce(baseURL: string, account: TestAccount): Promise<APIRequestContext> {
+  const token = reusableSessions.get(account.email)
+  const cookie = token ? verifiedSessions.get(token) : undefined
+  if (token && cookie && (await stillSignedIn(baseURL, account, { token, cookie }))) {
+    return request.newContext({ baseURL, extraHTTPHeaders: asUser(token) })
+  }
+  const fresh = await signInToken(baseURL, account)
+  reusableSessions.set(account.email, fresh)
+  return request.newContext({ baseURL, extraHTTPHeaders: asUser(fresh) })
+}
