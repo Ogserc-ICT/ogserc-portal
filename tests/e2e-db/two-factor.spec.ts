@@ -103,10 +103,12 @@ async function adminRedirect(context: APIRequestContext, path: string): Promise<
 test('the admin panel sends a session that owes a code to the code page, which loads', async () => {
   const account = await enrolledEditor('2fa-panel')
   const token = await passwordOnlyToken(baseURL, account)
-  const owing = await as({ Cookie: sessionCookies(token) })
+  // As a browser sends it: cookies, and Sec-Fetch-Site, without which the CSRF check (D-052)
+  // does not accept a cookie session at all.
+  const owing = await as({ Cookie: sessionCookies(token), 'Sec-Fetch-Site': 'same-origin' })
   expect(await adminRedirect(owing, '/admin'), 'a session that owes a code').toContain('/admin/verify-totp')
   // Control: without a session the panel sends the visitor to sign in instead.
-  expect(await adminRedirect(await as({}), '/admin'), 'no session').toContain('/admin/login')
+  expect(await adminRedirect(await as({ 'Sec-Fetch-Site': 'same-origin' }), '/admin'), 'no session').toContain('/admin/login')
   // The code page itself loads without redirecting again: proxy.ts passes it the path.
   const page = await owing.get('/admin/verify-totp', { maxRedirects: 0 })
   expect(page.status()).toBe(200)
