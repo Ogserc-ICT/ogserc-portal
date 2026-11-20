@@ -19,6 +19,7 @@ Every setting comes from environment variables. The full list, with explanations
 | `S3_*` | From step 4 | S3-compatible file storage for uploads. |
 | `SMTP_*`, `EMAIL_FROM`, `CONTACT_FORM_TO` | From step 5 | Email for the contact form. |
 | `TURNSTILE_*` | From step 5 | Bot protection on forms. |
+| `AUDIT_IP_RETENTION_DAYS`, `AUDIT_RETENTION_DAYS` | No | Audit log retention, read by `deploy/prune-audit.sh` (D-083): blank the address and browser after this many days (default 90) and delete entries after this many (default 730). |
 | `CLIENT_IP_HEADER` | Yes in production | The request header that carries the visitor's address, set by the proxy in front of the app. Sign-in rate limits count each address separately (D-081); the server refuses to start in production without it. `docker-compose.prod.yml` sets `X-Forwarded-For` for Caddy. On another host, use the header its proxy sets (and make sure the proxy replaces any value the visitor sends). |
 | `PASSWORD_BREACH_CHECK` | No | `off` stops checking new staff passwords against Have I Been Pwned (D-053). Leave it unset on servers; the server warns at startup if it is `off` in production. The server must be able to reach `api.pwnedpasswords.com` over HTTPS; if it cannot, passwords are accepted on the other rules and a warning is logged. |
 | `TEST_DATABASE_URL` | Tests only | Database that `pnpm test:e2e:db` empties and uses (Section 3.1). Never set it on a deployed server. |
@@ -448,6 +449,15 @@ Set up once:
 ```
 Each table should report `0 rows … deleted` until November 2028, and the last line reads `prune ok (ROLLBACK)`. A `WARNING … skipped` line means a Umami upgrade changed a table: review the list in the script.
 
+**Audit log retention (D-083).** Once Step 3 is deployed, `deploy/prune-audit.sh` runs once a month: it blanks the internet address and browser of audit log entries older than 90 days and deletes entries older than 2 years. Change the periods with `AUDIT_IP_RETENTION_DAYS` and `AUDIT_RETENTION_DAYS` in `.env` (whole numbers of days; the address period cannot be longer than the entry period). Install it once, as `deploy`, after the first deploy that includes Step 3, and check it with a dry run:
+```sh
+(crontab -l 2>/dev/null; echo '45 3 1 * * /opt/ogserc/deploy/prune-audit.sh >> /var/backups/ogserc/prune-audit.log 2>&1') | crontab -
+/opt/ogserc/deploy/prune-audit.sh --dry-run
+```
+It prints `UPDATE 0` and `DELETE 0` until entries are old enough, and the last line ends `(ROLLBACK)`.
+
+**Reading the audit log.** In the admin panel, administrators open *Audit log* to see sign-ins, failed and refused sign-ins, locks and unlocks, password resets and changes, account and role changes, and image uploads, changes and deletions, newest first, with search by email or file name. Entries cannot be edited or deleted. Things to look out for: many `Sign-in failed` or `Sign-in refused: too many attempts` entries for one account or address, `Account locked` for an account whose owner did not report trouble, and role changes or password resets nobody expected.
+
 Restore a dump into the running database (this replaces its contents):
 ```sh
 cd /opt/ogserc
@@ -645,4 +655,5 @@ Build step 2 added temporary placeholders so OGSERC could review the design befo
 - [x] Privacy Policy section 7 covers cookies and visitor statistics: wording approved by the owner on 2026-11-18 (D-077). OGSERC's legal advisers to review it with the rest of the policy (D-074).
 - [ ] `stats.<domain>`'s one-day HSTS lengthened with the main site's (D-077).
 - [x] The monthly `deploy/prune-analytics.sh` cron job installed on the VPS, and its dry run clean (Section 6; done 2026-11-18).
+- [ ] The monthly `deploy/prune-audit.sh` cron job installed on the VPS after the first deploy that includes Step 3, and its dry run clean (Section 6, D-083).
 - [ ] `IMAGE_PROCESSING=off` gone from the VPS's `.env` once its CPU shows `sse4_1` and `sse4_2` (D-056), then the setting, its CI job and `scripts/block-sharp-binaries.mjs` removed from the code, and D-055's `@img/sharp-wasm32` reconsidered.
