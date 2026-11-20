@@ -34,7 +34,11 @@ export async function resetTwoFactor(req: PayloadRequest, id: number | string, v
   const { payload } = req
   const account = (await payload.db.findOne({ collection: 'users', where: { id: { equals: id } }, req })) as Account | null
   if (!account) return false
-  await payload.db.updateOne({ collection: 'users', id: account.id, data: { totpSecret: null, sessions: [] }, req, returning: false })
+  // The secret through Payload's own update, as the plugin saves it: the adapter's updateOne is an
+  // upsert, which Postgres refuses for a partial row (NOT NULL is checked before the conflict).
+  await payload.update({ collection: 'users', id: account.id, data: { totpSecret: null }, overrideAccess: true, req, depth: 0 })
+  // Sessions live in their own table; the adapter clears them as endSessionsOnRoleChange does.
+  await payload.db.updateOne({ collection: 'users', id: account.id, data: { sessions: [] }, req, returning: false })
   await payload.db.deleteMany({ collection: TOTP_ATTEMPTS, where: { id: { equals: String(account.id) } }, req })
   const actor = req.user?.collection === 'users' ? (req.user as { id: number | string; email?: unknown }) : null
   await recordAudit(req, {
