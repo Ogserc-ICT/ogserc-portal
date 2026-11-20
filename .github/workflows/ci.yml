@@ -234,6 +234,12 @@ jobs:
           UMAMI_DB_PASSWORD: ci-placeholder
           UMAMI_APP_SECRET: ci-placeholder
           UMAMI_2FA_KEY: ci-placeholder
+          # Required since D-086; placeholders only, nothing connects to them.
+          S3_BUCKET: ci-placeholder
+          S3_REGION: ci-placeholder
+          S3_ENDPOINT: https://s3.example.invalid
+          S3_ACCESS_KEY_ID: ci-placeholder
+          S3_SECRET_ACCESS_KEY: ci-placeholder
         run: |
           docker compose -f docker-compose.prod.yml config --quiet
           docker run --rm -e SITE_DOMAIN -e ACME_EMAIL \
