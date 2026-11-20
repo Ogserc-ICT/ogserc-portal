@@ -10,6 +10,12 @@ const valid = {
   PAYLOAD_SECRET: SECRET_32,
   SITE_URL: 'https://example.org',
   CLIENT_IP_HEADER: 'X-Forwarded-For',
+  // Made-up bucket settings for an S3-compatible provider (D-086); nothing connects to them.
+  S3_BUCKET: 'site-files',
+  S3_REGION: 'eu-central-003',
+  S3_ENDPOINT: 'https://s3.eu-central-003.example.invalid',
+  S3_ACCESS_KEY_ID: 'key-id',
+  S3_SECRET_ACCESS_KEY: 'not-a-real-key',
 }
 
 function errorsFor(env: Record<string, string | undefined>): string[] {
@@ -23,6 +29,20 @@ test.describe('server startup checks', () => {
 
   test('a complete production configuration passes', () => {
     expect(errorsFor({ ...valid, NODE_ENV: 'production' })).toEqual([])
+  })
+
+  test('uploads: all five S3 settings or none, and production without them only with MEDIA_STORAGE=local', () => {
+    const none = { S3_BUCKET: undefined, S3_REGION: undefined, S3_ENDPOINT: undefined, S3_ACCESS_KEY_ID: undefined, S3_SECRET_ACCESS_KEY: undefined }
+    const needS3 = 'Uploads need S3 storage in production (the S3_* settings), or MEDIA_STORAGE=local where losing them at each deploy is acceptable (CI only).'
+    expect(errorsFor({ ...valid, ...none, NODE_ENV: 'production' })).toEqual([needS3])
+    expect(errorsFor({ ...valid, ...none, NODE_ENV: 'production', MEDIA_STORAGE: 'local' })).toEqual([])
+    expect(errorsFor({ ...valid, ...none, NODE_ENV: 'production', NEXT_PHASE: 'phase-production-build' })).toEqual([])
+    expect(errorsFor({ ...valid, ...none, NODE_ENV: 'development' })).toEqual([])
+    for (const env of ['development', 'production']) {
+      expect(errorsFor({ ...valid, S3_ENDPOINT: '', S3_SECRET_ACCESS_KEY: ' ', NODE_ENV: env }), env).toEqual([
+        'S3 storage is half configured: set S3_ENDPOINT, S3_SECRET_ACCESS_KEY too, or none of them.',
+      ])
+    }
   })
 
   test('production needs CLIENT_IP_HEADER, development and the build do not', () => {

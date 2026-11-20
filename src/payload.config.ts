@@ -17,6 +17,7 @@ import { assertServerEnv, csrfOrigins, siteOrigin } from './lib/env'
 import { queryLimits } from './lib/query-limits'
 import { onPayloadInit } from './lib/startup'
 import { MAX_UPLOAD_BYTES } from './lib/uploads/limits'
+import { mediaStorage } from './lib/uploads/storage'
 import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
@@ -102,7 +103,7 @@ export const portalConfig = async ({
     // denyByDefault runs after every other plugin but two-factor sign-in (by `order`), so it also
     // covers collections that plugins add; twoFactor runs last and wraps every access rule (D-084).
     // Keep them in that order here too, for readers.
-    plugins: [queryLimits, denyByDefault, twoFactor({ enabled: twoFactorSignIn })],
+    plugins: [mediaStorage(), queryLimits, denyByDefault, twoFactor({ enabled: twoFactorSignIn })],
   }).then(hardenPayloadInternals)
 }
 

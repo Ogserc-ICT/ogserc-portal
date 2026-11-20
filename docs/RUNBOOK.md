@@ -414,6 +414,22 @@ PAYLOAD_SECRET=any-long-random-string docker compose up --build
 With `HC_BACKUP_PING_URL` in `.env`, each run reports to Healthchecks.io: success, failure, or nothing arrived (Section 8, D-079).
 These copies are on the same server, so they do not survive losing it. The off-server copy below covers that.
 
+**Uploaded files (D-086).** Images (and, from Step 4, documents) are stored in a Backblaze B2 bucket of their own, never on the server's disk. Set up once, **before deploying the commit that adds it** (the app refuses to start without these settings):
+1. **Bucket.** In the same Backblaze account as the backups, *Buckets → Create a Bucket*: a unique name such as `ogserc-site-files-` plus a few random letters, **Private**, Object Lock off. Then *Lifecycle Settings* → **Keep prior versions for this number of days: 90**, so a file deleted or replaced by mistake can be restored for 90 days.
+2. **Key.** *Application Keys → Add a New Application Key*: name `ogserc-vps-site-files`, access to **that bucket only**, **Read and Write**. Copy the keyID and applicationKey straight into the password manager.
+3. **Server settings.** As `deploy`, `cd /opt/ogserc && nano .env` and add, with your values:
+   ```
+   S3_BUCKET=ogserc-site-files-xxxx
+   S3_REGION=eu-central-003
+   S3_ENDPOINT=https://s3.eu-central-003.backblazeb2.com
+   S3_ACCESS_KEY_ID=<keyID>
+   S3_SECRET_ACCESS_KEY=<applicationKey>
+   ```
+   The region is the middle part of the bucket's Endpoint shown in Backblaze (`s3.<region>.backblazeb2.com`). Save the updated `.env` in the password manager.
+4. **Check, after `/admin` opens:** upload an image in the admin panel, then see it listed in the bucket's *Browse Files*. Deploy again and check the image still shows: it lives in the bucket, not in the container.
+
+To restore a file deleted by mistake: in Backblaze, *Browse Files*, turn on *Show all versions*, and restore (unhide) the earlier version.
+
 **Off-server copies (D-080).** After each nightly backup, `deploy/offsite-backup.sh` sends an encrypted copy to Backblaze B2 using restic, from its pinned Docker image.
 - **What is copied:** the latest site and statistics dumps, and `.env`.
 - **Kept:** 7 daily, 4 weekly and 3 monthly copies.
@@ -574,7 +590,7 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 | Database | PostgreSQL (dev branch, staging, production) | `<Neon / Supabase / other>` | `<account / project name>` | `<name>`, `<name>` | `<password manager / vault>` | Dev in use |
 | Domain registrar | Domain name registration | `<registrar>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | `<domain to be confirmed>` |
 | DNS / CDN / WAF | DNS records, DDoS and bot protection, Turnstile | `<e.g. Cloudflare>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 5 / 13 |
-| File storage | Uploaded documents and images (S3-compatible) | `<provider>` | `<account / bucket>` | `<name>`, `<name>` | `<password manager / vault>` | Step 4 |
+| File storage | Uploaded images and documents (D-086) | Backblaze B2 (EU Central), same account as backups | `<shared OGSERC IT mailbox>`, bucket `<name>`, key `ogserc-vps-site-files` (that bucket only, Read and Write) | `<name>`, `<name>` | `<password manager / vault>` | Being set up |
 | Backup storage | Encrypted off-server backup copies (D-080) | Backblaze B2 (EU Central) | `<shared OGSERC IT mailbox>`, bucket `ogserc-backups-k7qm`, key `ogserc-vps-backup` (that bucket only, Read and Write) | `<name>`, `<name>` | `<password manager / vault>`, with `OFFSITE_PASSWORD` | Active since 2026-11-19; restore test passed 2026-11-19, next due 2027-02 |
 | Email sending | None in Phase 1: the site sends no email (D-085) | n/a | n/a | n/a | n/a | Not used; decide in Phase 2 |
 | Receiving mailbox | OGSERC inbox for contact form messages | `<provider>` | `<OGSERC mailbox address>` | `<name>` | Held by OGSERC | Step 5 |
@@ -610,7 +626,7 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 
 **File storage**
 - Recover: through another account member, or the provider's recovery process.
-- Move: create the new bucket, copy all objects across with the provider's sync tool or any S3-compatible copy tool, update the `S3_*` variables, then check that documents download on the site. Commands are added in build step 4.
+- Move: create the new bucket, copy all objects across with the provider's sync tool or any S3-compatible copy tool (for example `rclone sync`), update the five `S3_*` variables, redeploy, then check that images and documents still show on the site.
 
 **Backup storage (Backblaze B2)**
 - Recover: through another account member, or Backblaze's recovery process. The copies themselves open only with `OFFSITE_PASSWORD`, so losing the account does not expose them, but losing the password makes them unusable.
