@@ -5,7 +5,7 @@ import { type APIRequestContext, type APIResponse, expect, request, test } from 
 import { readCommonPasswords } from '../../src/lib/auth/common-passwords'
 import { BULK_PASSWORD_MESSAGE } from '../../src/lib/auth/enforce-password-policy'
 import { PASSWORD_MESSAGES } from '../../src/lib/auth/password-policy'
-import { attemptLogin, createStaff, loadAdminAccount, newAccount, signIn, type TestAccount } from './support/auth'
+import { attemptLogin, createStaff, loadAdminAccount, newAccount, signIn, type TestAccount, visitorAddress } from './support/auth'
 import { runTestDbScript } from './support/db-script'
 
 // The staff password policy through Payload's own REST pipeline, on the running server (D-053).
@@ -173,7 +173,7 @@ async function issueResetToken(email: string): Promise<string> {
 
 /** One reset-password request from a visitor who is not signed in, as the reset form sends it. */
 async function resetPassword(token: string, password: string): Promise<APIResponse & { bodyText: string }> {
-  const anonymous = await request.newContext({ baseURL })
+  const anonymous = await request.newContext({ baseURL, extraHTTPHeaders: visitorAddress() })
   opened.push(anonymous)
   const response = await anonymous.post('/api/users/reset-password', { data: { token, password } })
   return Object.assign(response, { bodyText: await response.text() })

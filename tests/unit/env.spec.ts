@@ -9,6 +9,7 @@ const valid = {
   DATABASE_URL: fakeDatabaseUrl('localhost:5432', 'db'),
   PAYLOAD_SECRET: SECRET_32,
   SITE_URL: 'https://example.org',
+  CLIENT_IP_HEADER: 'X-Forwarded-For',
 }
 
 function errorsFor(env: Record<string, string | undefined>): string[] {
@@ -22,6 +23,16 @@ test.describe('server startup checks', () => {
 
   test('a complete production configuration passes', () => {
     expect(errorsFor({ ...valid, NODE_ENV: 'production' })).toEqual([])
+  })
+
+  test('production needs CLIENT_IP_HEADER, development and the build do not', () => {
+    const missing = 'CLIENT_IP_HEADER is required in production (for example X-Forwarded-For behind Caddy).'
+    for (const value of [undefined, '', '  ']) {
+      expect(errorsFor({ ...valid, CLIENT_IP_HEADER: value, NODE_ENV: 'production' }), String(value)).toEqual([missing])
+    }
+    expect(errorsFor({ ...valid, CLIENT_IP_HEADER: undefined, NODE_ENV: 'development' })).toEqual([])
+    const build = { ...valid, CLIENT_IP_HEADER: undefined, NODE_ENV: 'production', NEXT_PHASE: 'phase-production-build' }
+    expect(errorsFor(build)).toEqual([])
   })
 
   test('turning the breach check off in production warns but does not stop the server', () => {

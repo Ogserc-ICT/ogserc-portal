@@ -18,6 +18,15 @@ export function newAccount(label: string): TestAccount {
   }
 }
 
+/**
+ * A made-up visitor address in CLIENT_IP_HEADER (X-Forwarded-For, playwright.db.config.ts), so each
+ * request context counts against its own sign-in limit instead of one shared by the whole run
+ * (D-081). Private range 10.x.x.x; never a real visitor's address.
+ */
+export function visitorAddress(address = `10.${[...randomBytes(3)].join('.')}`): Record<string, string> {
+  return { 'X-Forwarded-For': address }
+}
+
 /** Request headers that act as the signed-in user. */
 export function asUser(token: string): Record<string, string> {
   return { Authorization: `JWT ${token}` }
@@ -52,7 +61,7 @@ export async function attemptLogin(
   email: string,
   password: string,
 ): Promise<{ status: number; body: string; token?: string }> {
-  const anonymous = await request.newContext({ baseURL })
+  const anonymous = await request.newContext({ baseURL, extraHTTPHeaders: visitorAddress() })
   try {
     const response = await anonymous.post('/api/users/login', { data: { email, password } })
     const token = response.ok() ? sessionCookie(response.headersArray())?.value : undefined

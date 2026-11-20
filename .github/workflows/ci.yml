@@ -61,6 +61,8 @@ jobs:
       DATABASE_URL: postgres://ci:ci@localhost:5432/ci
       PAYLOAD_SECRET: ci-placeholder-not-a-secret-at-least-32-chars
       SITE_URL: http://localhost:3000
+      # Required in production mode (D-081); the sign-in tests send their own addresses in it.
+      CLIENT_IP_HEADER: X-Forwarded-For
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -114,6 +116,8 @@ jobs:
       # It passes the same guard as a developer's (name contains "e2e", not DATABASE_URL).
       TEST_DATABASE_URL: postgres://ogserc:ogserc@localhost:5432/ogserc_e2e
       SITE_URL: http://localhost:3000
+      # Required in production mode (D-081); the sign-in tests send their own addresses in it.
+      CLIENT_IP_HEADER: X-Forwarded-For
       # A made-up ID so tests/e2e/analytics.spec.ts checks the tracker tag (D-077).
       UMAMI_WEBSITE_ID: 00000000-0000-4000-8000-000000000000
     steps:
