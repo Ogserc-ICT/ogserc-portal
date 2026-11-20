@@ -23,6 +23,7 @@ import {
 } from '../lib/audit/hooks'
 import { protectLastAdministrator } from '../lib/auth/last-administrator'
 import { countFailedLogins, limitAuthRequests, rateLimitReply } from '../lib/auth/rate-limit'
+import { resetTwoFactorEndpoint } from '../lib/auth/reset-two-factor'
 import { endSessionsOnRoleChange } from '../lib/auth/revoke-sessions'
 import { limitSessionAge } from '../lib/auth/session-cap'
 import { lockForTransaction } from '../lib/transaction-lock'
@@ -89,6 +90,8 @@ export const Users: CollectionConfig = {
       sameSite: 'Strict',
     },
   },
+  // An administrator resets another account's two-factor sign-in (D-084).
+  endpoints: [resetTwoFactorEndpoint],
   access: {
     admin: isStaff,
     create: isAdmin,
@@ -154,6 +157,16 @@ export const Users: CollectionConfig = {
       },
       admin: {
         description: 'Administrator: manages users and settings. Publisher: approves and publishes content. Editor: drafts content.',
+      },
+    },
+    // A button only (nothing is stored): administrators reset another account's two-factor
+    // sign-in from its screen (D-084). Not shown when creating an account.
+    {
+      name: 'resetTwoFactor',
+      type: 'ui',
+      admin: {
+        condition: (data) => Boolean(data?.id),
+        components: { Field: '/components/admin/ResetTwoFactorButton#ResetTwoFactorButton' },
       },
     },
   ],

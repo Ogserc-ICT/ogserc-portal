@@ -68,11 +68,17 @@ export default defineConfig({
     { name: 'rate-limits', testMatch: 'rate-limits.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'audit-log', testMatch: 'audit-log.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'two-factor', testMatch: 'two-factor.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'two-factor-reset',
+      testMatch: 'two-factor-reset.spec.ts',
+      dependencies: ['first-user', 'two-factor'],
+      use: { ...devices['Desktop Chrome'] },
+    },
     // Must run last: it demotes the run's administrator, leaving one administrator the others don't know.
     {
       name: 'last-admin',
       testMatch: 'last-admin.spec.ts',
-      dependencies: ['first-user', 'media', 'users', 'drafts', 'password-policy', 'rate-limits', 'audit-log', 'two-factor'],
+      dependencies: ['first-user', 'media', 'users', 'drafts', 'password-policy', 'rate-limits', 'audit-log', 'two-factor', 'two-factor-reset'],
       use: { ...devices['Desktop Chrome'] },
     },
   ],
