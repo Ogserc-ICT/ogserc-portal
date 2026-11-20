@@ -137,7 +137,7 @@ must set up 2FA at next login.
 6. 2FA plugin, guards, admin reset, emergency CLI + migration.
    **Part A done** (2026-11-20, D-084): payload-totp 3.0.7 (3.0.6 fixed the brute-force advisory with its own code lock),
    forced set-up, the four guards (address limit, no code reuse, secret size, audit), proxy.ts, test helpers and tests.
-   Part B: the administrator reset and the emergency command.
+   **Part B done** (2026-11-20): the administrator reset (endpoint and button) and `pnpm auth:reset-2fa`.
 7. Email adapter (dev console / prod drop).
 8. Test-only collection (`E2E_TEST_COLLECTIONS=true`) + migration, test user seeding, Playwright auth tests.
 9. Docs: README, RUNBOOK (first admin, 2FA reset, email), DECISIONS (D-044+), CLAUDE.md "Authentication and access",
