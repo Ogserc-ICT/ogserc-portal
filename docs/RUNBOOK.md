@@ -576,7 +576,7 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 | DNS / CDN / WAF | DNS records, DDoS and bot protection, Turnstile | `<e.g. Cloudflare>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 5 / 13 |
 | File storage | Uploaded documents and images (S3-compatible) | `<provider>` | `<account / bucket>` | `<name>`, `<name>` | `<password manager / vault>` | Step 4 |
 | Backup storage | Encrypted off-server backup copies (D-080) | Backblaze B2 (EU Central) | `<shared OGSERC IT mailbox>`, bucket `ogserc-backups-k7qm`, key `ogserc-vps-backup` (that bucket only, Read and Write) | `<name>`, `<name>` | `<password manager / vault>`, with `OFFSITE_PASSWORD` | Active since 2026-11-19; restore test passed 2026-11-19, next due 2027-02 |
-| Email sending | Contact form delivery (SMTP) | `<provider>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Step 5 |
+| Email sending | None in Phase 1: the site sends no email (D-085) | n/a | n/a | n/a | n/a | Not used; decide in Phase 2 |
 | Receiving mailbox | OGSERC inbox for contact form messages | `<provider>` | `<OGSERC mailbox address>` | `<name>` | Held by OGSERC | Step 5 |
 | Error and uptime monitoring | Alerts on downtime and errors | UptimeRobot (free plan) | `<shared OGSERC IT mailbox>` | `<name>`, `<name>` | `<password manager / vault>` | Uptime active; error alerts step 13 |
 | Search engine consoles | Indexing reports, sitemap, search words (D-078) | Google Search Console, Bing Webmaster Tools | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | Active |
@@ -617,11 +617,10 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 - Move: create a bucket and key at the new S3-compatible provider, run `./deploy/offsite-backup.sh init` with the new `OFFSITE_REPOSITORY` and keys, and keep the old account until the new one holds 3 months of copies.
 
 **Email sending**
-- Recover: through another account member, or the provider's recovery process.
-- Move: set up the new provider, update the SPF and DKIM DNS records (and DMARC if needed) (NFR-SEC-15), update the `SMTP_*` and `EMAIL_FROM` variables, then send a test message through the contact form.
+- None in Phase 1 (D-085). When Phase 2 adds email, record the provider here, with its SPF, DKIM and DMARC records (NFR-SEC-15).
 
 **Receiving mailbox**
-- Held by OGSERC. To change it, update `CONTACT_FORM_TO` and send a test message through the contact form.
+- Held by OGSERC on Microsoft 365. The contact form's `mailto:` link names it (D-059); to change it, edit the address in the site's content and check the link opens a message to the new address.
 
 **Error and uptime monitoring / Analytics / Disk and backup alerts**
 - Recover: through another account member, or the provider's recovery process.
