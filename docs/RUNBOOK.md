@@ -165,6 +165,16 @@ On a brand-new, empty database, `/admin` shows a "create first user" screen that
 - After the screen creates the account it goes to the login page: sign in with the new account (it does not sign you in by itself). You are then asked to set up two-factor sign-in (Section 4.2) before anything else. Write the password down in the password manager: there is no email reset (Section 4.3).
 - Then create a **second administrator** (Section 4.1). The last administrator can never be demoted or deleted (the change is refused with "At least one administrator must remain"), and nobody can delete their own account.
 
+### 4.0 On OGSERC's VPS: the first-administrator window (D-087)
+
+While `/admin` is closed to everyone in the Caddyfile, it can be opened to **one internet address** for as long as it takes to create the first administrators:
+
+1. **Find your address.** On the computer you will use, open <https://ifconfig.me> in the browser and note the address (four numbers with dots). Mobile data can change it; use a fixed office or home connection if you can.
+2. **Open the window.** On the server, as `deploy`: `cd /opt/ogserc && nano .env`, add `ADMIN_ALLOW_IP=<that address>`, save, then `docker compose -f docker-compose.prod.yml up -d caddy`. `/admin` now loads from that address only; everyone else still gets "not found".
+3. **Create the accounts** at `https://<site>/admin` (Section 4): the first administrator, their authenticator app (4.2), then the second administrator. The second person must sign in and set up their authenticator app **from the same address** while the window is open, for example on the same computer.
+4. **Check** (4.2 and Section 6, "Uploaded files"): sign out and back in with a code; upload an image and see it in the site-files bucket; open another account's screen and see the *Reset two-factor sign-in* button.
+5. **Close the window.** Remove the `ADMIN_ALLOW_IP` line from `.env`, then `docker compose -f docker-compose.prod.yml up -d caddy` again. Without it the rule uses 192.0.2.1, an address no visitor can have.
+
 ### 4.1 Locked accounts
 
 After **5 failed sign-ins in a row**, a staff account is locked for **15 minutes**. The reply is the same for every failed sign-in, so it never says whether an account exists or is locked.
