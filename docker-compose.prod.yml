@@ -96,6 +96,9 @@ services:
     environment:
       SITE_DOMAIN: ${SITE_DOMAIN:?Set SITE_DOMAIN in .env}
       ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env}
+      # Unset: 192.0.2.1, an address no visitor can have, so /admin and /api stay closed to everyone. Set only for the first-administrator window
+      # (RUNBOOK Section 4), then removed again (D-087).
+      ADMIN_ALLOW_IP: ${ADMIN_ALLOW_IP:-192.0.2.1}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

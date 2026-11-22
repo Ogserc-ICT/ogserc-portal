@@ -1606,3 +1606,11 @@ Its three endpoints (`/api/setup-totp`, `/api/verify-totp`, `/api/remove-totp`) 
 
 **Data note:** images and, later, documents are published material, held in the EU (Backblaze EU Central) like the backups.
 
+## D-087 The admin panel opens to one address for the first administrators (2026-11-22)
+
+**Decision:** The Caddyfile's preview block (D-054) keeps `/admin` and `/api` closed to everyone except `ADMIN_ALLOW_IP`, a setting in the server's `.env` that is present only while OGSERC creates the first two administrators (RUNBOOK 4.0) and then removed. Without it, compose passes 192.0.2.1 (TEST-NET-1, RFC 5737), an address no visitor can have, so the site stays closed exactly as before; compose's default also replaces an empty value, which Caddy would otherwise turn into a matcher with no addresses.
+
+**Why:** Payload's "create first user" screen makes whoever reaches it first an administrator (RUNBOOK Section 4). Opening `/admin` to everyone, even for a few minutes, would race anyone who finds the address. Caddy sees each visitor's own address (it is the site's front door; no proxy in front of it), so the rule cannot be bypassed with a header. A setting instead of editing the Caddyfile on the server keeps the server's files identical to the repository.
+
+**After the window:** the preview block is removed altogether (RUNBOOK Section 11) once the administrators exist and sign-in has been checked in a real browser; until then `/admin` stays closed.
+

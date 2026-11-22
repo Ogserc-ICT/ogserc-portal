@@ -17,8 +17,8 @@ Updated 2026-11-20. Plan for Step 3: `docs/step-3-plan.md`.
 - **Step 3 plan commit 6 (two-factor sign-in, D-084):** part A merged (PR #56); part B (administrator reset, emergency command) on branch `feat/step-3-two-factor-reset`, PR #57.
 
 ## Before reopening `/admin`
-- Uploads in a Backblaze B2 bucket (D-086), branch `feat/media-storage-s3`: set up the bucket, key and five `S3_*` settings on the
-  server (RUNBOOK Section 6) **before** deploying it, since the app then refuses to start without them.
+- Uploads in a Backblaze B2 bucket (D-086): merged and deployed 2026-11-22, settings in the server's `.env`.
+- The first-administrator window (D-087, RUNBOOK 4.0): `/admin` open to one address via `ADMIN_ALLOW_IP`.
 - Create the first administrator yourself on the "create first user" screen, then a second administrator, before anyone else can
   reach the site's `/admin` (RUNBOOK Section 4); each sets up an authenticator app at first sign-in (RUNBOOK 4.2).
 - Check sign-in, the code step and the Strict session cookie in a real browser (D-052).
@@ -75,6 +75,5 @@ When Step 3 is complete: reopen `/admin` in `deploy/Caddyfile`.
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-Merge the storage PR when its CI is green. The owner sets up the site-files bucket and the `S3_*` settings, then deploys it.
-Then the `/admin` window: open it to the owner's address only, create two administrators with authenticator apps, check in a
-real browser (including an image upload landing in the bucket), then remove the Caddyfile block.
+Merge the admin-window PR and restart Caddy on the server. Then RUNBOOK 4.0: open the window to the owner's address, create the
+two administrators with authenticator apps, check sign-in and an upload, close the window. Then remove the preview block.

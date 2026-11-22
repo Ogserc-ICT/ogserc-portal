@@ -24,10 +24,15 @@ www.{$SITE_DOMAIN} {
 		format json
 	}
 
-	# PREVIEW ONLY (RUNBOOK Section 11). Staff sign-in is not finished (Step 3: 2FA, rate limiting,
-	# audit log), so the admin panel and Payload's REST and GraphQL API are closed to everyone.
-	# Public pages read content through Payload's Local API inside the app, never through /api.
-	@staff path /admin /admin/* /api /api/*
+	# PREVIEW ONLY (RUNBOOK Section 11). The admin panel and Payload's REST API are closed to everyone
+	# except ADMIN_ALLOW_IP, set in .env only for the short window in which OGSERC creates the first
+	# administrators (RUNBOOK Section 4). Unset, it is 192.0.2.1 (TEST-NET-1, RFC 5737), an address no
+	# visitor can have, so everything stays closed. Public pages read content through Payload's Local
+	# API inside the app, never through /api.
+	@staff {
+		path /admin /admin/* /api /api/*
+		not remote_ip {$ADMIN_ALLOW_IP:192.0.2.1}
+	}
 	respond @staff 404
 
 	header {
