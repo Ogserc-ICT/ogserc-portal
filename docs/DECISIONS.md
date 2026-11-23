@@ -1614,3 +1614,8 @@ Its three endpoints (`/api/setup-totp`, `/api/verify-totp`, `/api/remove-totp`) 
 
 **After the window:** the preview block is removed altogether (RUNBOOK Section 11) once the administrators exist and sign-in has been checked in a real browser; until then `/admin` stays closed.
 
+## D-088 Registered Operators page and quick service (2026-11-23)
+
+**Decision:** A sixth homepage quick service, "Registered Operators", after the five FR-WEB-02 lists, links to a new page at `/registered-operators`. The page is a numbered table of operator name and registration number, in registration order, starting with VERGE POWER LIMITED (OGSERC/REG/2026/F-DIS/0001). The list lives in `src/lib/operators/registered-operators.ts` until the Licencees collection (build step 8) moves it into the CMS.
+
+**Why:** the owner asked for it on 2026-11-23, with the first operator's name and number. Registration under the registration notice (D-065) is not a licence, so this is a separate list from the licencee register (FR-LIC) at `/licences`, which is still to be built. The page shows only what OGSERC supplied; columns such as activity or location are added when OGSERC supplies them. The page is not in the SRS Section 4 menus; the homepage card is its entry point, and the sitemap lists it.

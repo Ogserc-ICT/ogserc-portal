@@ -53,7 +53,8 @@ test.describe('Homepage', () => {
     }
   })
 
-  test('quick services list the five SRS services', async ({ page }) => {
+  // The five SRS services, then Registered Operators (D-088).
+  test('quick services list the six services', async ({ page }) => {
     const services = page
       .locator('section[aria-labelledby="quick-services-heading"]')
       .getByRole('link')
@@ -63,6 +64,7 @@ test.describe('Homepage', () => {
       'Regulatory Instruments',
       'Energy Caps',
       'FAQs',
+      'Registered Operators',
     ])
   })
 

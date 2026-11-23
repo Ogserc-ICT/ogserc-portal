@@ -55,6 +55,12 @@ export const routes = {
   events: pending('Events', '/media-center/events'),
   // Not in the SRS Section 4 Media Center menu; added with the owner's agreement (D-065).
   notices: { label: 'Public Notices', path: '/media-center/notices', ready: true },
+  // Homepage quick service, not in SRS Section 4; added with the owner's agreement (D-088).
+  registeredOperators: {
+    label: 'Registered Operators',
+    path: '/registered-operators',
+    ready: true,
+  },
 } satisfies Record<string, SiteLink>
 
 const menuGroups: { id: string; label: string; links: SiteLink[] }[] = [
