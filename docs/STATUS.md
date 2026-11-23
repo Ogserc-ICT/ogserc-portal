@@ -1,6 +1,6 @@
 # Project status
 
-Updated 2026-11-20. Plan for Step 3: `docs/step-3-plan.md`.
+Updated 2026-11-23. Plan for Step 3: `docs/step-3-plan.md`.
 
 ## Where things stand
 - **Steps 1, 2 and 2b** are merged. The live preview at `https://ogserc.org.ng` runs on OGSERC's VPS (D-054), with
@@ -10,27 +10,24 @@ Updated 2026-11-20. Plan for Step 3: `docs/step-3-plan.md`.
 - **Step 3's security work is merged and deployed** (2026-11-20, `0db390f`): roles, password policy and breach check (D-053),
   rate limits (D-081), audit log (D-083), two-factor sign-in with an administrator reset and an emergency command (D-084).
   On the VPS all six migrations ran, the startup check passed, the audit clean-up cron is installed and dry-run clean, and the
-  restore test passed with the full site database (15 tables, 6 migrations). `/admin` and `/api` are still closed (404).
+  restore test passed with the full site database (15 tables, 6 migrations).
+- **`/admin` is open** (2026-11-23, D-087): both administrators (the owner and a second administrator) signed in through the
+  one-address window with two-factor sign-in, the window was closed and checked from outside, then the Caddyfile block was
+  removed (branch `chore/open-admin`).
 - **Step 3 plan commit 3 (password policy) is complete:** PRs #51 and #53 (breach check, fail-open) merged.
 - **Step 3 plan commit 4 (rate limiting, D-081):** PR #54 merged.
 - **Step 3 plan commit 5 (audit log, D-083):** PR #55 merged.
 - **Step 3 plan commit 6 (two-factor sign-in, D-084):** part A merged (PR #56); part B (administrator reset, emergency command) on branch `feat/step-3-two-factor-reset`, PR #57.
 
-## Before reopening `/admin`
-- Uploads in a Backblaze B2 bucket (D-086): merged and deployed 2026-11-22, settings in the server's `.env`.
-- The first-administrator window (D-087, RUNBOOK 4.0): `/admin` open to one address via `ADMIN_ALLOW_IP`.
-- Create the first administrator yourself on the "create first user" screen, then a second administrator, before anyone else can
-  reach the site's `/admin` (RUNBOOK Section 4); each sets up an authenticator app at first sign-in (RUNBOOK 4.2).
-- Check sign-in, the code step and the Strict session cookie in a real browser (D-052).
-- The server needs outbound HTTPS to `api.pwnedpasswords.com` for the breach check (D-053); if blocked it is skipped with a warning.
-- Then remove the `/admin` and `/api` block in `deploy/Caddyfile` (D-054, RUNBOOK Section 11) and restart Caddy.
+## Still to check on the live admin
+- The server needs outbound HTTPS to `api.pwnedpasswords.com` for the breach check (D-053); if blocked it is skipped with a
+  warning in the app log.
 
 ## Remaining Step 3 plan commits
 6. Re-test Strict cookies with 2FA in a real browser at the first deploy (D-052).
 7. No email (D-085): branch `feat/step-3-no-email`; forgotten passwords are reset by an administrator (RUNBOOK 4.3).
 8. Auth e2e tests.
 9. Docs.
-When Step 3 is complete: reopen `/admin` in `deploy/Caddyfile`.
 
 ## Waiting on the owner
 - **Unsaved work at sign-out (decide before Step 4).** Seen 2026-10-20 with a temporary 5-minute token. The admin refreshes
@@ -75,5 +72,6 @@ When Step 3 is complete: reopen `/admin` in `deploy/Caddyfile`.
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-Merge the admin-window PR and restart Caddy on the server. Then RUNBOOK 4.0: open the window to the owner's address, create the
-two administrators with authenticator apps, check sign-in and an upload, close the window. Then remove the preview block.
+Merge `chore/open-admin`, then on the server: `git pull --ff-only && docker compose -f docker-compose.prod.yml up -d caddy && docker compose -f docker-compose.prod.yml restart caddy`, and
+check `/admin` shows the sign-in screen. Then decide the open owner items above (unsaved work at sign-out, private files for
+draft documents) and start Step 4.
