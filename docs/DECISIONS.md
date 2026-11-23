@@ -1700,3 +1700,15 @@ Shared field builders (`src/fields/common.ts`) keep dates, attachments, related 
 **Changed plan:** the homepage switch to the CMS moves from this slice to slice 5, with the import of the real news, notices and settings. Switching first would have emptied the live homepage's lists until the import.
 
 **Tested:** `tests/e2e-db/content-collections.spec.ts` (was `news-events.spec.ts`): the draft rules and audit entries over HTTP for all eight collections after Documents; site settings readable by visitors, refused to editors, saved by publishers and audited; unsafe slide links refused. Unit tests for the link, map and video checks.
+
+## D-094 `pnpm seed`: sample content for review databases only (2026-11-23)
+
+**Decision:** `pnpm seed --database <name>` (`scripts/seed.ts`, `scripts/seed-payload.ts`, `src/lib/seed/sample-content.ts`) adds clearly marked sample content of every type (FR-CMS-08): a document per Regulatory Instruments category (one superseded, one consultation with its fields, one code with its family), three items of each other content collection, a sample PDF and three plain green images. Every title reads "[Sample …, OGSERC to supply]"; nothing is regulatory content (no fees, tariffs, licence data, real dates of events or legal text). In each collection one sample is a draft titled "must never show on the site", for checking the D-049 rule by eye. Site settings are not seeded: slice 5b's migration puts OGSERC's real contact details and slides in every database.
+
+**Safeguards (owner's choice, 2026-11-23: never on the production database):**
+- It refuses `NODE_ENV=production`, and runs only as `--database <name>` with the name `--show-target` printed; the live connection must be that database.
+- It refuses any database whose audit log has a content, file, image or settings entry made by a staff account (D-083). That tells a database people work in from one only migrations and the seed have filled, which a rule such as "only samples present" could not once slice 5b's migration adds OGSERC's real news and notices to every database.
+- It is idempotent (it skips samples already there, by title), and confirms itself like the other database scripts (D-047).
+- The images are made with Node's zlib, not sharp, so it works where sharp cannot (D-056); the PDF is a real one-page PDF that passes Payload's own check.
+
+**Tested:** unit tests (arguments, confirmation, refusal, every title marked, one draft per collection, all eleven categories, the files pass the upload checks); on the development database, a first run added 40 items and a second added none.

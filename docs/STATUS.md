@@ -64,7 +64,9 @@ Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3
 - Slice 2 (Documents, D-091): one collection for the eleven Regulatory Instruments categories. PR #67 merged and deployed
   2026-11-23; the `deploy/run-jobs.sh` cron job is installed and printed `jobs ok`.
 - Slice 3 (News, Announcements, Events, Tenders, D-092). PR #68 merged and deployed 2026-11-23.
-- Slice 4 (Reports, FAQs, Pages, Galleries, site settings, D-093). The homepage switch moved to slice 5.
+- Slice 4 (Reports, FAQs, Pages, Galleries, site settings, D-093). PR #69 merged and deployed 2026-11-23. The homepage
+  switch moved to slice 5.
+- Slice 5a (`pnpm seed`, D-094): the development database is seeded (40 sample items).
 - Owner decisions (D-089): drafts with autosave on every content collection, so work resumes after a sign-out; uploaded
   files (images and documents) stay public, and the staff guide says not to upload anything confidential.
 - Hide admin controls that return 403 for editors (e.g. Publish on published documents).
@@ -73,6 +75,9 @@ Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-Step 4 slice 4 (Reports, FAQs, Pages, Galleries, site settings, D-093) is on branch `feat/step-4-pages-settings`. After it is
-merged and deployed, slice 5: `pnpm seed` (refuses production), the one-time import of the real news, notices and settings,
-and the homepage, footer and contact page reading the CMS (`placeholder-content.ts` deleted, D-028).
+Step 4 slice 5a (`pnpm seed`, D-094) is on branch `feat/step-4-seed`. Then slice 5b (owner approved 2026-11-23): a data
+migration that puts OGSERC's real news story, public notice, homepage slides and contact details into the CMS in every
+database; an optional "link to" field on News and Announcements for homepage items that point at other pages; the homepage,
+footer, contact page and the news and notices pages reading the CMS (rich text rendered with Payload's own renderer);
+`placeholder-content.ts` deleted (About, History and Structure move to a file of their own until Step 5). Before and after
+screenshots for the owner before merging.

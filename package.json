@@ -22,6 +22,7 @@
     "migrate:status": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:status",
     "db:verify": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/db-verify.ts",
     "auth:unlock": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/auth-unlock.ts",
+    "seed": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/seed.ts",
     "auth:reset-2fa": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/auth-reset-2fa.ts",
     "hooks:install": "git config core.hooksPath scripts/git-hooks"
   },
