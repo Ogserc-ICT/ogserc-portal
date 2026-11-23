@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
-import { auditFailedLogin, auditLogin, auditUserChange, contentAuditHooks, noteLockBeforeLogin, notePasswordChange } from '../../src/lib/audit/hooks'
+import { contentAuditHooks } from '../../src/lib/audit/content-hooks'
+import { auditFailedLogin, auditLogin, auditUserChange, noteLockBeforeLogin, notePasswordChange, uploadAuditHooks } from '../../src/lib/audit/hooks'
 import { auditData, changedFields, DETAIL_KEYS, safeDetails } from '../../src/lib/audit/record'
 
 // The audit log hooks with a fake Payload that records what would be written (D-083). The database
@@ -194,7 +195,7 @@ test.describe('refused sign-ins', () => {
 })
 
 test('images: upload, change (field names only) and delete', async () => {
-  const hooks = contentAuditHooks('media')
+  const hooks = uploadAuditHooks('media')
   const image = { id: 9, filename: 'office.webp', alt: 'Office' }
   const { req, written } = fakeReq({ user: { id: 1, email: 'a@example.org', collection: 'users' } })
   await hooks.afterChange({ doc: image, operation: 'create', req } as never)
@@ -206,4 +207,55 @@ test('images: upload, change (field names only) and delete', async () => {
     ['media.updated', 'office.webp', { fields: ['alt'] }],
     ['media.deleted', 'office.webp', null],
   ])
+})
+
+test('document files: upload, change (field names only) and delete', async () => {
+  const hooks = uploadAuditHooks('document-files')
+  const doc = { id: 4, filename: 'order.pdf', title: 'Order' }
+  const { req, written } = fakeReq({ user: { id: 1, email: 'a@example.org', collection: 'users' } })
+  await hooks.afterChange({ doc, operation: 'create', req } as never)
+  await hooks.afterChange({ doc: { ...doc, title: 'Order 1' }, previousDoc: doc, operation: 'update', req } as never)
+  await hooks.afterDelete({ doc, req } as never)
+  expect(written.map((w) => [w.data.action, w.data.targetType, w.data.targetLabel, w.data.details])).toEqual([
+    ['file.uploaded', 'document-files', 'order.pdf', null],
+    ['file.updated', 'document-files', 'order.pdf', { fields: ['title'] }],
+    ['file.deleted', 'document-files', 'order.pdf', null],
+  ])
+})
+
+test.describe('content items (D-090)', () => {
+  const hooks = contentAuditHooks('e2e-drafts', ['title', 'summary', 'updatedAt', '_status'])
+  const published = { id: 7, title: 'Notice', summary: 'A', _status: 'published' }
+  const draft = { ...published, _status: 'draft' }
+
+  /** Runs one save through both hooks, as Payload does, and returns what was written. */
+  async function save(args: { autosave?: boolean; draft?: boolean }, operation: 'create' | 'update', doc: unknown, previousDoc?: unknown) {
+    const { req, written } = fakeReq({ user: { id: 1, email: 'a@example.org', collection: 'users' } })
+    hooks.noteSaveKind({ args, operation, req } as never)
+    await hooks.afterChange({ doc, previousDoc, operation, req } as never)
+    return written.map((w) => [w.data.action, w.data.targetLabel, w.data.details])
+  }
+
+  test('created as a draft, or published straight away', async () => {
+    expect(await save({ draft: true }, 'create', draft)).toEqual([['content.created', 'Notice', null]])
+    expect(await save({}, 'create', published)).toEqual([['content.published', 'Notice', null]])
+  })
+
+  test('draft saved, published and unpublished, with the changed field names only', async () => {
+    expect(await save({ draft: true }, 'update', { ...draft, summary: 'B' }, published)).toEqual([
+      ['content.draft-saved', 'Notice', { fields: ['summary'] }],
+    ])
+    expect(await save({}, 'update', { ...published, summary: 'B' }, draft)).toEqual([['content.published', 'Notice', { fields: ['summary'] }]])
+    expect(await save({}, 'update', draft, published)).toEqual([['content.unpublished', 'Notice', null]])
+  })
+
+  test('autosaves leave no entry (version history keeps them)', async () => {
+    expect(await save({ autosave: true, draft: true }, 'update', { ...draft, summary: 'typing' }, published)).toEqual([])
+  })
+
+  test('deleted', async () => {
+    const { req, written } = fakeReq({ user: { id: 1, email: 'a@example.org', collection: 'users' } })
+    await hooks.afterDelete({ doc: published, req } as never)
+    expect(written.map((w) => [w.data.action, w.data.targetType, w.data.targetId])).toEqual([['content.deleted', 'e2e-drafts', '7']])
+  })
 })

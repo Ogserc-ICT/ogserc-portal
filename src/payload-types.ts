@@ -69,6 +69,7 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    'document-files': DocumentFile;
     'audit-log': AuditLog;
     'rate-limits': RateLimit;
     'totp-attempts': TotpAttempt;
@@ -81,6 +82,7 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    'document-files': DocumentFilesSelect<false> | DocumentFilesSelect<true>;
     'audit-log': AuditLogSelect<false> | AuditLogSelect<true>;
     'rate-limits': RateLimitsSelect<false> | RateLimitsSelect<true>;
     'totp-attempts': TotpAttemptsSelect<false> | TotpAttemptsSelect<true>;
@@ -177,6 +179,32 @@ export interface Media {
   focalY?: number | null;
 }
 /**
+ * PDF, Word (.docx) and Excel (.xlsx) files, up to 25 MB. Anyone with a file's address can open it as soon as it is uploaded, so never upload anything confidential.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "document-files".
+ */
+export interface DocumentFile {
+  id: number;
+  _objectKey?: string | null;
+  prefix?: string | null;
+  /**
+   * For staff, to find the file. The public sees the title of the item that uses it.
+   */
+  title: string;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
  * A record of sign-ins and changes. Read-only: entries cannot be edited or deleted.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -205,7 +233,15 @@ export interface AuditLog {
     | '2fa.reset'
     | 'media.created'
     | 'media.updated'
-    | 'media.deleted';
+    | 'media.deleted'
+    | 'file.uploaded'
+    | 'file.updated'
+    | 'file.deleted'
+    | 'content.created'
+    | 'content.draft-saved'
+    | 'content.published'
+    | 'content.unpublished'
+    | 'content.deleted';
   /**
    * Who did it. Empty for a visitor who is not signed in, or for server code.
    */
@@ -214,10 +250,10 @@ export interface AuditLog {
    * A copy, so the entry still reads correctly if the account is deleted.
    */
   actorEmail?: string | null;
-  targetType?: ('user' | 'media') | null;
+  targetType?: ('user' | 'media' | 'document-files' | 'e2e-drafts') | null;
   targetId?: string | null;
   /**
-   * The account's email or the image's file name, at the time.
+   * The account's email, the file's name or the item's title, at the time.
    */
   targetLabel?: string | null;
   /**
@@ -293,6 +329,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'document-files';
+        value: number | DocumentFile;
       } | null)
     | ({
         relationTo: 'audit-log';
@@ -378,6 +418,26 @@ export interface UsersSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   _objectKey?: T;
   alt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "document-files_select".
+ */
+export interface DocumentFilesSelect<T extends boolean = true> {
+  _objectKey?: T;
+  prefix?: T;
+  title?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

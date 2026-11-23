@@ -1,10 +1,11 @@
 import type { CollectionConfig, PayloadRequest } from 'payload'
 
 import { isLoginRequest } from '../auth/generic-login-error'
-import { changedFields, MEDIA_FIELDS, recordAudit, requestActor, USER_FIELDS } from './record'
+import type { AuditAction } from './actions'
+import { changedFields, DOCUMENT_FILE_FIELDS, MEDIA_FIELDS, recordAudit, requestActor, USER_FIELDS } from './record'
 
 // The hooks that write the audit log (D-083). Staff account events go on the Users collection,
-// image events on Media; Step 4's content collections reuse contentAuditHooks.
+// upload events on Media and document-files (uploadAuditHooks); content items use content-hooks.ts.
 
 type Hooks = NonNullable<CollectionConfig['hooks']>
 type Hook<K extends keyof Hooks> = NonNullable<Hooks[K]>[number]
@@ -158,21 +159,27 @@ export const auditFailedLogin: Hook<'afterError'> = async ({ collection, error, 
   if (account && !lockedBefore && isLocked(account)) await recordAudit(req, { action: 'account.locked', target }, { separate: true })
 }
 
-/** For content collections (Media now, Step 4's collections later): created, changed, deleted. */
-export function contentAuditHooks(type: 'media', fields: readonly string[] = MEDIA_FIELDS) {
-  const label = (doc: unknown) => (doc as { filename?: unknown; title?: unknown } | undefined)?.filename ?? (doc as { title?: unknown })?.title
+const UPLOADS = {
+  media: { actions: ['media.created', 'media.updated', 'media.deleted'], fields: MEDIA_FIELDS },
+  'document-files': { actions: ['file.uploaded', 'file.updated', 'file.deleted'], fields: DOCUMENT_FILE_FIELDS },
+} as const satisfies Record<string, { actions: readonly [AuditAction, AuditAction, AuditAction]; fields: readonly string[] }>
+
+/** For upload collections: file uploaded, changed (field names only), deleted. */
+export function uploadAuditHooks(type: keyof typeof UPLOADS) {
+  const { actions, fields } = UPLOADS[type]
+  const [created, updated, deleted] = actions
+  const target = (doc: unknown) => ({ type, id: (doc as { id: number | string }).id, label: (doc as { filename?: unknown } | undefined)?.filename })
   const afterChange: Hook<'afterChange'> = async ({ doc, operation, previousDoc, req }) => {
-    const target = { type, id: (doc as { id: number | string }).id, label: label(doc) }
     if (operation === 'create') {
-      await recordAudit(req, { action: `${type}.created`, actor: requestActor(req), target })
+      await recordAudit(req, { action: created, actor: requestActor(req), target: target(doc) })
     } else {
       const changed = changedFields(fields, previousDoc, doc)
-      if (changed.length > 0) await recordAudit(req, { action: `${type}.updated`, actor: requestActor(req), target, details: { fields: changed } })
+      if (changed.length > 0) await recordAudit(req, { action: updated, actor: requestActor(req), target: target(doc), details: { fields: changed } })
     }
     return doc
   }
   const afterDelete: Hook<'afterDelete'> = async ({ doc, req }) => {
-    await recordAudit(req, { action: `${type}.deleted`, actor: requestActor(req), target: { type, id: (doc as { id: number | string }).id, label: label(doc) } })
+    await recordAudit(req, { action: deleted, actor: requestActor(req), target: target(doc) })
     return doc
   }
   return { afterChange, afterDelete }

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url'
 import { denyByDefault } from './access/deny-by-default'
 import { hardenPayloadInternals } from './access/payload-internals'
 import { AuditLog } from './collections/AuditLog'
+import { DocumentFiles } from './collections/DocumentFiles'
 import { Media } from './collections/Media'
 import { RateLimits } from './collections/RateLimits'
 import { TEST_COLLECTIONS, testCollectionsEnabled } from './collections/test'
@@ -14,6 +15,7 @@ import { Users } from './collections/Users'
 import { twoFactor } from './lib/auth/two-factor'
 import { noSendEmail } from './lib/email/no-send'
 import { assertServerEnv, csrfOrigins, siteOrigin } from './lib/env'
+import { jobsAccess } from './lib/jobs/run-access'
 import { queryLimits } from './lib/query-limits'
 import { onPayloadInit } from './lib/startup'
 import { MAX_UPLOAD_BYTES } from './lib/uploads/limits'
@@ -66,8 +68,15 @@ export const portalConfig = async ({
         baseDir: path.resolve(dirname),
       },
     },
-    collections: [Users, Media, AuditLog, RateLimits, ...(withTestCollections ? TEST_COLLECTIONS : [])],
+    collections: [Users, Media, DocumentFiles, AuditLog, RateLimits, ...(withTestCollections ? TEST_COLLECTIONS : [])],
     editor: lexicalEditor(),
+    // Scheduled publishing (FR-CMS-04, D-090): the admin panel queues a job; the server's cron job
+    // runs due jobs through /api/payload-jobs/run with JOBS_RUN_SECRET (deploy/run-jobs.sh). There is
+    // no timer inside the app (D-051). Finished jobs are deleted; failed ones stay for an administrator.
+    jobs: {
+      access: jobsAccess,
+      deleteJobOnComplete: true,
+    },
     // The site sends no email (D-085); this also keeps Payload from writing emails to the log.
     email: noSendEmail,
     secret: requireEnv('PAYLOAD_SECRET'),

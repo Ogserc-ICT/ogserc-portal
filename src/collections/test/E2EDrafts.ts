@@ -1,30 +1,17 @@
 import type { CollectionConfig } from 'payload'
 
-import { canSaveContent, isEditorOrAbove, isPublisherOrAbove, publishedOnly } from '../../access'
-import { guardPublishedContent } from '../../access/guard-published-content'
-import { PUBLIC_READ, publicOrTwoFactor } from '../../access/two-factor'
+import { contentCollection } from '../content/content-collection'
 
 /**
- * Test-only: the smallest drafts-enabled collection, so the content access rules (`canSaveContent`,
- * `publishedOnly`) can be tested before Step 4 adds real content collections. Registered only when
- * E2E_TEST_COLLECTIONS=true, which production refuses (src/lib/env.ts). Its tables exist in every
- * database, empty, because they are in the committed migrations (docs/DECISIONS.md D-050).
+ * Test-only: the smallest content collection, built with the same contentCollection() as every real
+ * one, so the content rules (access, the published-content guard, autosave, scheduling, audit) are
+ * tested on exactly what the real collections use. Registered only when E2E_TEST_COLLECTIONS=true,
+ * which production refuses (src/lib/env.ts). Its tables exist in every database, empty, because they
+ * are in the committed migrations (docs/DECISIONS.md D-050).
  */
-export const E2EDrafts: CollectionConfig = {
+export const E2EDrafts: CollectionConfig = contentCollection({
   slug: 'e2e-drafts',
+  labels: { singular: 'Test item', plural: 'Test items' },
   admin: { hidden: true },
-  versions: { drafts: true },
-  // Published documents stay readable by visitors; staff (who also see drafts) need a verified code (D-084).
-  custom: PUBLIC_READ,
-  access: {
-    read: publicOrTwoFactor(publishedOnly),
-    readVersions: isEditorOrAbove,
-    create: canSaveContent,
-    update: canSaveContent,
-    delete: isPublisherOrAbove,
-  },
-  hooks: {
-    beforeOperation: [guardPublishedContent],
-  },
   fields: [{ name: 'title', type: 'text', required: true }],
-}
+})

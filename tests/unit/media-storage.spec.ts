@@ -36,13 +36,14 @@ test.describe('the Media collection', () => {
   })
 
   /** Media's field names and whether its files go to local disk, for a config built with this environment. */
-  async function media(env: Record<string, string>) {
+  async function media(env: Record<string, string>, slug = 'media') {
     Object.assign(process.env, env)
     const config = await portalConfig({ withTestCollections: false })
-    const collection = config.collections.find((c) => c.slug === 'media')!
+    const collection = config.collections.find((c) => c.slug === slug)!
     const upload = collection.upload as { disableLocalStorage?: boolean }
     const names = collection.fields.flatMap((field) => ('name' in field ? [field.name] : []))
-    return { names, local: !upload.disableLocalStorage }
+    const prefixField = collection.fields.find((field) => 'name' in field && field.name === 'prefix') as { defaultValue?: unknown } | undefined
+    return { names, local: !upload.disableLocalStorage, prefix: prefixField?.defaultValue }
   }
 
   test('without S3 settings files stay on local disk; with them they go to the bucket', async () => {
@@ -56,6 +57,17 @@ test.describe('the Media collection', () => {
     for (const env of [{}, all]) {
       const { names } = await media(env)
       expect(names.filter((name) => name === '_objectKey')).toHaveLength(1)
+    }
+  })
+
+  test('document files: the same fields either way, in the bucket under their own prefix (D-090)', async () => {
+    for (const name of S3_VARIABLES) delete process.env[name]
+    for (const env of [{}, all]) {
+      const { names, local, prefix } = await media(env, 'document-files')
+      expect(names.filter((name) => name === '_objectKey'), JSON.stringify(env)).toHaveLength(1)
+      expect(names.filter((name) => name === 'prefix'), JSON.stringify(env)).toHaveLength(1)
+      expect(local).toBe(env === all ? false : true)
+      if (env === all) expect(prefix).toBe('document-files')
     }
   })
 })

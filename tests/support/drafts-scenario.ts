@@ -29,8 +29,17 @@ type Doc = { id: Id; title?: string; _status?: string }
 type Staff = Record<string, unknown> & { id: Id }
 type Status = 'draft' | 'published'
 
-/** A document after a case: as stored, and as the public sees it (null: not visible). */
-export type DocState = { title?: string; _status?: string; public: { title?: string } | null }
+/**
+ * A document after a case: as stored, its newest draft (what staff see when they open it again,
+ * D-089), as the public sees it (null: not visible), and the audit log's actions for it, oldest first.
+ */
+export type DocState = {
+  title?: string
+  _status?: string
+  draftTitle?: string
+  public: { title?: string } | null
+  audit: string[]
+}
 
 /** What one case did: the error it threw (if any) and its documents afterwards, seeded ones first. */
 export type CaseResult = { error: string | null; docs: (DocState | null)[] }
@@ -43,6 +52,8 @@ export type ScenarioResult = {
   publicVersions: string | null
   /** Drafts an anonymous REST request saw while sending overrideAccess and draft. */
   anonymousRestDrafts: number | null
+  /** The job runner's answer (D-090) to a request without the secret, and to a signed-in publisher. */
+  jobsRunRefused: { withoutSecret: string | null; asPublisher: string | null }
 }
 
 // The generated types describe the deployed config, which has no test collections (D-050), so
@@ -73,6 +84,8 @@ async function main(): Promise<void> {
   if (!process.env.E2E_SCRIPT_CONFIRM_FILE) fail('E2E_SCRIPT_CONFIRM_FILE is not set.')
   const tokens = JSON.parse(process.env.E2E_DRAFTS_TOKENS ?? '{}') as { editor?: string; publisher?: string }
   if (!tokens.editor || !tokens.publisher) fail('E2E_DRAFTS_TOKENS must hold the editor and publisher tokens.')
+  const jobsSecret = process.env.JOBS_RUN_SECRET ?? ''
+  if (jobsSecret.length < 32) fail('JOBS_RUN_SECRET (32 characters or more) must be set for the scheduling cases.')
   const target = assertWipeableTestDatabase({ ...process.env, DATABASE_URL: process.env.PROTECTED_DATABASE_URL })
   const connectingTo = databaseIdentity(process.env.DATABASE_URL)
   if (!connectingTo || !sameDatabase(connectingTo, target)) {
@@ -141,8 +154,44 @@ async function main(): Promise<void> {
   const state = async (id: Id): Promise<DocState | null> => {
     const doc = await api.findByID({ ...trusted, id, depth: 0 }).catch(() => null)
     if (!doc) return null
+    const latest = await api.findByID({ ...trusted, id, depth: 0, draft: true }).catch(() => null)
     const seen = await api.findByID({ collection: COLLECTION, id, depth: 0, overrideAccess: false }).catch(() => null)
-    return { title: doc.title, _status: doc._status, public: seen ? { title: seen.title } : null }
+    const { docs: entries } = await payload.find({
+      collection: 'audit-log',
+      where: { and: [{ targetType: { equals: COLLECTION } }, { targetId: { equals: String(id) } }] },
+      sort: 'createdAt',
+      depth: 0,
+      limit: 50,
+    })
+    return {
+      title: doc.title,
+      _status: doc._status,
+      draftTitle: latest?.title,
+      public: seen ? { title: seen.title } : null,
+      audit: entries.map((entry) => String(entry.action)),
+    }
+  }
+
+  /**
+   * Scheduled publishing (D-090): what the admin panel's scheduling screen queues, already due,
+   * as `user`. `runner` 'local' runs it directly; 'rest' through the job runner endpoint with the
+   * secret, as the server's cron job does.
+   */
+  async function schedule(doc: Doc, user: Staff, type: 'publish' | 'unpublish', runner: 'local' | 'rest') {
+    // A job run directly goes in a queue of its own, so the cron case's runner never picks it up first.
+    // The generated types know no test collection, so the job is described loosely here.
+    const job = (await payload.jobs.queue({
+      task: 'schedulePublish' as never,
+      input: { type, doc: { relationTo: COLLECTION, value: String(doc.id) }, user: { relationTo: 'users', value: user.id } } as never,
+      waitUntil: new Date(Date.now() - 1000),
+      ...(runner === 'local' ? { queue: `e2e-${doc.id}` } : {}),
+    } as never)) as { id: Id }
+    if (runner === 'local') await payload.jobs.runByID({ id: job.id, silent: true })
+    else await rest('GET', '/payload-jobs/run?limit=50', { headers: { Authorization: `Bearer ${jobsSecret}` } })
+    // A failed job is kept (only finished ones are deleted); report its error like a refused save.
+    const left = await payload.find({ collection: 'payload-jobs' as never, where: { id: { equals: job.id } }, depth: 0 }).catch(() => null)
+    const kept = left?.docs[0] as { hasError?: boolean; error?: unknown } | undefined
+    if (kept?.hasError || kept?.error) throw new Error('The scheduled job failed.')
   }
 
   /**
@@ -350,6 +399,44 @@ async function main(): Promise<void> {
           body: { title: 'rest-duplicated-not-draft' },
         }),
     },
+    // --- Autosave (D-089): what the admin panel sends every few seconds while someone types ---
+    'REST: editor autosaves a published document': {
+      seed: ['published'],
+      action: ([doc]) =>
+        rest('PATCH', `/${COLLECTION}/${doc!.id}?draft=true&autosave=true`, { token: tokens.editor, body: { title: 'autosaved-by-editor' } }),
+    },
+    'REST: editor autosaves twice, then saves the draft': {
+      seed: ['draft'],
+      action: async ([doc]) => {
+        for (const title of ['typing', 'typing more']) {
+          await rest('PATCH', `/${COLLECTION}/${doc!.id}?draft=true&autosave=true`, { token: tokens.editor, body: { title } })
+        }
+        return rest('PATCH', `/${COLLECTION}/${doc!.id}?draft=true`, { token: tokens.editor, body: { title: 'saved-after-typing' } })
+      },
+    },
+    'REST: editor autosaves with _status published': {
+      seed: ['published'],
+      action: ([doc]) =>
+        rest('PATCH', `/${COLLECTION}/${doc!.id}?draft=true&autosave=true`, {
+          token: tokens.editor,
+          body: { title: 'autosave-publish-attempt', _status: 'published' },
+        }),
+    },
+
+    // --- Scheduled publishing (D-090): runs as the person who scheduled it ---
+    'editor schedules publishing a draft': {
+      seed: ['draft'],
+      action: ([doc]) => schedule(doc!, editor, 'publish', 'local'),
+    },
+    'editor schedules unpublishing a published document': {
+      seed: ['published'],
+      action: ([doc]) => schedule(doc!, editor, 'unpublish', 'local'),
+    },
+    'publisher schedules publishing a draft, run by the cron job': {
+      seed: ['draft'],
+      action: ([doc]) => schedule(doc!, publisher, 'publish', 'rest'),
+    },
+
     'REST: editor sends overrideAccess in the query, a header and the body': {
       seed: ['published'],
       action: ([doc]) =>
@@ -384,12 +471,22 @@ async function main(): Promise<void> {
     .then((json) => (json as { docs: unknown[] }).docs.length)
     .catch(() => null)
 
+  const runnerAnswer = (headers: Record<string, string>) =>
+    rest('GET', '/payload-jobs/run', { headers })
+      .then(() => null)
+      .catch(errorName)
+  const jobsRunRefused = {
+    withoutSecret: await runnerAnswer({}),
+    asPublisher: await runnerAnswer({ Authorization: `JWT ${tokens.publisher}` }),
+  }
+
   const result: ScenarioResult = {
     cases,
     sharedIds,
     publicList: publicDocs.map((d) => String(d._status)),
     publicVersions,
     anonymousRestDrafts,
+    jobsRunRefused,
   }
   await writeFile(process.env.E2E_SCRIPT_CONFIRM_FILE!, JSON.stringify(result))
   console.log(`[drafts-scenario] ${names.length} cases run in ${describeDatabase(live)}.`)

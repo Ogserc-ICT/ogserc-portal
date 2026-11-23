@@ -1,12 +1,12 @@
 import type { PayloadRequest } from 'payload'
 
 import { clientAddress } from '../auth/rate-limit'
-import type { AuditAction } from './actions'
+import type { AuditAction, AuditTargetType } from './actions'
 
 // Writes one audit log entry (D-083). Every value written comes from this file's allow-lists, so a
 // password, hash, token or reset link can never reach the log, even by a later mistake in a hook.
 
-export type AuditTarget = { type: 'user' | 'media'; id: number | string; label?: unknown }
+export type AuditTarget = { type: AuditTargetType; id: number | string; label?: unknown }
 type Actor = { id: number | string; email?: unknown } | null | undefined
 
 /** Keys a `details` object may have. Anything else is dropped before writing. */
@@ -18,6 +18,8 @@ export type AuditDetails = Partial<Record<DetailKey, string | string[]>>
 export const USER_FIELDS = ['email', 'name', 'roles'] as const
 /** Image fields whose change is recorded, by name only. */
 export const MEDIA_FIELDS = ['alt', 'filename', 'mimeType', 'filesize'] as const
+/** Document-file fields whose change is recorded, by name only. */
+export const DOCUMENT_FILE_FIELDS = ['title', 'filename', 'mimeType', 'filesize'] as const
 
 const MAX_TEXT = 320
 

@@ -9,6 +9,8 @@ export type EnvCheck = { errors: string[]; warnings: string[] }
 export type Env = Record<string, string | undefined>
 
 const MIN_SECRET_LENGTH = 32
+/** JOBS_RUN_SECRET, the scheduled-publishing runner's key (D-090). */
+export const MIN_JOBS_SECRET_LENGTH = 32
 
 /** `next build` evaluates the config with NODE_ENV=production but without run-time values (D-009). */
 function isBuildPhase(env: Env): boolean {
@@ -79,6 +81,14 @@ export function checkServerEnv(env: Env): EnvCheck {
   // Without it every visitor shares one sign-in limit, so one person could block everyone (D-081).
   if (production && !isBuildPhase(env) && !env.CLIENT_IP_HEADER?.trim()) {
     errors.push('CLIENT_IP_HEADER is required in production (for example X-Forwarded-For behind Caddy).')
+  }
+
+  // Scheduled publishing runs only when the server's cron job sends this secret (D-090).
+  const jobsSecret = env.JOBS_RUN_SECRET?.trim()
+  if (jobsSecret && jobsSecret.length < MIN_JOBS_SECRET_LENGTH) {
+    errors.push(`JOBS_RUN_SECRET must be at least ${MIN_JOBS_SECRET_LENGTH} characters.`)
+  } else if (!jobsSecret && production && !isBuildPhase(env)) {
+    warnings.push('JOBS_RUN_SECRET is not set: scheduled publishing will not run (D-090).')
   }
 
   if (env.PASSWORD_BREACH_CHECK === 'off' && production && !isBuildPhase(env)) {
