@@ -13,7 +13,7 @@ Updated 2026-11-23. Plan for Step 3: `docs/step-3-plan.md`.
   restore test passed with the full site database (15 tables, 6 migrations).
 - **`/admin` is open** (2026-11-23, D-087): both administrators (the owner and a second administrator) signed in through the
   one-address window with two-factor sign-in, the window was closed and checked from outside, then the Caddyfile block was
-  removed (branch `chore/open-admin`).
+  removed (PR #64, deployed and checked from outside: `/admin` 200).
 - **Step 3 plan commit 3 (password policy) is complete:** PRs #51 and #53 (breach check, fail-open) merged.
 - **Step 3 plan commit 4 (rate limiting, D-081):** PR #54 merged.
 - **Step 3 plan commit 5 (audit log, D-083):** PR #55 merged.
@@ -30,15 +30,8 @@ Updated 2026-11-23. Plan for Step 3: `docs/step-3-plan.md`.
 9. Docs.
 
 ## Waiting on the owner
-- **Unsaved work at sign-out (decide before Step 4).** Seen 2026-10-20 with a temporary 5-minute token. The admin refreshes
-  the token only on a page change in its last 2 minutes, otherwise shows "Stay logged in" 1 minute before the end, then forces a
-  page change to the inactivity page. Separately, the 12-hour limit (4582f40) refuses the refresh and signs out with no warning.
-  Either can discard unsaved work in a long form. Before Step 4: test it with a filled-in form, then choose between a longer token
-  (for example 4 hours; the owner leans this way for now), a refresh mechanism, or autosave or draft recovery. In D-052.
 - How the admin panel shows the last-administrator 409 (for example demoting the last administrator from the edit screen): not
   yet seen.
-- Private files for draft documents, before Step 4 (D-045). **Undecided.** Leaning: Media for public images only;
-  document files in their own upload collection whose read access follows the document's published status.
 - Dependabot PRs #17 (Payload group) and #38 (minor-and-patch): re-check the D-051 boot instance, the D-052 and D-053 "Watch"
   lists before merging #17. Payload 3.92.1 ships undici 7.30.1, so the undici override can go then (D-012).
 - The image "option A" decision (pre-optimise images while the VPS lacks SSE4.2; revisit hosting before launch) is still to be
@@ -66,12 +59,13 @@ Updated 2026-11-23. Plan for Step 3: `docs/step-3-plan.md`.
 - Server commands: the owner runs them over SSH and pastes the output; give one labelled block at a time.
 
 ## Step 4 notes
+- Owner decisions (D-089): drafts with autosave on every content collection, so work resumes after a sign-out; uploaded
+  files (images and documents) stay public, and the staff guide says not to upload anything confidential.
 - Hide admin controls that return 403 for editors (e.g. Publish on published documents).
 - Add one real HTTP test of the draft rules on a real content collection.
 - Watch the drafts test's second `payload run` in CI (time, silent exits: D-047).
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-Merge `chore/open-admin`, then on the server: `git pull --ff-only && docker compose -f docker-compose.prod.yml up -d caddy && docker compose -f docker-compose.prod.yml restart caddy`, and
-check `/admin` shows the sign-in screen. Then decide the open owner items above (unsaved work at sign-out, private files for
-draft documents) and start Step 4.
+Step 4: read SRS for the collections, propose the Step 4 plan (collections, drafts with autosave per D-089, seed script) and
+wait for approval.
