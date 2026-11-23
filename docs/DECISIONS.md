@@ -685,7 +685,7 @@ The increase is about 4 KB compressed, for the carousel, the drawer, hover menus
 - With the hook, `tests/e2e-db/media.spec.ts` rejects all of these, plus a valid image over the image limit (400) and a 27 MB file (413). Since 2026-10-16 it also accepts a 9.7 MB PNG and rejects a 10.8 MB one.
 
 **Open questions:**
-- **For Step 4 (draft files):** a file is public at `/api/media/file/...` as soon as it is uploaded, before any document that uses it is published. Options: keep media public and treat uploads as publishable; add a `published` flag checked by Media `read`; or keep draft documents' files in a separate access-controlled collection. Decide before building Documents.
+- **For Step 4 (draft files):** a file is public at `/api/media/file/...` as soon as it is uploaded, before any document that uses it is published. Options: keep media public and treat uploads as publishable; add a `published` flag checked by Media `read`; or keep draft documents' files in a separate access-controlled collection. Decide before building Documents. **Decided 2026-11-23 (D-089): files stay public.**
 - **For OGSERC:** the size limit for PDFs and other documents (Step 4). Until then only the 25 MB ceiling applies.
 
 **Watch:**
@@ -1013,7 +1013,7 @@ Step 3 plan commit 2, in seven code commits plus this one (`f881738`, `407ee4e`,
 - **Anyone who knows a staff email can lock that account for 15 minutes at a time.** Rate limiting (D-081) slows guessing but cannot prevent this: any per-account protection can be triggered by someone else. Two-factor authentication (Step 3 plan commit 6) makes a guessed password useless on its own. Keep at least two administrators; `pnpm auth:unlock` is the emergency route (RUNBOOK 4.1).
 - **Timing:** unknown and locked accounts are answered faster than a wrong password, because no password hash is computed, so response time can still hint that an account exists. Rate limiting reduces how much can be learned this way; a constant-time reply is not implemented.
 - **Strict cookies:** a link to `/admin` opened from email or chat (a cross-site navigation) arrives without the cookie, so the page shows the login screen until it is reloaded or the person signs in.
-- **Open: unsaved work at sign-out.** The forced page change at the token's end, and the 12-hour limit's sign-out (a refused refresh, which goes straight to the inactivity page with **no** warning), can discard what someone typed in a long form. To be tested with a filled-in form before Step 4, then decide between a longer token (for example 4 hours; the owner leans this way for now), a refresh mechanism, or autosave or draft recovery. Also in STATUS.md.
+- **Open: unsaved work at sign-out.** The forced page change at the token's end, and the 12-hour limit's sign-out (a refused refresh, which goes straight to the inactivity page with **no** warning), can discard what someone typed in a long form. Decided 2026-11-23 (D-089): drafts with autosave, so work resumes after signing in again.
 - **Unverified:** how the admin panel shows the last-administrator 409 (for example when demoting the last administrator from the edit screen).
 - **Re-test with two-factor authentication:** Strict cookies must be checked again with the 2FA plugin (its verification cookie and redirects, plan commit 6).
 
@@ -1621,3 +1621,17 @@ Its three endpoints (`/api/setup-totp`, `/api/verify-totp`, `/api/remove-totp`) 
 **Decision:** A sixth homepage quick service, "Registered Operators", after the five FR-WEB-02 lists, links to a new page at `/registered-operators`. The page is a numbered table of operator name and registration number, in registration order, starting with VERGE POWER LIMITED (OGSERC/REG/2026/F-DIS/0001). The list lives in `src/lib/operators/registered-operators.ts` until the Licencees collection (build step 8) moves it into the CMS.
 
 **Why:** the owner asked for it on 2026-11-23, with the first operator's name and number. Registration under the registration notice (D-065) is not a licence, so this is a separate list from the licencee register (FR-LIC) at `/licences`, which is still to be built. The page shows only what OGSERC supplied; columns such as activity or location are added when OGSERC supplies them. The page is not in the SRS Section 4 menus; the homepage card is its entry point, and the sitemap lists it.
+
+## D-089 Before Step 4: work survives a sign-out; uploaded files are public (2026-11-23)
+
+**Decision (owner, 2026-11-23):**
+- **Unsaved work at sign-out (D-052's open question):** someone signed out in the middle of a form must be able to sign in again and carry on where they were. Step 4 turns on Payload's built-in drafts with autosave (`versions.drafts.autosave`) for every content collection, so the form is saved as a draft every few seconds while they type, and the published version does not change until they publish. After signing in again they open the item and find their draft. No new library. The token length (D-052) stays as it is.
+- **Files of draft documents (D-045's open question):** not private. Documents' files, like images, can be read by anyone with the file's address from the moment they are uploaded, before the document that uses them is published. No separate access-controlled collection and no `published` flag on files.
+
+**Why:** the owner chose resuming over a longer token, so a forced sign-out costs at most the last few seconds of typing, whatever its cause (the token's end, the 12-hour limit, a closed laptop). For files, OGSERC publishes public regulatory documents; keeping drafts' files private would add a second upload collection and access rules for little gain.
+
+**Consequences:**
+- Autosave applies to collections with drafts. Forms without drafts (staff accounts, for example) are short and are not covered.
+- A draft's file address is not listed on any public page, in search or in the sitemap (D-049), but anyone who has it can open the file. **Staff must not upload anything confidential**, or anything that must not be seen before its publication date; the staff guide (Step 4) says so.
+- To check in Step 4 with a real form: sign-out in the middle of typing, sign in again, the draft is there and the published page unchanged; and that an editor's autosave on a published item creates a draft, not a change to the live page (`guardPublishedContent`).
+
