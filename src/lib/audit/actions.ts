@@ -33,6 +33,7 @@ export const AUDIT_ACTIONS = [
   { value: 'content.published', label: 'Published' },
   { value: 'content.unpublished', label: 'Unpublished' },
   { value: 'content.deleted', label: 'Content deleted' },
+  { value: 'settings.updated', label: 'Site settings changed' },
 ] as const
 
 /**
@@ -48,6 +49,11 @@ export const AUDIT_TARGET_TYPES = [
   { value: 'events', label: 'Event' },
   { value: 'announcements', label: 'Announcement' },
   { value: 'tenders', label: 'Tender' },
+  { value: 'reports', label: 'Report or publication' },
+  { value: 'faqs', label: 'FAQ' },
+  { value: 'pages', label: 'Page' },
+  { value: 'galleries', label: 'Gallery' },
+  { value: 'site-settings', label: 'Site settings' },
   // Test-only collection (src/collections/test); its tables exist in every database, empty.
   { value: 'e2e-drafts', label: 'Test item (tests only)' },
 ] as const

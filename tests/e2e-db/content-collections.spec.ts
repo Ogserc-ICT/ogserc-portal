@@ -2,17 +2,19 @@ import { randomBytes } from 'node:crypto'
 
 import { type APIRequestContext, expect, request, test } from '@playwright/test'
 
+import { pdf } from '../support/zip'
 import { createStaff, loadAdminAccount, signIn, visitorAddress } from './support/auth'
 
-// News, Announcements, Events and Tenders (FR-NEWS-01 to 03, D-092) over HTTP on the running
-// server: each follows the content rules (D-049) — an editor's draft is invisible to visitors and
-// cannot be published by the editor; a publisher publishes; visitors then see it — and each step
-// is in the audit log with the collection as its target.
+// The content collections after Documents (D-092, D-093) over HTTP on the running server: each
+// follows the content rules (D-049) — an editor's draft is invisible to visitors and cannot be
+// published by the editor; a publisher publishes; visitors then see it — and each step is in the
+// audit log with the collection as its target. Also the site settings (D-093).
 
 let admin: APIRequestContext
 let editor: APIRequestContext
 let publisher: APIRequestContext
 let visitor: APIRequestContext
+let fileId: number | string
 
 /** The smallest rich text Payload's editor accepts: one paragraph. */
 const text = (words: string) => ({
@@ -46,13 +48,37 @@ const COLLECTIONS: Record<string, (title: string) => Record<string, unknown>> = 
     summary: '[Test] summary',
     body: text('[Test] details'),
   }),
+  reports: (title) => ({
+    title,
+    reportType: 'annual',
+    period: '2026',
+    publishedDate: '2026-11-23T00:00:00.000Z',
+    summary: '[Test] summary',
+    file: fileId,
+  }),
+  faqs: (title) => ({ title, answer: text('[Test] answer'), topic: '[Test] topic' }),
+  pages: (title) => ({ title, body: text('[Test] page text') }),
+  galleries: (title) => ({
+    title,
+    date: '2026-11-23T00:00:00.000Z',
+    summary: '[Test] summary',
+    videos: [{ url: 'https://www.youtube.com/watch?v=test', title: '[Test] video' }],
+  }),
 }
+
+/** FAQs have no web address of their own; every other collection makes one from the title. */
+const HAS_SLUG = (slug: string) => slug !== 'faqs'
 
 test.beforeAll(async ({ baseURL }) => {
   admin = await signIn(baseURL!, await loadAdminAccount())
   editor = await signIn(baseURL!, await createStaff(admin, 'news-editor', ['editor']))
   publisher = await signIn(baseURL!, await createStaff(admin, 'news-publisher', ['publisher']))
   visitor = await request.newContext({ baseURL, extraHTTPHeaders: visitorAddress() })
+  const upload = await editor.post('/api/document-files', {
+    multipart: { file: { name: `${unique()}-report.pdf`, mimeType: 'application/pdf', buffer: pdf() }, _payload: JSON.stringify({ title: '[Test] report' }) },
+  })
+  expect(upload.status()).toBe(201)
+  fileId = ((await upload.json()) as { doc: { id: number | string } }).doc.id
 })
 
 test.afterAll(async () => {
@@ -64,8 +90,8 @@ for (const [slug, data] of Object.entries(COLLECTIONS)) {
     const title = `[Test] ${slug} ${unique()}`
     const created = await editor.post(`/api/${slug}?draft=true&depth=0`, { data: data(title) })
     expect(created.status(), await created.text()).toBe(201)
-    const { doc } = (await created.json()) as { doc: { id: number | string; slug: string } }
-    expect(doc.slug).toMatch(/^test-/)
+    const { doc } = (await created.json()) as { doc: { id: number | string; slug?: string } }
+    if (HAS_SLUG(slug)) expect(doc.slug).toMatch(/^test-/)
 
     const seen = async () => {
       const response = await visitor.get(`/api/${slug}?depth=0&draft=true&where[id][equals]=${doc.id}`)
@@ -102,4 +128,30 @@ test('an announcement needs one of the four categories (FR-NEWS-03)', async () =
     data: { ...COLLECTIONS.announcements!(`[Test] notice ${unique()}`), category: 'press-release', _status: 'published' },
   })
   expect(response.status()).toBe(400)
+})
+
+test.describe('site settings (D-093)', () => {
+  const contact = { addressLines: [{ line: '[Test] address' }], phone: '[Test] phone', email: 'test@example.org' }
+
+  test('visitors can read them; editors cannot change them; publishers can, and it is in the audit log', async () => {
+    expect((await visitor.get('/api/globals/site-settings')).status()).toBe(200)
+    expect((await editor.post('/api/globals/site-settings', { data: { footerSummary: '[Test] by an editor' } })).status()).toBe(403)
+    const summary = `[Test] footer ${unique()}`
+    const saved = await publisher.post('/api/globals/site-settings', { data: { contact, footerSummary: summary } })
+    expect(saved.status(), await saved.text()).toBe(200)
+    const seen = (await (await visitor.get('/api/globals/site-settings')).json()) as { footerSummary?: string }
+    expect(seen.footerSummary).toBe(summary)
+    const log = await admin.get('/api/audit-log?where[action][equals]=settings.updated&sort=-createdAt&limit=1&depth=0')
+    const [entry] = ((await log.json()) as { docs: { details?: { fields?: string[] } }[] }).docs
+    expect(entry?.details?.fields).toContain('footerSummary')
+  })
+
+  test('a slide button cannot link to another site over plain http or a script', async () => {
+    for (const actionLink of ['http://example.org', 'javascript:alert(1)', '//evil.example']) {
+      const response = await publisher.post('/api/globals/site-settings', {
+        data: { contact, heroSlides: [{ image: 1, headline: '[Test]', actionLabel: '[Test]', actionLink }] },
+      })
+      expect(response.status(), actionLink).toBe(400)
+    }
+  })
 })

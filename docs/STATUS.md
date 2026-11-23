@@ -63,7 +63,8 @@ Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3
   publishing through `deploy/run-jobs.sh` and `JOBS_RUN_SECRET`. PR #66 merged and deployed 2026-11-23.
 - Slice 2 (Documents, D-091): one collection for the eleven Regulatory Instruments categories. PR #67 merged and deployed
   2026-11-23; the `deploy/run-jobs.sh` cron job is installed and printed `jobs ok`.
-- Slice 3 (News, Announcements, Events, Tenders, D-092).
+- Slice 3 (News, Announcements, Events, Tenders, D-092). PR #68 merged and deployed 2026-11-23.
+- Slice 4 (Reports, FAQs, Pages, Galleries, site settings, D-093). The homepage switch moved to slice 5.
 - Owner decisions (D-089): drafts with autosave on every content collection, so work resumes after a sign-out; uploaded
   files (images and documents) stay public, and the staff guide says not to upload anything confidential.
 - Hide admin controls that return 403 for editors (e.g. Publish on published documents).
@@ -72,5 +73,6 @@ Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-Step 4 slice 3 (News, Announcements, Events, Tenders, D-092) is on branch `feat/step-4-news-events`. After it is merged
-and deployed, slice 4: Reports, FAQs, Pages, Galleries and site settings, with the homepage reading the CMS.
+Step 4 slice 4 (Reports, FAQs, Pages, Galleries, site settings, D-093) is on branch `feat/step-4-pages-settings`. After it is
+merged and deployed, slice 5: `pnpm seed` (refuses production), the one-time import of the real news, notices and settings,
+and the homepage, footer and contact page reading the CMS (`placeholder-content.ts` deleted, D-028).

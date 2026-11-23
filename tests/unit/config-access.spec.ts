@@ -16,6 +16,7 @@ import configPromise, { portalConfig } from '../../src/payload.config'
 /** Every intentional use of allowAll, with the reason. Anything else fails the audit. */
 const ALLOW_ALL_USES: Record<string, string> = {
   'media.read': 'Images are only ever used on public pages (see docs/DECISIONS.md for Step 4 drafts).',
+  'site-settings.read': 'Contact details, office hours, social links and slides are on every public page (D-093).',
   'document-files.read': 'Uploaded document files are public from upload, by the owner’s choice (D-089, D-090).',
 }
 
@@ -225,8 +226,12 @@ test.describe('two-factor sign-in', () => {
       'documents.read',
       'e2e-drafts.read',
       'events.read',
+      'faqs.read',
+      'galleries.read',
       'media.read',
       'news.read',
+      'pages.read',
+      'reports.read',
       'tenders.read',
     ])
   })
