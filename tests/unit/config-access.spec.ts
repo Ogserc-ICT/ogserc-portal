@@ -16,6 +16,7 @@ import configPromise, { portalConfig } from '../../src/payload.config'
 /** Every intentional use of allowAll, with the reason. Anything else fails the audit. */
 const ALLOW_ALL_USES: Record<string, string> = {
   'media.read': 'Images are only ever used on public pages (see docs/DECISIONS.md for Step 4 drafts).',
+  'document-files.read': 'Uploaded document files are public from upload, by the owner’s choice (D-089, D-090).',
 }
 
 const TEST_ONLY_SLUGS = ['e2e-drafts']
@@ -199,13 +200,13 @@ test.describe('two-factor sign-in', () => {
   // code page. Everything the panel shows or changes is behind the wrapped rules.
   test('an administrator who has set it up but not entered a code gets only public reads', async () => {
     const user = administrator({ hasTotp: true, _strategy: 'local-jwt' })
-    expect(await allowed(live, user)).toEqual(['media.read', 'users.admin'])
-    expect(await allowed(liveWithTests, user)).toEqual(['media.read', 'users.admin'])
+    expect(await allowed(live, user)).toEqual(['document-files.read', 'media.read', 'users.admin'])
+    expect(await allowed(liveWithTests, user)).toEqual(['document-files.read', 'media.read', 'users.admin'])
   })
 
   test('an administrator who has never set it up can read only their own account, to set it up', async () => {
     const user = administrator({ hasTotp: false, _strategy: 'local-jwt' })
-    expect(await allowed(live, user)).toEqual(['media.read', 'users.admin', 'users.read'])
+    expect(await allowed(live, user)).toEqual(['document-files.read', 'media.read', 'users.admin', 'users.read'])
     const users = live.collections.find((c) => c.slug === 'users')!
     const result = await (users.access.read as (args: unknown) => unknown)({ req: { user, payload: { config: live } } })
     expect(JSON.stringify(result)).toContain('"equals":1')
@@ -216,8 +217,8 @@ test.describe('two-factor sign-in', () => {
     expect(await allowed(live, user)).toEqual(expect.arrayContaining(['users.read', 'users.create', 'media.create', 'audit-log.read']))
   })
 
-  test('visitors who are not signed in still read public images and published test documents', async () => {
+  test('visitors who are not signed in still read public images, document files and published test documents', async () => {
     const open = await allowed(liveWithTests, null)
-    expect(open).toEqual(['e2e-drafts.read', 'media.read'])
+    expect(open).toEqual(['document-files.read', 'e2e-drafts.read', 'media.read'])
   })
 })

@@ -1,6 +1,6 @@
 # Project status
 
-Updated 2026-11-23. Plan for Step 3: `docs/step-3-plan.md`.
+Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3-plan.md`).
 
 ## Where things stand
 - **Steps 1, 2 and 2b** are merged. The live preview at `https://ogserc.org.ng` runs on OGSERC's VPS (D-054), with
@@ -59,6 +59,8 @@ Updated 2026-11-23. Plan for Step 3: `docs/step-3-plan.md`.
 - Server commands: the owner runs them over SSH and pastes the output; give one labelled block at a time.
 
 ## Step 4 notes
+- Slice 1 (foundation, D-090): `contentCollection()`, `slugField()`, `document-files`, content audit entries, scheduled
+  publishing through `deploy/run-jobs.sh` and `JOBS_RUN_SECRET`.
 - Owner decisions (D-089): drafts with autosave on every content collection, so work resumes after a sign-out; uploaded
   files (images and documents) stay public, and the staff guide says not to upload anything confidential.
 - Hide admin controls that return 403 for editors (e.g. Publish on published documents).
@@ -67,5 +69,6 @@ Updated 2026-11-23. Plan for Step 3: `docs/step-3-plan.md`.
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-Step 4: read SRS for the collections, propose the Step 4 plan (collections, drafts with autosave per D-089, seed script) and
-wait for approval.
+Step 4 slice 1 (foundation, D-090) is on branch `feat/step-4-foundation`. After it is merged and deployed: add
+`JOBS_RUN_SECRET` to the server's `.env` first (compose requires it). Then slice 2: the Documents collection (FR-DOC-01/02,
+FR-DRAFT-01, FR-CODE), after which the `deploy/run-jobs.sh` cron job is installed (RUNBOOK Section 6).

@@ -15,6 +15,7 @@ next-env.d.ts
 
 # Local uploads (production uses S3-compatible storage)
 /media
+/document-files
 
 # Playwright
 /test-results/

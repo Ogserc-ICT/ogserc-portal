@@ -15,6 +15,8 @@ import { oncePerRun } from './support/run-cache'
 // Not serial: every case is reported even when one fails. The scenario runs once per test run
 // (oncePerRun), so a worker restarted after a failure reuses its result instead of running it again.
 
+const JOBS_SECRET = `e2e-${'x'.repeat(40)}`
+
 let baseURL: string
 let admin: APIRequestContext
 let result: ScenarioResult
@@ -30,6 +32,8 @@ test.beforeAll(async ({ baseURL: url }) => {
     return (await runTestDbScript('tests/support/drafts-scenario.ts', [editor.email, publisher.email], {
       E2E_TEST_COLLECTIONS: 'true',
       E2E_DRAFTS_TOKENS: JSON.stringify(tokens),
+      // The scheduled-publishing runner's key (D-090), made up for this run.
+      JOBS_RUN_SECRET: JOBS_SECRET,
     })) as ScenarioResult
   })
 })
@@ -41,8 +45,15 @@ test.afterAll(async () => {
 /**
  * What each case must do. `public`: the title the public sees for each of the case's documents
  * (seeded first, then any it created), or null when not visible. `stored`: titles as stored.
+ * `draft`: each document's newest draft title. `audit`: the audit log's actions for each document.
  */
-type Expected = { outcome?: 'allowed' | 'refused'; public: (string | null)[]; stored?: string[] }
+type Expected = {
+  outcome?: 'allowed' | 'refused'
+  public: (string | null)[]
+  stored?: string[]
+  draft?: (string | undefined)[]
+  audit?: string[][]
+}
 
 const EXPECTED: Record<string, Expected> = {
   // Creating
@@ -79,12 +90,25 @@ const EXPECTED: Record<string, Expected> = {
   'editor duplicates a published document as a draft': { outcome: 'allowed', public: ['original', null] },
   'publisher duplicates a published document': { outcome: 'allowed', public: ['original', 'duplicated-by-publisher'] },
   // Publishers, and trusted server code
-  'publisher publishes a draft': { outcome: 'allowed', public: ['published-by-publisher'] },
-  'publisher unpublishes a published document': { outcome: 'allowed', public: [null] },
+  'publisher publishes a draft': {
+    outcome: 'allowed',
+    public: ['published-by-publisher'],
+    audit: [['content.created', 'content.published']],
+  },
+  'publisher unpublishes a published document': {
+    outcome: 'allowed',
+    public: [null],
+    audit: [['content.published', 'content.unpublished']],
+  },
   'trusted code changes a published document': { outcome: 'allowed', public: ['trusted-change'] },
   // REST
   'REST: editor updates a published document without _status': { outcome: 'refused', public: ['original'] },
-  'REST: editor saves a draft of a published document': { outcome: 'allowed', public: ['original'] },
+  'REST: editor saves a draft of a published document': {
+    outcome: 'allowed',
+    public: ['original'],
+    draft: ['rest-draft'],
+    audit: [['content.published', 'content.draft-saved']],
+  },
   'REST: editor unpublishes a published document': { outcome: 'refused', public: ['original'] },
   'REST: editor bulk-updates a published and a draft document': {
     outcome: 'refused',
@@ -100,6 +124,29 @@ const EXPECTED: Record<string, Expected> = {
   },
   'REST: editor duplicates a published document with draft=false': { outcome: 'refused', public: ['original'] },
   'REST: editor sends overrideAccess in the query, a header and the body': { outcome: 'refused', public: ['original'] },
+  // Autosave (D-089): the work is kept as the newest draft, the public page does not change, and
+  // only the manual save is logged.
+  'REST: editor autosaves a published document': {
+    outcome: 'allowed',
+    public: ['original'],
+    draft: ['autosaved-by-editor'],
+    audit: [['content.published']],
+  },
+  'REST: editor autosaves twice, then saves the draft': {
+    outcome: 'allowed',
+    public: [null],
+    draft: ['saved-after-typing'],
+    audit: [['content.created', 'content.draft-saved']],
+  },
+  'REST: editor autosaves with _status published': { outcome: 'refused', public: ['original'], draft: ['original'] },
+  // Scheduled publishing (D-090)
+  'editor schedules publishing a draft': { outcome: 'refused', public: [null] },
+  'editor schedules unpublishing a published document': { outcome: 'refused', public: ['original'] },
+  'publisher schedules publishing a draft, run by the cron job': {
+    outcome: 'allowed',
+    public: ['original-draft'],
+    audit: [['content.created', 'content.published']],
+  },
 }
 
 test('every scenario case has an expectation, and every expectation a case', () => {
@@ -115,6 +162,8 @@ for (const [name, expected] of Object.entries(EXPECTED)) {
     if (expected.outcome === 'refused') expect(found!.error).not.toBeNull()
     expect(found!.docs.map((doc) => (doc?.public ? (doc.public.title ?? '') : null))).toEqual(expected.public)
     if (expected.stored) expect(found!.docs.map((doc) => doc?.title)).toEqual(expected.stored)
+    if (expected.draft) expect(found!.docs.map((doc) => doc?.draftTitle)).toEqual(expected.draft)
+    if (expected.audit) expect(found!.docs.map((doc) => doc?.audit)).toEqual(expected.audit)
   })
 }
 
@@ -134,6 +183,25 @@ test.describe('the public', () => {
 
   test('sees no drafts through REST, even sending overrideAccess and draft', () => {
     expect(result.anonymousRestDrafts ?? 0).toBe(0)
+  })
+})
+
+test.describe('the job runner (D-090)', () => {
+  test('refuses a request without the secret, and a signed-in publisher', () => {
+    expect(result.jobsRunRefused.withoutSecret).toContain('HTTP 401')
+    expect(result.jobsRunRefused.asPublisher).toContain('HTTP 401')
+  })
+
+  // The running server has no content collection that schedules publishing until slice 2, so its
+  // job system is off and the route does not exist (404); from then on it refuses (401).
+  test('on the running server, refuses visitors and a signed-in administrator without the secret', async ({ request }) => {
+    for (const response of [
+      await request.get('/api/payload-jobs/run'),
+      await admin.get('/api/payload-jobs/run'),
+      await request.get('/api/payload-jobs/run', { headers: { Authorization: 'Bearer wrong' } }),
+    ]) {
+      expect([401, 404]).toContain(response.status())
+    }
   })
 })
 

@@ -2,11 +2,11 @@ import { type CollectionBeforeOperationHook, type CollectionConfig, ValidationEr
 
 import { allowAll, isEditorOrAbove, isPublisherOrAbove, userCan } from '../access'
 import { PUBLIC_READ } from '../access/two-factor'
-import { contentAuditHooks } from '../lib/audit/hooks'
+import { uploadAuditHooks } from '../lib/audit/hooks'
 import { IMAGE_MIME_TYPES, imageUploadProblem } from '../lib/uploads/image-signature'
 import { MAX_IMAGE_BYTES } from '../lib/uploads/limits'
 
-const mediaAudit = contentAuditHooks('media')
+const mediaAudit = uploadAuditHooks('media')
 
 /**
  * Checks every uploaded file by its content before Payload stores it: an accepted image type,

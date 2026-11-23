@@ -15,8 +15,9 @@ Every setting comes from environment variables. The full list, with explanations
 | `DATABASE_URL` | Yes | PostgreSQL connection string. Use `sslmode=verify-full` for hosted databases. |
 | `PAYLOAD_SECRET` | Yes | Long random string that signs login sessions. Different in every environment. Changing it logs everyone out. |
 | `SITE_URL` | Yes | Public address of the site, e.g. `https://example.gov.ng`, without a trailing slash. |
-| `MEDIA_DIR` | No | Local folder for uploaded images until S3 storage arrives in step 4. Default `media`. |
-| `S3_*` | From step 4 | S3-compatible file storage for uploads. |
+| `MEDIA_DIR` | No | Local folder for uploads when the `S3_*` settings are not set (development, tests). Default `media`; document files go in `document-files`, or in `document-files/` inside `MEDIA_DIR`. |
+| `S3_*` | Yes in production | S3-compatible file storage for uploads (D-086): images, and document files under the `document-files/` prefix. |
+| `JOBS_RUN_SECRET` | Yes on the VPS | Key that `deploy/run-jobs.sh` sends to carry out scheduled publishing (D-090). At least 32 characters (`openssl rand -hex 32`). Without it nothing scheduled is published; the server warns at startup in production. |
 | `SMTP_*`, `EMAIL_FROM`, `CONTACT_FORM_TO` | Not used | The site sends no email (D-085); the contact form uses a `mailto:` link (D-059). |
 | `TURNSTILE_*` | From step 5 | Bot protection on forms. |
 | `AUDIT_IP_RETENTION_DAYS`, `AUDIT_RETENTION_DAYS` | No | Audit log retention, read by `deploy/prune-audit.sh` (D-083): blank the address and browser after this many days (default 90) and delete entries after this many (default 730). |
@@ -504,7 +505,14 @@ Each table should report `0 rows … deleted` until November 2028, and the last 
 ```
 It prints `UPDATE 0` and `DELETE 0` until entries are old enough, and the last line ends `(ROLLBACK)`.
 
-**Reading the audit log.** In the admin panel, administrators open *Audit log* to see sign-ins, failed and refused sign-ins, locks and unlocks, password resets and changes, account and role changes, and image uploads, changes and deletions, newest first, with search by email or file name. Entries cannot be edited or deleted. Things to look out for: many `Sign-in failed` or `Sign-in refused: too many attempts` entries for one account or address, `Account locked` for an account whose owner did not report trouble, and role changes or password resets nobody expected.
+**Scheduled publishing (D-090).** Staff can schedule an item to be published or unpublished later (the arrow beside *Publish*). Only publishers and administrators can, and the change is made in their name. `deploy/run-jobs.sh` carries out what is due, every 5 minutes, so a scheduled item goes live up to 5 minutes after its time. It needs `JOBS_RUN_SECRET` in `.env` (`openssl rand -hex 32`). Install it once, as `deploy`, after the first deploy that includes a content collection (Step 4, slice 2; before that the job runner does not exist and the script would log an error every 5 minutes):
+```sh
+(crontab -l 2>/dev/null; echo '*/5 * * * * /opt/ogserc/deploy/run-jobs.sh >> /var/backups/ogserc/run-jobs.log 2>&1') | crontab -
+/opt/ogserc/deploy/run-jobs.sh && echo 'jobs ok'
+```
+It prints only `jobs ok`. The log grows only when something is wrong: `answered 401` means `JOBS_RUN_SECRET` in `.env` differs from the one the app started with (recreate the app: `docker compose -f docker-compose.prod.yml up -d app`); `could not be reached` means the app is down. A scheduled publish by someone who has since lost the publisher role is refused and the item stays as it was; schedule it again as a publisher.
+
+**Reading the audit log.** In the admin panel, administrators open *Audit log* to see sign-ins, failed and refused sign-ins, locks and unlocks, password resets and changes, account and role changes, image and document-file uploads, changes and deletions, and content created, saved as a draft, published, unpublished or deleted (with the names of the fields that changed), newest first, with search by email, file name or title. Autosaves are not listed one by one; each item's *Versions* tab keeps them. Entries cannot be edited or deleted. Things to look out for: many `Sign-in failed` or `Sign-in refused: too many attempts` entries for one account or address, `Account locked` for an account whose owner did not report trouble, and role changes or password resets nobody expected.
 
 Restore a dump into the running database (this replaces its contents):
 ```sh

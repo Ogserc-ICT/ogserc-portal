@@ -8,7 +8,7 @@ import { s3Settings } from './s3-settings'
 // folder (MEDIA_DIR). Any S3-compatible provider works, so the host or provider can change by
 // settings alone (portability rules in CLAUDE.md).
 
-/** Payload's S3 storage for Media, enabled only when every setting is present. */
+/** Payload's S3 storage for Media and document files, enabled only when every setting is present. */
 export function mediaStorage(env: Record<string, string | undefined> = process.env): Plugin {
   const settings = s3Settings(env)
   const ready = settings && !('missing' in settings) ? settings : undefined
@@ -16,7 +16,8 @@ export function mediaStorage(env: Record<string, string | undefined> = process.e
     // Off without settings, so local development and CI keep their folder; the database schema is
     // the same either way.
     enabled: Boolean(ready),
-    collections: { media: true },
+    // Document files under their own prefix, so a file name used in both collections never clashes.
+    collections: { media: true, 'document-files': { prefix: 'document-files' } },
     bucket: ready?.bucket ?? '',
     config: {
       region: ready?.region,

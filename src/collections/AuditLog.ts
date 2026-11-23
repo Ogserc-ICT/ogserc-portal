@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { denyAll, isAdmin } from '../access'
-import { AUDIT_ACTIONS } from '../lib/audit/actions'
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from '../lib/audit/actions'
 
 // Who did what, and when (NFR-SEC-04, FR-CMS-05, Step 3 plan commit 5, D-083). Written only by
 // server hooks (src/lib/audit/), read only by administrators. Nobody, administrators included,
@@ -47,17 +47,14 @@ export const AuditLog: CollectionConfig = {
     {
       name: 'targetType',
       type: 'select',
-      options: [
-        { value: 'user', label: 'Staff account' },
-        { value: 'media', label: 'Image' },
-      ],
+      options: AUDIT_TARGET_TYPES.map(({ value, label }) => ({ value, label })),
       admin: { readOnly: true },
     },
     { name: 'targetId', type: 'text', index: true, admin: { readOnly: true } },
     {
       name: 'targetLabel',
       type: 'text',
-      admin: { readOnly: true, description: "The account's email or the image's file name, at the time." },
+      admin: { readOnly: true, description: "The account's email, the file's name or the item's title, at the time." },
     },
     {
       name: 'ipAddress',

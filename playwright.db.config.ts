@@ -60,6 +60,12 @@ export default defineConfig({
     { name: 'users', testMatch: 'users.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'drafts', testMatch: 'drafts.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     {
+      name: 'document-files',
+      testMatch: 'document-files.spec.ts',
+      dependencies: ['first-user'],
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
       name: 'password-policy',
       testMatch: 'password-policy.spec.ts',
       dependencies: ['first-user'],

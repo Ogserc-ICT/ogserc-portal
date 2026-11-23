@@ -240,6 +240,8 @@ jobs:
           S3_ENDPOINT: https://s3.example.invalid
           S3_ACCESS_KEY_ID: ci-placeholder
           S3_SECRET_ACCESS_KEY: ci-placeholder
+          # Required since D-090; a placeholder, nothing runs with it.
+          JOBS_RUN_SECRET: ci-placeholder-ci-placeholder-ci-placeholder
         run: |
           docker compose -f docker-compose.prod.yml config --quiet
           docker run --rm -e SITE_DOMAIN -e ACME_EMAIL \

@@ -10,6 +10,8 @@ const valid = {
   PAYLOAD_SECRET: SECRET_32,
   SITE_URL: 'https://example.org',
   CLIENT_IP_HEADER: 'X-Forwarded-For',
+  // The scheduled-publishing runner's key (D-090); made up.
+  JOBS_RUN_SECRET: 'j'.repeat(40),
   // Made-up bucket settings for an S3-compatible provider (D-086); nothing connects to them.
   S3_BUCKET: 'site-files',
   S3_REGION: 'eu-central-003',

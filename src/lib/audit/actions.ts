@@ -1,6 +1,7 @@
 // The events the audit log records (D-083). Values are stored; labels are shown in the admin panel.
-// Two-factor events since D-084; content events for each Step 4 collection come through the same
-// content hooks as Media. A new value needs a migration (it is a Postgres enum).
+// Two-factor events since D-084; content and document-file events since Step 4 (D-090), the same
+// actions for every content collection, told apart by the target type. A new value needs a
+// migration (it is a Postgres enum).
 
 export const AUDIT_ACTIONS = [
   { value: 'login.succeeded', label: 'Sign-in succeeded' },
@@ -24,6 +25,28 @@ export const AUDIT_ACTIONS = [
   { value: 'media.created', label: 'Image uploaded' },
   { value: 'media.updated', label: 'Image changed' },
   { value: 'media.deleted', label: 'Image deleted' },
+  { value: 'file.uploaded', label: 'Document file uploaded' },
+  { value: 'file.updated', label: 'Document file changed' },
+  { value: 'file.deleted', label: 'Document file deleted' },
+  { value: 'content.created', label: 'Content created' },
+  { value: 'content.draft-saved', label: 'Draft saved' },
+  { value: 'content.published', label: 'Published' },
+  { value: 'content.unpublished', label: 'Unpublished' },
+  { value: 'content.deleted', label: 'Content deleted' },
 ] as const
+
+/**
+ * What an entry is about, with the label shown in the admin panel. Content collections use their
+ * slug. A new value needs a migration (it is a Postgres enum), so each Step 4 collection adds its own.
+ */
+export const AUDIT_TARGET_TYPES = [
+  { value: 'user', label: 'Staff account' },
+  { value: 'media', label: 'Image' },
+  { value: 'document-files', label: 'Document file' },
+  // Test-only collection (src/collections/test); its tables exist in every database, empty.
+  { value: 'e2e-drafts', label: 'Test item (tests only)' },
+] as const
+
+export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number]['value']
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number]['value']
