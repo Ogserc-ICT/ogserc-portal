@@ -69,6 +69,10 @@ export interface Config {
   collections: {
     users: User;
     documents: Document;
+    news: News;
+    announcements: Announcement;
+    events: Event;
+    tenders: Tender;
     media: Media;
     'document-files': DocumentFile;
     'audit-log': AuditLog;
@@ -84,6 +88,10 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     documents: DocumentsSelect<false> | DocumentsSelect<true>;
+    news: NewsSelect<false> | NewsSelect<true>;
+    announcements: AnnouncementsSelect<false> | AnnouncementsSelect<true>;
+    events: EventsSelect<false> | EventsSelect<true>;
+    tenders: TendersSelect<false> | TendersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     'document-files': DocumentFilesSelect<false> | DocumentFilesSelect<true>;
     'audit-log': AuditLogSelect<false> | AuditLogSelect<true>;
@@ -321,6 +329,206 @@ export interface Media {
   focalY?: number | null;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "news".
+ */
+export interface News {
+  id: number;
+  title: string;
+  /**
+   * The end of the page address. Left empty, it is made from the title. Changing it breaks old links.
+   */
+  slug: string;
+  publishedDate: string;
+  /**
+   * Optional, for example "Corporate Communications".
+   */
+  author?: string | null;
+  /**
+   * Optional, for example "Partnerships".
+   */
+  category?: string | null;
+  /**
+   * One or two sentences for cards, listings and search results.
+   */
+  summary: string;
+  /**
+   * Shown on the news card and at the top of the story. Its description (alt text) is set in Media.
+   */
+  featuredImage?: (number | null) | Media;
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * More photographs, shown as a gallery under the story.
+   */
+  photos?: (number | Media)[] | null;
+  /**
+   * Files visitors can download with this item.
+   */
+  attachments?: (number | DocumentFile)[] | null;
+  relatedDocuments?: (number | Document)[] | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * Public notices, regulatory notices, service announcements and consultation notices, worded exactly as issued.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "announcements".
+ */
+export interface Announcement {
+  id: number;
+  title: string;
+  /**
+   * The end of the page address. Left empty, it is made from the title. Changing it breaks old links.
+   */
+  slug: string;
+  category: 'public-notice' | 'regulatory-notice' | 'service-announcement' | 'consultation-notice';
+  /**
+   * Lists sort by this date.
+   */
+  postedDate: string;
+  /**
+   * Optional, if different.
+   */
+  issuedDate?: string | null;
+  /**
+   * One or two sentences for cards, listings and search results.
+   */
+  summary: string;
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * The signed notice or other files, if any.
+   */
+  attachments?: (number | DocumentFile)[] | null;
+  relatedDocuments?: (number | Document)[] | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "events".
+ */
+export interface Event {
+  id: number;
+  title: string;
+  /**
+   * The end of the page address. Left empty, it is made from the title. Changing it breaks old links.
+   */
+  slug: string;
+  startsAt: string;
+  /**
+   * Optional.
+   */
+  endsAt?: string | null;
+  venue: string;
+  /**
+   * One or two sentences for cards, listings and search results.
+   */
+  summary: string;
+  body?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Optional: where to register, starting with https://.
+   */
+  registrationLink?: string | null;
+  /**
+   * Programme, papers or other files for the event.
+   */
+  attachments?: (number | DocumentFile)[] | null;
+  relatedDocuments?: (number | Document)[] | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tenders".
+ */
+export interface Tender {
+  id: number;
+  title: string;
+  /**
+   * The end of the page address. Left empty, it is made from the title. Changing it breaks old links.
+   */
+  slug: string;
+  reference?: string | null;
+  publishedDate: string;
+  closesAt: string;
+  /**
+   * One or two sentences for cards, listings and search results.
+   */
+  summary: string;
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Optional, only if the tender names one.
+   */
+  enquiries?: string | null;
+  /**
+   * The tender documents bidders download.
+   */
+  attachments?: (number | DocumentFile)[] | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
  * A record of sign-ins and changes. Read-only: entries cannot be edited or deleted.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -366,7 +574,19 @@ export interface AuditLog {
    * A copy, so the entry still reads correctly if the account is deleted.
    */
   actorEmail?: string | null;
-  targetType?: ('user' | 'media' | 'document-files' | 'documents' | 'e2e-drafts') | null;
+  targetType?:
+    | (
+        | 'user'
+        | 'media'
+        | 'document-files'
+        | 'documents'
+        | 'news'
+        | 'events'
+        | 'announcements'
+        | 'tenders'
+        | 'e2e-drafts'
+      )
+    | null;
   targetId?: string | null;
   /**
    * The account's email, the file's name or the item's title, at the time.
@@ -539,6 +759,22 @@ export interface PayloadLockedDocument {
         value: number | Document;
       } | null)
     | ({
+        relationTo: 'news';
+        value: number | News;
+      } | null)
+    | ({
+        relationTo: 'announcements';
+        value: number | Announcement;
+      } | null)
+    | ({
+        relationTo: 'events';
+        value: number | Event;
+      } | null)
+    | ({
+        relationTo: 'tenders';
+        value: number | Tender;
+      } | null)
+    | ({
         relationTo: 'media';
         value: number | Media;
       } | null)
@@ -662,6 +898,81 @@ export interface DocumentsSelect<T extends boolean = true> {
       };
   related?: T;
   tags?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "news_select".
+ */
+export interface NewsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  publishedDate?: T;
+  author?: T;
+  category?: T;
+  summary?: T;
+  featuredImage?: T;
+  body?: T;
+  photos?: T;
+  attachments?: T;
+  relatedDocuments?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "announcements_select".
+ */
+export interface AnnouncementsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  category?: T;
+  postedDate?: T;
+  issuedDate?: T;
+  summary?: T;
+  body?: T;
+  attachments?: T;
+  relatedDocuments?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "events_select".
+ */
+export interface EventsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  startsAt?: T;
+  endsAt?: T;
+  venue?: T;
+  summary?: T;
+  body?: T;
+  registrationLink?: T;
+  attachments?: T;
+  relatedDocuments?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tenders_select".
+ */
+export interface TendersSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  reference?: T;
+  publishedDate?: T;
+  closesAt?: T;
+  summary?: T;
+  body?: T;
+  enquiries?: T;
+  attachments?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -829,10 +1140,27 @@ export interface TaskSchedulePublish {
   input: {
     type?: ('publish' | 'unpublish') | null;
     locale?: string | null;
-    doc?: {
-      relationTo: 'documents';
-      value: number | Document;
-    } | null;
+    doc?:
+      | ({
+          relationTo: 'documents';
+          value: number | Document;
+        } | null)
+      | ({
+          relationTo: 'news';
+          value: number | News;
+        } | null)
+      | ({
+          relationTo: 'announcements';
+          value: number | Announcement;
+        } | null)
+      | ({
+          relationTo: 'events';
+          value: number | Event;
+        } | null)
+      | ({
+          relationTo: 'tenders';
+          value: number | Tender;
+        } | null);
     global?: string | null;
     user?: {
       relationTo: 'users';

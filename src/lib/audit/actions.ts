@@ -44,6 +44,10 @@ export const AUDIT_TARGET_TYPES = [
   { value: 'media', label: 'Image' },
   { value: 'document-files', label: 'Document file' },
   { value: 'documents', label: 'Regulatory document' },
+  { value: 'news', label: 'News story' },
+  { value: 'events', label: 'Event' },
+  { value: 'announcements', label: 'Announcement' },
+  { value: 'tenders', label: 'Tender' },
   // Test-only collection (src/collections/test); its tables exist in every database, empty.
   { value: 'e2e-drafts', label: 'Test item (tests only)' },
 ] as const

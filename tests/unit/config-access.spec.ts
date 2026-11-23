@@ -219,6 +219,15 @@ test.describe('two-factor sign-in', () => {
 
   test('visitors who are not signed in still read public images, document files and published content', async () => {
     const open = await allowed(liveWithTests, null)
-    expect(open).toEqual(['document-files.read', 'documents.read', 'e2e-drafts.read', 'media.read'])
+    expect(open).toEqual([
+      'announcements.read',
+      'document-files.read',
+      'documents.read',
+      'e2e-drafts.read',
+      'events.read',
+      'media.read',
+      'news.read',
+      'tenders.read',
+    ])
   })
 })
