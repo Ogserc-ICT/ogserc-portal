@@ -59,6 +59,7 @@ export default defineConfig({
     { name: 'media', testMatch: 'media.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'users', testMatch: 'users.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'drafts', testMatch: 'drafts.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
+    { name: 'documents', testMatch: 'documents.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     {
       name: 'document-files',
       testMatch: 'document-files.spec.ts',

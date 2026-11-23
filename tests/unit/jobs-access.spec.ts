@@ -33,9 +33,8 @@ test('a signed-in administrator without the secret may not run or queue jobs; on
   expect(jobsAccess.cancel({ req: req(undefined, editor) })).toBe(false)
 })
 
-// Until Step 4's real collections exist, only the test collection schedules publishing.
-test('the config uses these rules, not Payload’s “any signed-in user” defaults', async () => {
-  const config = await portalConfig({ withTestCollections: true })
+test('the deployed config uses these rules, not Payload’s “any signed-in user” defaults', async () => {
+  const config = await portalConfig({ withTestCollections: false })
   expect(config.jobs.access?.run).toBe(jobsAccess.run)
   expect(config.jobs.access?.queue).toBe(jobsAccess.queue)
   expect(config.jobs.access?.cancel).toBe(jobsAccess.cancel)

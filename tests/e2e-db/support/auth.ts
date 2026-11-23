@@ -143,6 +143,13 @@ export async function totpRequest(baseURL: string, token: string, path: string, 
   }
 }
 
+/** The two-factor cookie of a session that has entered a code, for a real browser (context.addCookies). */
+export function verifiedCookieFor(token: string): string {
+  const cookie = verifiedSessions.get(token)
+  if (!cookie) throw new Error('This session has not entered a two-factor code.')
+  return cookie
+}
+
 /** Records that this session has entered a code, so asUser and sessionCookies send its cookie. */
 export function markVerified(token: string, cookie: string): void {
   verifiedSessions.set(token, cookie)

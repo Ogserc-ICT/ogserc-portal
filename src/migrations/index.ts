@@ -6,6 +6,7 @@ import * as migration_20261120_065543_audit_log from './20261120_065543_audit_lo
 import * as migration_20261120_082750_two_factor from './20261120_082750_two_factor';
 import * as migration_20261120_210425_media_object_key from './20261120_210425_media_object_key';
 import * as migration_20261123_152211_step4_foundation from './20261123_152211_step4_foundation';
+import * as migration_20261123_175317_step4_documents from './20261123_175317_step4_documents';
 
 export const migrations = [
   {
@@ -46,6 +47,11 @@ export const migrations = [
   {
     up: migration_20261123_152211_step4_foundation.up,
     down: migration_20261123_152211_step4_foundation.down,
-    name: '20261123_152211_step4_foundation'
+    name: '20261123_152211_step4_foundation',
+  },
+  {
+    up: migration_20261123_175317_step4_documents.up,
+    down: migration_20261123_175317_step4_documents.down,
+    name: '20261123_175317_step4_documents'
   },
 ];

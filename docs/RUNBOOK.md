@@ -505,7 +505,7 @@ Each table should report `0 rows … deleted` until November 2028, and the last 
 ```
 It prints `UPDATE 0` and `DELETE 0` until entries are old enough, and the last line ends `(ROLLBACK)`.
 
-**Scheduled publishing (D-090).** Staff can schedule an item to be published or unpublished later (the arrow beside *Publish*). Only publishers and administrators can, and the change is made in their name. `deploy/run-jobs.sh` carries out what is due, every 5 minutes, so a scheduled item goes live up to 5 minutes after its time. It needs `JOBS_RUN_SECRET` in `.env` (`openssl rand -hex 32`). Install it once, as `deploy`, after the first deploy that includes a content collection (Step 4, slice 2; before that the job runner does not exist and the script would log an error every 5 minutes):
+**Scheduled publishing (D-090).** Staff can schedule an item to be published or unpublished later (the arrow beside *Publish*). Only publishers and administrators can, and the change is made in their name. `deploy/run-jobs.sh` carries out what is due, every 5 minutes, so a scheduled item goes live up to 5 minutes after its time. It needs `JOBS_RUN_SECRET` in `.env` (`openssl rand -hex 32`). Install it once, as `deploy`, after the first deploy that includes the Documents collection (Step 4, slice 2, D-091; before that the job runner does not exist and the script would log an error every 5 minutes):
 ```sh
 (crontab -l 2>/dev/null; echo '*/5 * * * * /opt/ogserc/deploy/run-jobs.sh >> /var/backups/ogserc/run-jobs.log 2>&1') | crontab -
 /opt/ogserc/deploy/run-jobs.sh && echo 'jobs ok'
