@@ -1657,3 +1657,19 @@ Its three endpoints (`/api/setup-totp`, `/api/verify-totp`, `/api/remove-totp`) 
 - Until slice 2 the deployed config has no collection that schedules publishing, so its job system is off and `/api/payload-jobs/run` does not exist (404). The `payload_jobs` tables exist already, because migrations are made with the test collection. Install the cron job only after slice 2 is deployed (RUNBOOK Section 6).
 - Payload's `alwaysInsertFields` for the storage adapter becomes the default in Payload 4; the fields defined here then match what it inserts.
 - Autosave saves versions, not the main record, until someone saves or publishes. With 100 versions per item and a save every 2 seconds of typing, a long editing session can push out older versions; raise `MAX_VERSIONS_PER_ITEM` if staff need a longer history.
+
+## D-091 The Documents collection (2026-11-23)
+
+**Decision:** One `documents` collection (`src/collections/Documents.ts`), built with `contentCollection()` (D-090), holds every Regulatory Instruments category (FR-DOC-01). Fields follow FR-DOC-02 and `src/lib/documents/types.ts`, so the documents in `catalogue.ts` and the registration forms (D-063) move in unchanged in build step 6:
+- **Category:** a fixed list of the eleven menu entries; the value is the page address (`orders-and-directives`), so a listing page finds its documents by its own address. A new category needs a developer (a menu entry, a page, a migration), which matches the SRS fixing the menu.
+- **Status** (`documentStatus`): Published (in force), Superseded, Revoked. Separate from the CMS's draft and published state: "draft" in FR-DOC-02 is the CMS draft, never public; superseded and revoked documents stay public and labelled (FR-DOC-05), with an optional "superseded by" link.
+- **File** from `document-files` (required to publish), with a short description ("Signed copy, scanned"), an optional cover image from Media, and the optional **full text** as rich text, for reading and search (FR-SRCH-04 extracts text from PDFs in step 10).
+- **Consultation** fields (FR-DRAFT-01), shown for the Consultation category: closing date, where comments go (email, address, subject line), public hearing date and place, and the final document once adopted. Comments themselves stay by email or by hand (FR-DRAFT-02).
+- **Code family** (FR-CODE-01), shown for the Codes category: free text such as "Distribution Code", so OGSERC can name its own families.
+- **Enquiries** (only when the document itself names an address), **related documents** (never the document itself) and **tags**.
+
+**Why:** one collection keeps one workflow for every instrument (FR-CODE-02, FR-CMS-03) and one place for search (step 10). A select instead of a categories collection: the categories are the menu, which the SRS fixes, and pages can be built for each.
+
+**Tested:** `tests/e2e-db/documents.spec.ts` over HTTP on the running server: an editor's draft is invisible to visitors (also when they ask for drafts), the editor cannot publish, change the published version, unpublish or delete; a publisher publishes; an editor's later draft leaves the public version unchanged; a superseded document stays public with its status; web addresses are unique; each step is in the audit log. In a real browser: an editor's typing is saved without pressing anything, and is there after the session ends without warning and they sign in again (D-089).
+
+**Since this collection, scheduled publishing is live** on the deployed config: `/api/payload-jobs/run` exists and refuses requests without `JOBS_RUN_SECRET` (401). Install the `deploy/run-jobs.sh` cron job after deploying it (RUNBOOK Section 6).

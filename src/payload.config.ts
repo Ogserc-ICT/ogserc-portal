@@ -8,6 +8,7 @@ import { denyByDefault } from './access/deny-by-default'
 import { hardenPayloadInternals } from './access/payload-internals'
 import { AuditLog } from './collections/AuditLog'
 import { DocumentFiles } from './collections/DocumentFiles'
+import { Documents } from './collections/Documents'
 import { Media } from './collections/Media'
 import { RateLimits } from './collections/RateLimits'
 import { TEST_COLLECTIONS, testCollectionsEnabled } from './collections/test'
@@ -68,7 +69,7 @@ export const portalConfig = async ({
         baseDir: path.resolve(dirname),
       },
     },
-    collections: [Users, Media, DocumentFiles, AuditLog, RateLimits, ...(withTestCollections ? TEST_COLLECTIONS : [])],
+    collections: [Users, Documents, Media, DocumentFiles, AuditLog, RateLimits, ...(withTestCollections ? TEST_COLLECTIONS : [])],
     editor: lexicalEditor(),
     // Scheduled publishing (FR-CMS-04, D-090): the admin panel queues a job; the server's cron job
     // runs due jobs through /api/payload-jobs/run with JOBS_RUN_SECRET (deploy/run-jobs.sh). There is

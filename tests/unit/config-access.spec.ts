@@ -217,8 +217,8 @@ test.describe('two-factor sign-in', () => {
     expect(await allowed(live, user)).toEqual(expect.arrayContaining(['users.read', 'users.create', 'media.create', 'audit-log.read']))
   })
 
-  test('visitors who are not signed in still read public images, document files and published test documents', async () => {
+  test('visitors who are not signed in still read public images, document files and published content', async () => {
     const open = await allowed(liveWithTests, null)
-    expect(open).toEqual(['document-files.read', 'e2e-drafts.read', 'media.read'])
+    expect(open).toEqual(['document-files.read', 'documents.read', 'e2e-drafts.read', 'media.read'])
   })
 })

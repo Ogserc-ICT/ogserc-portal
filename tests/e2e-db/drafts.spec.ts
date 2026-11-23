@@ -192,16 +192,10 @@ test.describe('the job runner (D-090)', () => {
     expect(result.jobsRunRefused.asPublisher).toContain('HTTP 401')
   })
 
-  // The running server has no content collection that schedules publishing until slice 2, so its
-  // job system is off and the route does not exist (404); from then on it refuses (401).
   test('on the running server, refuses visitors and a signed-in administrator without the secret', async ({ request }) => {
-    for (const response of [
-      await request.get('/api/payload-jobs/run'),
-      await admin.get('/api/payload-jobs/run'),
-      await request.get('/api/payload-jobs/run', { headers: { Authorization: 'Bearer wrong' } }),
-    ]) {
-      expect([401, 404]).toContain(response.status())
-    }
+    expect((await request.get('/api/payload-jobs/run')).status()).toBe(401)
+    expect((await admin.get('/api/payload-jobs/run')).status()).toBe(401)
+    expect((await request.get('/api/payload-jobs/run', { headers: { Authorization: 'Bearer wrong' } })).status()).toBe(401)
   })
 })
 
