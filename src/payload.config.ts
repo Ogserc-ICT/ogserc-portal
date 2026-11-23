@@ -11,12 +11,17 @@ import { DocumentFiles } from './collections/DocumentFiles'
 import { Announcements } from './collections/Announcements'
 import { Documents } from './collections/Documents'
 import { Events } from './collections/Events'
+import { Faqs } from './collections/Faqs'
+import { Galleries } from './collections/Galleries'
 import { Media } from './collections/Media'
 import { News } from './collections/News'
+import { Pages } from './collections/Pages'
 import { RateLimits } from './collections/RateLimits'
+import { Reports } from './collections/Reports'
 import { Tenders } from './collections/Tenders'
 import { TEST_COLLECTIONS, testCollectionsEnabled } from './collections/test'
 import { Users } from './collections/Users'
+import { SiteSettings } from './globals/SiteSettings'
 import { twoFactor } from './lib/auth/two-factor'
 import { noSendEmail } from './lib/email/no-send'
 import { assertServerEnv, csrfOrigins, siteOrigin } from './lib/env'
@@ -73,7 +78,8 @@ export const portalConfig = async ({
         baseDir: path.resolve(dirname),
       },
     },
-    collections: [Users, Documents, News, Announcements, Events, Tenders, Media, DocumentFiles, AuditLog, RateLimits, ...(withTestCollections ? TEST_COLLECTIONS : [])],
+    collections: [Users, Documents, News, Announcements, Events, Tenders, Reports, Galleries, Faqs, Pages, Media, DocumentFiles, AuditLog, RateLimits, ...(withTestCollections ? TEST_COLLECTIONS : [])],
+    globals: [SiteSettings],
     editor: lexicalEditor(),
     // Scheduled publishing (FR-CMS-04, D-090): the admin panel queues a job; the server's cron job
     // runs due jobs through /api/payload-jobs/run with JOBS_RUN_SECRET (deploy/run-jobs.sh). There is

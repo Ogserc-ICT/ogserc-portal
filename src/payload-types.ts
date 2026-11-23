@@ -73,6 +73,10 @@ export interface Config {
     announcements: Announcement;
     events: Event;
     tenders: Tender;
+    reports: Report;
+    galleries: Gallery;
+    faqs: Faq;
+    pages: Page;
     media: Media;
     'document-files': DocumentFile;
     'audit-log': AuditLog;
@@ -92,6 +96,10 @@ export interface Config {
     announcements: AnnouncementsSelect<false> | AnnouncementsSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
     tenders: TendersSelect<false> | TendersSelect<true>;
+    reports: ReportsSelect<false> | ReportsSelect<true>;
+    galleries: GalleriesSelect<false> | GalleriesSelect<true>;
+    faqs: FaqsSelect<false> | FaqsSelect<true>;
+    pages: PagesSelect<false> | PagesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     'document-files': DocumentFilesSelect<false> | DocumentFilesSelect<true>;
     'audit-log': AuditLogSelect<false> | AuditLogSelect<true>;
@@ -107,8 +115,12 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    'site-settings': SiteSetting;
+  };
+  globalsSelect: {
+    'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
+  };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
@@ -529,6 +541,148 @@ export interface Tender {
   _status?: ('draft' | 'published') | null;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reports".
+ */
+export interface Report {
+  id: number;
+  title: string;
+  /**
+   * The end of the page address. Left empty, it is made from the title. Changing it breaks old links.
+   */
+  slug: string;
+  reportType: 'annual' | 'quarterly' | 'regulatory-performance' | 'market' | 'consumer' | 'research' | 'statistics';
+  /**
+   * For example "2026", "Q3 2026" or "January to June 2026".
+   */
+  period: string;
+  publishedDate: string;
+  /**
+   * One or two sentences for cards, listings and search results.
+   */
+  summary: string;
+  file: number | DocumentFile;
+  /**
+   * Optional cover image.
+   */
+  thumbnail?: (number | null) | Media;
+  /**
+   * Optional images shown on the report’s page (FR-REP-03).
+   */
+  images?: (number | Media)[] | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "galleries".
+ */
+export interface Gallery {
+  id: number;
+  title: string;
+  /**
+   * The end of the page address. Left empty, it is made from the title. Changing it breaks old links.
+   */
+  slug: string;
+  date: string;
+  /**
+   * One or two sentences for cards, listings and search results.
+   */
+  summary: string;
+  photos?:
+    | {
+        image: number | Media;
+        /**
+         * Optional. The image’s description for screen readers is set in Media.
+         */
+        caption?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  videos?:
+    | {
+        url: string;
+        /**
+         * Read out to screen readers and shown before the video loads.
+         */
+        title: string;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "faqs".
+ */
+export interface Faq {
+  id: number;
+  title: string;
+  answer: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Questions with the same topic are shown together.
+   */
+  topic: string;
+  /**
+   * Smaller numbers come first.
+   */
+  order?: number | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages".
+ */
+export interface Page {
+  id: number;
+  title: string;
+  /**
+   * The end of the page address. Left empty, it is made from the title. Changing it breaks old links.
+   */
+  slug: string;
+  /**
+   * Optional: shown under the title, and in search results and link previews.
+   */
+  summary?: string | null;
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
  * A record of sign-ins and changes. Read-only: entries cannot be edited or deleted.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -565,7 +719,8 @@ export interface AuditLog {
     | 'content.draft-saved'
     | 'content.published'
     | 'content.unpublished'
-    | 'content.deleted';
+    | 'content.deleted'
+    | 'settings.updated';
   /**
    * Who did it. Empty for a visitor who is not signed in, or for server code.
    */
@@ -584,6 +739,11 @@ export interface AuditLog {
         | 'events'
         | 'announcements'
         | 'tenders'
+        | 'reports'
+        | 'faqs'
+        | 'pages'
+        | 'galleries'
+        | 'site-settings'
         | 'e2e-drafts'
       )
     | null;
@@ -773,6 +933,22 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'tenders';
         value: number | Tender;
+      } | null)
+    | ({
+        relationTo: 'reports';
+        value: number | Report;
+      } | null)
+    | ({
+        relationTo: 'galleries';
+        value: number | Gallery;
+      } | null)
+    | ({
+        relationTo: 'faqs';
+        value: number | Faq;
+      } | null)
+    | ({
+        relationTo: 'pages';
+        value: number | Page;
       } | null)
     | ({
         relationTo: 'media';
@@ -979,6 +1155,77 @@ export interface TendersSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reports_select".
+ */
+export interface ReportsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  reportType?: T;
+  period?: T;
+  publishedDate?: T;
+  summary?: T;
+  file?: T;
+  thumbnail?: T;
+  images?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "galleries_select".
+ */
+export interface GalleriesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  date?: T;
+  summary?: T;
+  photos?:
+    | T
+    | {
+        image?: T;
+        caption?: T;
+        id?: T;
+      };
+  videos?:
+    | T
+    | {
+        url?: T;
+        title?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "faqs_select".
+ */
+export interface FaqsSelect<T extends boolean = true> {
+  title?: T;
+  answer?: T;
+  topic?: T;
+  order?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages_select".
+ */
+export interface PagesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  summary?: T;
+  body?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media_select".
  */
 export interface MediaSelect<T extends boolean = true> {
@@ -1123,6 +1370,134 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
+ * Contact details, office hours, social links, the footer text and the homepage slides. Changes show on the site straight away.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings".
+ */
+export interface SiteSetting {
+  id: number;
+  contact: {
+    addressLines?:
+      | {
+          line: string;
+          id?: string | null;
+        }[]
+      | null;
+    phone: string;
+    email: string;
+    /**
+     * Read to screen readers, for example "OGSERC head office, OPIC Towers, Abeokuta".
+     */
+    mapPlace?: string | null;
+    mapLink?: string | null;
+    mapEmbed?: string | null;
+  };
+  officeHours?:
+    | {
+        days: string;
+        hours: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * The contact page’s list (FR-CNT-01).
+   */
+  departments?:
+    | {
+        name: string;
+        email: string;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  footerSummary?: string | null;
+  socialLinks?:
+    | {
+        network: 'linkedin' | 'facebook' | 'instagram' | 'x' | 'tiktok' | 'youtube';
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * The homepage slideshow (FR-WEB-08). Each slide: a photograph OGSERC has the right to publish, a headline and one button. Text sits on a dark overlay, so any photograph keeps it readable.
+   */
+  heroSlides?:
+    | {
+        image: number | Media;
+        headline: string;
+        text?: string | null;
+        actionLabel: string;
+        /**
+         * Optional, for example "about OGSERC" after "Learn more".
+         */
+        actionContext?: string | null;
+        actionLink: string;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings_select".
+ */
+export interface SiteSettingsSelect<T extends boolean = true> {
+  contact?:
+    | T
+    | {
+        addressLines?:
+          | T
+          | {
+              line?: T;
+              id?: T;
+            };
+        phone?: T;
+        email?: T;
+        mapPlace?: T;
+        mapLink?: T;
+        mapEmbed?: T;
+      };
+  officeHours?:
+    | T
+    | {
+        days?: T;
+        hours?: T;
+        id?: T;
+      };
+  departments?:
+    | T
+    | {
+        name?: T;
+        email?: T;
+        description?: T;
+        id?: T;
+      };
+  footerSummary?: T;
+  socialLinks?:
+    | T
+    | {
+        network?: T;
+        url?: T;
+        id?: T;
+      };
+  heroSlides?:
+    | T
+    | {
+        image?: T;
+        headline?: T;
+        text?: T;
+        actionLabel?: T;
+        actionContext?: T;
+        actionLink?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "collections_widget".
  */
@@ -1160,6 +1535,22 @@ export interface TaskSchedulePublish {
       | ({
           relationTo: 'tenders';
           value: number | Tender;
+        } | null)
+      | ({
+          relationTo: 'reports';
+          value: number | Report;
+        } | null)
+      | ({
+          relationTo: 'galleries';
+          value: number | Gallery;
+        } | null)
+      | ({
+          relationTo: 'faqs';
+          value: number | Faq;
+        } | null)
+      | ({
+          relationTo: 'pages';
+          value: number | Page;
         } | null);
     global?: string | null;
     user?: {

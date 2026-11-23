@@ -27,10 +27,12 @@ collections, the homepage's switch to the CMS and the seed script.
    (FR-CODE-01).
 3. **News, Events, Announcements, Tenders** (FR-NEWS-01 to 03).
 4. **Reports, FAQs, Pages, Galleries** (FR-REP, FR-NEWS-04) and site settings (hero slides, contact details, office
-   hours, social links). The homepage reads the CMS; `src/lib/placeholder-content.ts` is deleted (D-028).
-5. **Seed and import**: `pnpm seed` loads "[Sample, OGSERC to supply]" items for every type and refuses the production
-   database. A one-time import moves the real news and public notices into the CMS. Orders, consultation papers and forms
-   move in Step 6 with their pages, keeping their addresses.
+   hours, social links, departments, footer text).
+5. **Seed, import and the homepage switch**: `pnpm seed` loads "[Sample, OGSERC to supply]" items for every type and
+   refuses the production database. A one-time import moves the real news, public notices and site settings into the CMS,
+   and in the same slice the homepage, footer and contact page read the CMS and `src/lib/placeholder-content.ts` is
+   deleted (D-028). Changed on 2026-11-23 (moved from slice 4): switching the homepage before the import would empty the
+   live homepage's lists. Orders, consultation papers and forms move in Step 6 with their pages, keeping their addresses.
 
 ## Tests for every slice
 Migrations, `pnpm generate:types`, the access audit (`tests/unit/config-access.spec.ts`), and database tests: a draft never

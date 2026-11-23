@@ -8,6 +8,7 @@ import * as migration_20261120_210425_media_object_key from './20261120_210425_m
 import * as migration_20261123_152211_step4_foundation from './20261123_152211_step4_foundation';
 import * as migration_20261123_175317_step4_documents from './20261123_175317_step4_documents';
 import * as migration_20261123_192134_step4_news_events from './20261123_192134_step4_news_events';
+import * as migration_20261123_201543_step4_pages_settings from './20261123_201543_step4_pages_settings';
 
 export const migrations = [
   {
@@ -58,6 +59,11 @@ export const migrations = [
   {
     up: migration_20261123_192134_step4_news_events.up,
     down: migration_20261123_192134_step4_news_events.down,
-    name: '20261123_192134_step4_news_events'
+    name: '20261123_192134_step4_news_events',
+  },
+  {
+    up: migration_20261123_201543_step4_pages_settings.up,
+    down: migration_20261123_201543_step4_pages_settings.down,
+    name: '20261123_201543_step4_pages_settings'
   },
 ];

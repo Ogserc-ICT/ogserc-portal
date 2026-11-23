@@ -1687,3 +1687,16 @@ Shared field builders (`src/fields/common.ts`) keep dates, attachments, related 
 **Why:** the fields are the SRS's lists, nothing more; anything else (news categories, an announcements archive) waits until OGSERC asks. The real news story and public notice now in code move in during slice 5, their pages in step 9.
 
 **Tested:** `tests/e2e-db/news-events.spec.ts`: for each collection over HTTP, an editor's draft is invisible to visitors (also asking for drafts), the editor cannot publish, a publisher can, visitors then see it, and the audit log has both steps; a plain-http registration link and an unknown announcement category are refused.
+
+## D-093 Reports, FAQs, Pages, Galleries and site settings (2026-11-23)
+
+**Decision:** Four more content collections built with `contentCollection()` (D-090), and one global:
+- **Reports** (`reports`, FR-REP-01/02): title, type (the seven FR-REP-01 kinds: annual, quarterly, regulatory performance, market, consumer, research, statistics), period as free text ("Q3 2026"), date, summary, file (required), optional thumbnail and infographics (FR-REP-03). Data tables are a spreadsheet attached as the file until OGSERC supplies some and a page needs more.
+- **FAQs** (`faqs`): question, answer, a topic OGSERC names, and an order number. No web address of their own; the FAQs page groups them by topic.
+- **Pages** (`pages`): title, web address, optional summary, text. For information pages staff should be able to change (FR-CMS-01, FR-CON-01, FR-MET-01); step 5 decides which existing pages read their text from here.
+- **Galleries** (`galleries`, FR-NEWS-04): title, date, summary, photos (from Media, with optional captions) and videos embedded from YouTube or Vimeo only (https), never uploaded: video files are large for the VPS and for visitors on mobile data, and the CSP (step 12) then needs only those two hosts.
+- **Site settings** (global `site-settings`): contact details (address lines, phone, email, Google Maps link and embed address, the embed limited to Google Maps' own address, D-058), office hours, departments, social links, footer summary and the homepage slides (photograph, headline, text, button text, screen-reader text and link: a page of this site or an https address, never `javascript:` or `//`). Public to read (`allowAll`, listed in the access audit), changed by publishers and administrators, with 50 versions kept and a `settings.updated` audit entry naming the changed fields. Not a draft: a change shows straight away, which suits a phone number or office hours.
+
+**Changed plan:** the homepage switch to the CMS moves from this slice to slice 5, with the import of the real news, notices and settings. Switching first would have emptied the live homepage's lists until the import.
+
+**Tested:** `tests/e2e-db/content-collections.spec.ts` (was `news-events.spec.ts`): the draft rules and audit entries over HTTP for all eight collections after Documents; site settings readable by visitors, refused to editors, saved by publishers and audited; unsafe slide links refused. Unit tests for the link, map and video checks.
