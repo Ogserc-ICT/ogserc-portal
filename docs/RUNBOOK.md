@@ -157,6 +157,19 @@ It prints only the host and database name. Make sure it is not your development 
 
 **In CI:** the e2e job creates `ogserc_e2e` in its throwaway Postgres container and runs the same checks, with no exemptions.
 
+### 3.2 Sample content (`pnpm seed`)
+
+`pnpm seed` fills a review or development database with clearly marked sample items of every content type (FR-CMS-08, D-094), so every page can be checked before OGSERC supplies real content: a document in each of the eleven Regulatory Instruments categories (one superseded), and three news stories, announcements, events, tenders, reports, galleries, FAQs and pages, with a sample PDF and three plain green sample images. Every title reads "[Sample …, OGSERC to supply]". In each type one item is a **draft whose title says it must never show on the site**: if it appears on any public page, search result or the sitemap, that is a bug.
+
+```sh
+pnpm seed --show-target          # prints only the host and database name; connects to nothing
+pnpm seed --database <that name> # adds the samples
+```
+
+- **Never on the live site.** It refuses `NODE_ENV=production`, needs the database's name typed exactly, checks that the live connection is that database, and refuses any database in which staff have created, changed or uploaded content (from the audit log). Without `DATABASE_URL` in your terminal it uses `.env`, normally the development database.
+- **Running it again adds nothing:** it skips every sample that is already there (by title).
+- **Removing the samples:** delete the items whose titles start with "[Sample" in the admin panel, or start from a fresh database. Before launch, none may remain (Section 11).
+
 ## 4. First admin account
 
 On a brand-new, empty database, `/admin` shows a "create first user" screen that **anyone who reaches the site can use**. On every new database (staging or production), create the first administrator account yourself **before the site is reachable by anyone else**. Do this before pointing DNS at it or sharing the address.
