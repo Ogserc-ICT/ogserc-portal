@@ -61,7 +61,9 @@ Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3
 ## Step 4 notes
 - Slice 1 (foundation, D-090): `contentCollection()`, `slugField()`, `document-files`, content audit entries, scheduled
   publishing through `deploy/run-jobs.sh` and `JOBS_RUN_SECRET`. PR #66 merged and deployed 2026-11-23.
-- Slice 2 (Documents, D-091): one collection for the eleven Regulatory Instruments categories.
+- Slice 2 (Documents, D-091): one collection for the eleven Regulatory Instruments categories. PR #67 merged and deployed
+  2026-11-23; the `deploy/run-jobs.sh` cron job is installed and printed `jobs ok`.
+- Slice 3 (News, Announcements, Events, Tenders, D-092).
 - Owner decisions (D-089): drafts with autosave on every content collection, so work resumes after a sign-out; uploaded
   files (images and documents) stay public, and the staff guide says not to upload anything confidential.
 - Hide admin controls that return 403 for editors (e.g. Publish on published documents).
@@ -70,6 +72,5 @@ Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-Step 4 slice 2 (Documents, D-091) is on branch `feat/step-4-documents`. After it is merged and deployed: install the
-`deploy/run-jobs.sh` cron job and check it prints `jobs ok` (RUNBOOK Section 6). Then slice 3: News, Events, Announcements,
-Tenders (FR-NEWS-01 to 03).
+Step 4 slice 3 (News, Announcements, Events, Tenders, D-092) is on branch `feat/step-4-news-events`. After it is merged
+and deployed, slice 4: Reports, FAQs, Pages, Galleries and site settings, with the homepage reading the CMS.

@@ -1673,3 +1673,17 @@ Its three endpoints (`/api/setup-totp`, `/api/verify-totp`, `/api/remove-totp`) 
 **Tested:** `tests/e2e-db/documents.spec.ts` over HTTP on the running server: an editor's draft is invisible to visitors (also when they ask for drafts), the editor cannot publish, change the published version, unpublish or delete; a publisher publishes; an editor's later draft leaves the public version unchanged; a superseded document stays public with its status; web addresses are unique; each step is in the audit log. In a real browser: an editor's typing is saved without pressing anything, and is there after the session ends without warning and they sign in again (D-089).
 
 **Since this collection, scheduled publishing is live** on the deployed config: `/api/payload-jobs/run` exists and refuses requests without `JOBS_RUN_SECRET` (401). Install the `deploy/run-jobs.sh` cron job after deploying it (RUNBOOK Section 6).
+
+## D-092 News, Announcements, Events and Tenders collections (2026-11-23)
+
+**Decision:** Four content collections, each built with `contentCollection()` (D-090), so each has autosave drafts, scheduled publishing, versions, the draft rules (D-049) and audit entries:
+- **News** (`news`, FR-NEWS-01): title, date, author, category, summary, featured image, story (rich text), a gallery of the story's own photographs, attachments (document files), related documents. Author and category are optional free text: the SRS names no list and OGSERC has none yet.
+- **Announcements** (`announcements`, FR-NEWS-03, FR-WEB-04): one of the four SRS categories (public notice, regulatory notice, service announcement, consultation notice), the date posted on the site (lists sort by it), the date on the notice if different, summary, text, attachments, related documents.
+- **Events** (`events`, FR-NEWS-02): name, start and optional end (date and time), venue, summary, description, an optional registration link (https only), attachments, related documents.
+- **Tenders** (`tenders`, SRS Section 4 and FR-WEB-02): title, reference, published date, closing date and time, summary, details, optional enquiries email, the tender documents. There is no "open/closed" field: pages work it out from the closing date, so a tender never shows as open after it closes because someone forgot.
+
+Shared field builders (`src/fields/common.ts`) keep dates, attachments, related documents and summaries alike everywhere.
+
+**Why:** the fields are the SRS's lists, nothing more; anything else (news categories, an announcements archive) waits until OGSERC asks. The real news story and public notice now in code move in during slice 5, their pages in step 9.
+
+**Tested:** `tests/e2e-db/news-events.spec.ts`: for each collection over HTTP, an editor's draft is invisible to visitors (also asking for drafts), the editor cannot publish, a publisher can, visitors then see it, and the audit log has both steps; a plain-http registration link and an unknown announcement category are refused.

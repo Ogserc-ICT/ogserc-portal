@@ -8,9 +8,13 @@ import { denyByDefault } from './access/deny-by-default'
 import { hardenPayloadInternals } from './access/payload-internals'
 import { AuditLog } from './collections/AuditLog'
 import { DocumentFiles } from './collections/DocumentFiles'
+import { Announcements } from './collections/Announcements'
 import { Documents } from './collections/Documents'
+import { Events } from './collections/Events'
 import { Media } from './collections/Media'
+import { News } from './collections/News'
 import { RateLimits } from './collections/RateLimits'
+import { Tenders } from './collections/Tenders'
 import { TEST_COLLECTIONS, testCollectionsEnabled } from './collections/test'
 import { Users } from './collections/Users'
 import { twoFactor } from './lib/auth/two-factor'
@@ -69,7 +73,7 @@ export const portalConfig = async ({
         baseDir: path.resolve(dirname),
       },
     },
-    collections: [Users, Documents, Media, DocumentFiles, AuditLog, RateLimits, ...(withTestCollections ? TEST_COLLECTIONS : [])],
+    collections: [Users, Documents, News, Announcements, Events, Tenders, Media, DocumentFiles, AuditLog, RateLimits, ...(withTestCollections ? TEST_COLLECTIONS : [])],
     editor: lexicalEditor(),
     // Scheduled publishing (FR-CMS-04, D-090): the admin panel queues a job; the server's cron job
     // runs due jobs through /api/payload-jobs/run with JOBS_RUN_SECRET (deploy/run-jobs.sh). There is
