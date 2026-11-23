@@ -167,6 +167,8 @@ On a brand-new, empty database, `/admin` shows a "create first user" screen that
 
 ### 4.0 On OGSERC's VPS: the first-administrator window (D-087)
 
+**Done on 2026-11-23:** both administrators exist with two-factor sign-in, and the Caddyfile no longer closes `/admin` and `/api`. The steps below are kept for a new, empty database on a server the public can already reach (for example a move to another host): first put back the `@staff` block in `deploy/Caddyfile` and the `ADMIN_ALLOW_IP` line in `docker-compose.prod.yml` (both in commit `97ffe56`), then:
+
 While `/admin` is closed to everyone in the Caddyfile, it can be opened to **one internet address** for as long as it takes to create the first administrators:
 
 1. **Find your address.** On the computer you will use, open <https://ifconfig.me> in the browser and note the address (four numbers with dots). Mobile data can change it; use a fixed office or home connection if you can.
@@ -229,7 +231,7 @@ The container listens on port 3000. Put it behind HTTPS (the host's load balance
 
 `docker-compose.prod.yml` runs three containers: the app, PostgreSQL 17 and Caddy. Caddy is the only one reachable from the internet (ports 80 and 443); it gets and renews the HTTPS certificate from Let's Encrypt and passes requests to the app. The image is built on the server (the build needs no database), so no registry token is stored there. Migrations run when the app starts.
 
-**Preview period.** Until Step 3 is finished (2FA, rate limiting, audit log), `deploy/Caddyfile` returns 404 for `/admin` and `/api` and shortens HSTS to one day for this host only. Both are marked `PREVIEW ONLY` and listed in Section 11. Search engines have been allowed to list the site since 2026-11-18 (D-078).
+**Preview period.** `deploy/Caddyfile` shortens HSTS to one day for this host only, marked `PREVIEW ONLY` and listed in Section 11. It returned 404 for `/admin` and `/api` until the first administrators existed; both have been open since 2026-11-23 (D-087). Search engines have been allowed to list the site since 2026-11-18 (D-078).
 
 Commands run on the server over SSH. Never paste passwords, keys or the contents of `.env` into chat, tickets or commits.
 
@@ -342,7 +344,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml ps                   # all three "running", db "healthy"
 docker compose -f docker-compose.prod.yml logs --tail 50 app caddy
 curl -sI https://ogserc.org.ng | head -n 1                     # HTTP/2 200
-curl -s -o /dev/null -w '%{http_code}\n' https://ogserc.org.ng/admin   # 404 during the preview
+curl -s -o /dev/null -w '%{http_code}\n' https://ogserc.org.ng/admin   # 200 (the sign-in screen)
 ```
 
 **H. Close password logins** (as `deploy` with `sudo`, only after `ssh deploy@SERVER_IP` works with the key). Keep the current session open and test from a second window before closing it.
@@ -695,7 +697,7 @@ Build step 2 added temporary placeholders so OGSERC could review the design befo
 - [ ] The contact form sends email, with rate limiting, a configurable inbox and SPF/DKIM/DMARC; until then it offers a `mailto:` link (D-059).
 - [ ] `src/app/(frontend)/design-system/` (the review page) deleted (D-031).
 - [ ] No menu entry in `src/lib/navigation.ts` still has `ready: false`, and `/being-prepared` is removed or unused (D-027).
-- [ ] `deploy/Caddyfile` has no `PREVIEW ONLY` block left (D-054): `/admin` reopened once Step 3 is merged (2FA, rate limiting, audit log); `X-Robots-Tag: noindex` removed (done 2026-11-18, D-078); the HSTS override removed once every subdomain of the domain serves HTTPS.
+- [ ] `deploy/Caddyfile` has no `PREVIEW ONLY` block left (D-054): `/admin` and `/api` reopened (done 2026-11-23, D-087); `X-Robots-Tag: noindex` removed (done 2026-11-18, D-078); the HSTS override removed once every subdomain of the domain serves HTTPS.
 - [x] VPS backups copied off the server daily, and a restore tested (Section 6; first copy and restore test passed 2026-11-19). Rerun `deploy/test-restore.sh` before launch, and once Payload has created its tables so the site database check runs in full.
 - [x] Privacy Policy section 7 covers cookies and visitor statistics: wording approved by the owner on 2026-11-18 (D-077). OGSERC's legal advisers to review it with the rest of the policy (D-074).
 - [ ] `stats.<domain>`'s one-day HSTS lengthened with the main site's (D-077).

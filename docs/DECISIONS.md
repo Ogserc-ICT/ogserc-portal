@@ -1614,6 +1614,8 @@ Its three endpoints (`/api/setup-totp`, `/api/verify-totp`, `/api/remove-totp`) 
 
 **After the window:** the preview block is removed altogether (RUNBOOK Section 11) once the administrators exist and sign-in has been checked in a real browser; until then `/admin` stays closed.
 
+**Done (2026-11-23):** the owner and a second administrator signed in from the allowed address and set up two-factor sign-in; `ADMIN_ALLOW_IP` was removed and `/admin` checked closed from outside. The owner then chose to open `/admin` and `/api` to everyone, so the `@staff` block and the compose setting are gone. From now on the sign-in protections carry the load: password policy and breach check (D-053), rate limits (D-081), lockout after 5 failures, two-factor codes (D-084) and the audit log (D-083). Known cost: anyone who knows an administrator's email can keep that account locked 15 minutes at a time (RUNBOOK 4.1); the second administrator can unlock it.
+
 ## D-088 Registered Operators page and quick service (2026-11-23)
 
 **Decision:** A sixth homepage quick service, "Registered Operators", after the five FR-WEB-02 lists, links to a new page at `/registered-operators`. The page is a numbered table of operator name and registration number, in registration order, starting with VERGE POWER LIMITED (OGSERC/REG/2026/F-DIS/0001). The list lives in `src/lib/operators/registered-operators.ts` until the Licencees collection (build step 8) moves it into the CMS.
