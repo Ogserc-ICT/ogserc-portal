@@ -30,6 +30,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      # The committed Payload types and admin import map must match the config: a collection change
+      # without `pnpm generate:importmap` leaves admin fields (rich text) blank (D-095).
+      - name: Payload types and admin import map are up to date
+        run: |
+          pnpm generate:types
+          pnpm generate:importmap
+          git diff --exit-code -- src/payload-types.ts 'src/app/(payload)/admin/importMap.js'
       # Unit tests and the access audit of the assembled Payload config (no browser, no database).
       - run: pnpm test:unit
       # Fails only on high or critical vulnerabilities; lower ones are handled by Dependabot.
