@@ -135,7 +135,9 @@ function noticeBody() {
 export async function up({ payload, req }: MigrateUpArgs): Promise<void> {
   const api = payload as unknown as Api
 
-  const heroIds = await Promise.all(HERO_PHOTOS.map((photo) => image(api, req, photo)))
+  // One at a time: they share the migration's transaction, so a failure must stop at the first.
+  const heroIds = []
+  for (const photo of HERO_PHOTOS) heroIds.push(await image(api, req, photo))
   const storyIds = []
   for (const photo of STORY_PHOTOS) storyIds.push(await image(api, req, photo))
   const consultationCard = await image(api, req, CONSULTATION_CARD)
