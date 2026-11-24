@@ -339,6 +339,16 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+  sizes?: {
+    card?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -351,6 +361,10 @@ export interface News {
    * The end of the page address. Left empty, it is made from the title. Changing it breaks old links.
    */
   slug: string;
+  /**
+   * Optional. A page of this site (for example /regulatory-instruments/forms) or an https:// address. The card then links there, and the text below can stay empty.
+   */
+  link?: string | null;
   publishedDate: string;
   /**
    * Optional, for example "Corporate Communications".
@@ -368,7 +382,7 @@ export interface News {
    * Shown on the news card and at the top of the story. Its description (alt text) is set in Media.
    */
   featuredImage?: (number | null) | Media;
-  body: {
+  body?: {
     root: {
       type: string;
       children: {
@@ -382,7 +396,7 @@ export interface News {
       version: number;
     };
     [k: string]: unknown;
-  };
+  } | null;
   /**
    * More photographs, shown as a gallery under the story.
    */
@@ -392,6 +406,16 @@ export interface News {
    */
   attachments?: (number | DocumentFile)[] | null;
   relatedDocuments?: (number | Document)[] | null;
+  /**
+   * Optional buttons beside the item, for example "Read the Order".
+   */
+  relatedLinks?:
+    | {
+        label: string;
+        link: string;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -409,6 +433,10 @@ export interface Announcement {
    * The end of the page address. Left empty, it is made from the title. Changing it breaks old links.
    */
   slug: string;
+  /**
+   * Optional. A page of this site (for example /regulatory-instruments/forms) or an https:// address. The card then links there, and the text below can stay empty.
+   */
+  link?: string | null;
   category: 'public-notice' | 'regulatory-notice' | 'service-announcement' | 'consultation-notice';
   /**
    * Lists sort by this date.
@@ -419,10 +447,25 @@ export interface Announcement {
    */
   issuedDate?: string | null;
   /**
+   * Optional, for example "Abeokuta".
+   */
+  issuedAt?: string | null;
+  /**
    * One or two sentences for cards, listings and search results.
    */
   summary: string;
-  body: {
+  /**
+   * Optional: the instrument the notice is issued under, shown under its title, for example Order No. OGSERC/ORD/2026/001.
+   */
+  issuedUnder?: {
+    /**
+     * For example "Order No."
+     */
+    label?: string | null;
+    reference?: string | null;
+    link?: string | null;
+  };
+  body?: {
     root: {
       type: string;
       children: {
@@ -436,12 +479,52 @@ export interface Announcement {
       version: number;
     };
     [k: string]: unknown;
+  } | null;
+  /**
+   * Optional: bank accounts the notice gives for payments, exactly as printed.
+   */
+  payment?: {
+    intro?: string | null;
+    accounts?:
+      | {
+          accountName: string;
+          accountNumber: string;
+          bank: string;
+          description: string;
+          amount: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * Optional: where questions go, only if the notice says so.
+   */
+  enquiries?: {
+    note?: string | null;
+    email?: string | null;
+  };
+  /**
+   * Optional: the closing line and who signed the notice.
+   */
+  signOff?: {
+    closing?: string | null;
+    signatories?: string | null;
   };
   /**
    * The signed notice or other files, if any.
    */
   attachments?: (number | DocumentFile)[] | null;
   relatedDocuments?: (number | Document)[] | null;
+  /**
+   * Optional buttons beside the item, for example "Read the Order".
+   */
+  relatedLinks?:
+    | {
+        label: string;
+        link: string;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -1085,6 +1168,7 @@ export interface DocumentsSelect<T extends boolean = true> {
 export interface NewsSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
+  link?: T;
   publishedDate?: T;
   author?: T;
   category?: T;
@@ -1094,6 +1178,13 @@ export interface NewsSelect<T extends boolean = true> {
   photos?: T;
   attachments?: T;
   relatedDocuments?: T;
+  relatedLinks?:
+    | T
+    | {
+        label?: T;
+        link?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -1105,13 +1196,56 @@ export interface NewsSelect<T extends boolean = true> {
 export interface AnnouncementsSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
+  link?: T;
   category?: T;
   postedDate?: T;
   issuedDate?: T;
+  issuedAt?: T;
   summary?: T;
+  issuedUnder?:
+    | T
+    | {
+        label?: T;
+        reference?: T;
+        link?: T;
+      };
   body?: T;
+  payment?:
+    | T
+    | {
+        intro?: T;
+        accounts?:
+          | T
+          | {
+              accountName?: T;
+              accountNumber?: T;
+              bank?: T;
+              description?: T;
+              amount?: T;
+              id?: T;
+            };
+      };
+  enquiries?:
+    | T
+    | {
+        note?: T;
+        email?: T;
+      };
+  signOff?:
+    | T
+    | {
+        closing?: T;
+        signatories?: T;
+      };
   attachments?: T;
   relatedDocuments?: T;
+  relatedLinks?:
+    | T
+    | {
+        label?: T;
+        link?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -1242,6 +1376,20 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+  sizes?:
+    | T
+    | {
+        card?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1378,6 +1526,10 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
 export interface SiteSetting {
   id: number;
   contact: {
+    /**
+     * The contact page’s opening sentence.
+     */
+    introduction?: string | null;
     addressLines?:
       | {
           line: string;
@@ -1447,6 +1599,7 @@ export interface SiteSettingsSelect<T extends boolean = true> {
   contact?:
     | T
     | {
+        introduction?: T;
         addressLines?:
           | T
           | {

@@ -8,7 +8,7 @@ import {
   type ContactFormState,
 } from '@/lib/contact/enquiry'
 import { checkFormToken, issueFormToken } from '@/lib/contact/form-token'
-import { enquiryTypes } from '@/lib/placeholder-content'
+import { enquiryTypes } from '@/lib/contact/enquiry-types'
 
 /**
  * Contact form submission (FR-CNT-02, D-059). Everything is checked here on the server; the

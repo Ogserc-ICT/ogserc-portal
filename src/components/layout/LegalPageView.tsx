@@ -1,10 +1,11 @@
 import { PageBand } from '@/components/layout/PageBand'
 import { Container } from '@/components/ui/Container'
 import type { LegalPage, LegalSection } from '@/lib/legal/legal-pages'
-import { contactDetails } from '@/lib/placeholder-content'
+import { contactDetails as readContactDetails } from '@/lib/cms/content'
 
 /** FR-WEB-06 legal page: the title band, the last-updated date, then numbered sections (D-074). */
-export function LegalPageView({ page }: { page: LegalPage }) {
+export async function LegalPageView({ page }: { page: LegalPage }) {
+  const { email } = await readContactDetails()
   return (
     <>
       <PageBand
@@ -20,7 +21,7 @@ export function LegalPageView({ page }: { page: LegalPage }) {
         <Container>
           <div className="max-w-3xl space-y-10 text-lg leading-relaxed">
             {page.sections.map((section) => (
-              <Section key={section.heading} section={section} />
+              <Section key={section.heading} section={section} email={email} />
             ))}
           </div>
         </Container>
@@ -29,7 +30,7 @@ export function LegalPageView({ page }: { page: LegalPage }) {
   )
 }
 
-function Section({ section }: { section: LegalSection }) {
+function Section({ section, email }: { section: LegalSection; email: string }) {
   return (
     <section>
       <h2 className="text-2xl font-bold text-green-900">{section.heading}</h2>
@@ -48,10 +49,10 @@ function Section({ section }: { section: LegalSection }) {
           <p>
             {section.emailLead}{' '}
             <a
-              href={`mailto:${contactDetails.email}`}
+              href={`mailto:${email}`}
               className="font-semibold text-green-700 underline underline-offset-4"
             >
-              {contactDetails.email}
+              {email}
             </a>
             .
           </p>

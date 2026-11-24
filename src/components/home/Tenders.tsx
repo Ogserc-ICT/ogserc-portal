@@ -2,7 +2,8 @@ import { Card } from '@/components/ui/Card'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { formatDate } from '@/lib/format-date'
 import { hrefFor, routes } from '@/lib/navigation'
-import type { Tender } from '@/lib/placeholder-content'
+/** A tender line (hidden from the homepage until OGSERC has real ones, D-062). */
+export type Tender = { id: string; title: string; reference: string; closingDate: string; href: string }
 
 export function Tenders({ items }: { items: Tender[] }) {
   return (

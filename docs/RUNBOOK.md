@@ -705,7 +705,8 @@ Last review: `<date>` by `<name>`. Next review due: `<date + 3 months>`.
 
 Build step 2 added temporary placeholders so OGSERC could review the design before real content existed. Step 13 (launch checklist) must confirm every item below is gone:
 
-- [ ] `src/lib/placeholder-content.ts` deleted; all homepage content comes from the CMS (replaced in step 4, D-028).
+- [x] `src/lib/placeholder-content.ts` deleted; all homepage content comes from the CMS (done in step 4 slice 5b, D-096).
+- [ ] `src/lib/about/content.ts` emptied: the About OGSERC pages' text (About Us, History, Mission, Structure) moved into the CMS in step 5, so staff can change it (D-096).
 - [ ] No text containing "OGSERC to supply" on any page (search the site and the database).
 - [x] The `ink` colour set to `#483A16`, sampled from OGSERC's full logo lockup (D-033). Re-run the checks if OGSERC supplies an exact brand value.
 - [x] Crest placeholder replaced with the Ogun State crest image (step 2b).

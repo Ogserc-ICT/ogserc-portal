@@ -4,7 +4,8 @@ import { Icon } from '@/components/ui/Icon'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { dateParts, formatDate } from '@/lib/format-date'
 import { hrefFor, routes } from '@/lib/navigation'
-import type { EventItem } from '@/lib/placeholder-content'
+/** An event line (hidden from the homepage until OGSERC has real ones, D-062). */
+export type EventItem = { id: string; name: string; date: string; venue: string; href: string }
 
 export function Events({ items }: { items: EventItem[] }) {
   return (

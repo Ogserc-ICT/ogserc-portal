@@ -6,7 +6,7 @@ import { PageBand } from '@/components/layout/PageBand'
 import { Container } from '@/components/ui/Container'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { hrefFor, routes } from '@/lib/navigation'
-import { visionMissionValues } from '@/lib/placeholder-content'
+import { visionMissionValues } from '@/lib/about/content'
 
 const page = routes.visionMissionValues
 

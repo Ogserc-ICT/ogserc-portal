@@ -9,6 +9,9 @@ import * as migration_20261123_152211_step4_foundation from './20261123_152211_s
 import * as migration_20261123_175317_step4_documents from './20261123_175317_step4_documents';
 import * as migration_20261123_192134_step4_news_events from './20261123_192134_step4_news_events';
 import * as migration_20261123_201543_step4_pages_settings from './20261123_201543_step4_pages_settings';
+import * as migration_20261124_081246_step4_links_payments from './20261124_081246_step4_links_payments';
+import * as migration_20261124_103335_step4_notice_issued_under from './20261124_103335_step4_notice_issued_under';
+import * as migration_20261124_103400_real_content from './20261124_103400_real_content';
 
 export const migrations = [
   {
@@ -64,6 +67,21 @@ export const migrations = [
   {
     up: migration_20261123_201543_step4_pages_settings.up,
     down: migration_20261123_201543_step4_pages_settings.down,
-    name: '20261123_201543_step4_pages_settings'
+    name: '20261123_201543_step4_pages_settings',
+  },
+  {
+    up: migration_20261124_081246_step4_links_payments.up,
+    down: migration_20261124_081246_step4_links_payments.down,
+    name: '20261124_081246_step4_links_payments',
+  },
+  {
+    up: migration_20261124_103335_step4_notice_issued_under.up,
+    down: migration_20261124_103335_step4_notice_issued_under.down,
+    name: '20261124_103335_step4_notice_issued_under'
+  },
+  {
+    up: migration_20261124_103400_real_content.up,
+    down: migration_20261124_103400_real_content.down,
+    name: '20261124_103400_real_content',
   },
 ];

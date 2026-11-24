@@ -2,7 +2,7 @@ import type { GlobalAfterChangeHook, GlobalConfig } from 'payload'
 
 import { allowAll, isPublisherOrAbove } from '../access'
 import { PUBLIC_READ } from '../access/two-factor'
-import { validateHttpsUrl } from '../fields/common'
+import { validateHttpsUrl, validateSiteLink } from '../fields/common'
 import { changedFields, recordAudit, requestActor } from '../lib/audit/record'
 
 // Site-wide settings (FR-CMS-01, D-093): the text and links that appear on many pages, so staff can
@@ -10,15 +10,6 @@ import { changedFields, recordAudit, requestActor } from '../lib/audit/record'
 // footer summary and the homepage hero slides (FR-WEB-08). Public to read (they are on every page);
 // publishers and administrators change them, and each change is in the audit log. Build step 4
 // slice 5 makes the homepage, footer and contact page read them, replacing placeholder-content.ts.
-
-/** Why a link is neither a page of this site (starting with /) nor an https address, or true. */
-export function validateSiteLink(value: unknown): string | true {
-  if (typeof value !== 'string' || value === '') return 'Enter a page of this site (for example /about-ogserc) or an https:// address.'
-  if (value.startsWith('/') && !value.startsWith('//')) {
-    return /^\/[a-z0-9\-/#?=&]*$/.test(value) && value.length <= 200 ? true : 'Use only lowercase letters, numbers, hyphens and slashes.'
-  }
-  return validateHttpsUrl(value)
-}
 
 /** Why a map address is not Google Maps' embed address, or true (the CSP allows only that, D-058). */
 export function validateMapEmbed(value: unknown): string | true {
@@ -69,6 +60,12 @@ export const SiteSettings: GlobalConfig = {
               name: 'contact',
               type: 'group',
               fields: [
+                {
+                  name: 'introduction',
+                  type: 'textarea',
+                  maxLength: 400,
+                  admin: { description: 'The contact page’s opening sentence.' },
+                },
                 {
                   name: 'addressLines',
                   type: 'array',

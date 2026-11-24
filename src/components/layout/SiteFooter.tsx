@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react'
 import { Container } from '@/components/ui/Container'
 import { Icon } from '@/components/ui/Icon'
 import { footerQuickLinks, legalLinks } from '@/lib/navigation'
-import { contactDetails, footer, phoneHref, socialLinks } from '@/lib/placeholder-content'
+import { contactDetails as readContactDetails, phoneHref } from '@/lib/cms/content'
 
 import wordmark from '../../../public/brand/ogserc-wordmark.png'
 import './footer-grid.css'
@@ -21,7 +21,9 @@ const accents = [
 ]
 
 /** SRS Section 4 footer, with the FR-WEB-06 legal links. */
-export function SiteFooter() {
+export async function SiteFooter() {
+  const contactDetails = await readContactDetails()
+  const { footerSummary, socialLinks } = contactDetails
   return (
     <footer className="on-dark relative isolate overflow-hidden bg-green-900 text-green-50">
       <FooterPattern />
@@ -34,7 +36,7 @@ export function SiteFooter() {
           <p className="mt-4 text-lg font-bold text-white">
             Ogun State Electricity Regulatory Commission
           </p>
-          <p className="mt-3">{footer.summary}</p>
+          <p className="mt-3">{footerSummary}</p>
           <h2 id="footer-social" className="mt-6 font-semibold text-white">
             Follow us
           </h2>
@@ -92,7 +94,7 @@ export function SiteFooter() {
             </p>
             <p className="flex gap-3">
               <Icon name="phone" className="mt-0.5 size-5 shrink-0 text-gold-400" />
-              <a href={phoneHref} className={footerLink}>
+              <a href={phoneHref(contactDetails.phone)} className={footerLink}>
                 {contactDetails.phone}
               </a>
             </p>

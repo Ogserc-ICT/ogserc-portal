@@ -50,6 +50,10 @@ const paths = {
   tiktok: (
     <path d="M21 8v4a10 10 0 0 1-5-2v4.5a6.5 6.5 0 1 1-8-6.3v4.3a2.5 2.5 0 1 0 4 2V3h4a6 6 0 0 0 5 5Z" />
   ),
+  // Offered in the site settings' social links (D-093); not used until OGSERC has a channel.
+  youtube: (
+    <path d="M2.5 17a24 24 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.6 49.6 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24 24 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.6 49.6 0 0 1-16.2 0A2 2 0 0 1 2.5 17ZM10 15l5-3-5-3z" />
+  ),
 } as const
 
 export type IconName = keyof typeof paths

@@ -60,6 +60,7 @@ export default defineConfig({
     { name: 'users', testMatch: 'users.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'drafts', testMatch: 'drafts.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'documents', testMatch: 'documents.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
+    { name: 'public-pages', testMatch: 'public-pages.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'content-collections', testMatch: 'content-collections.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     {
       name: 'document-files',

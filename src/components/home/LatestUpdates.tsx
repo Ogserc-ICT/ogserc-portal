@@ -3,7 +3,7 @@ import { Container } from '@/components/ui/Container'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { byNewestFirst, formatDate } from '@/lib/format-date'
 import { hrefFor, routes } from '@/lib/navigation'
-import type { NewsItem } from '@/lib/placeholder-content'
+import type { NewsItem } from '@/lib/cms/content'
 
 /**
  * FR-WEB-02 Latest Updates. A CSS scroll-snap row instead of a JavaScript carousel (D-030): it

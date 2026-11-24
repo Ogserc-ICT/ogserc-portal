@@ -7,7 +7,7 @@ import { Container } from '@/components/ui/Container'
 import { Icon } from '@/components/ui/Icon'
 import { byNewestFirst, formatDate } from '@/lib/format-date'
 import { routes } from '@/lib/navigation'
-import { noticeHref, publicNotices } from '@/lib/notices/public-notices'
+import { listNotices } from '@/lib/cms/content'
 
 const page = routes.notices
 
@@ -16,11 +16,12 @@ export const metadata: Metadata = {
   description: 'Public notices issued by the Ogun State Electricity Regulatory Commission.',
 }
 
-/** Media Center > Public Notices (D-065), newest first. Filters arrive with step 9. */
-export default function NoticesPage() {
-  const items = byNewestFirst(
-    publicNotices.map((notice) => ({ ...notice, date: notice.postedDate })),
-  )
+/**
+ * Media Center > Public Notices (D-065, D-096): every published announcement, newest first, each
+ * linking to its own page or to the page it is about. Filters arrive with step 9.
+ */
+export default async function NoticesPage() {
+  const items = byNewestFirst(await listNotices())
 
   return (
     <>
@@ -40,25 +41,26 @@ export default function NoticesPage() {
           <ul className="space-y-4">
             {items.map((notice) => (
               <li
-                key={notice.slug}
+                key={notice.id}
                 className="relative rounded-lg border border-line bg-white p-5 hover:border-green-700 sm:p-6"
               >
                 <p className="flex flex-wrap items-center gap-3 text-sm text-ink-muted">
                   <Badge>{notice.category}</Badge>
                   <span className="inline-flex items-center gap-1.5">
                     <Icon name="calendar" className="size-4" />
-                    Issued <time dateTime={notice.issuedDate}>{formatDate(notice.issuedDate)}</time>
+                    {notice.issuedDate ? 'Issued' : 'Posted'}{' '}
+                    <time dateTime={notice.issuedDate ?? notice.date}>{formatDate(notice.issuedDate ?? notice.date)}</time>
                   </span>
                 </p>
                 <h2 className="mt-3 text-xl font-bold text-green-900">
                   <Link
-                    href={noticeHref(notice)}
+                    href={notice.href}
                     className="underline-offset-4 after:absolute after:inset-0 after:content-[''] hover:underline"
                   >
                     {notice.title}
                   </Link>
                 </h2>
-                <p className="mt-2 text-ink-muted">{notice.summary}</p>
+                {notice.summary !== notice.title ? <p className="mt-2 text-ink-muted">{notice.summary}</p> : null}
               </li>
             ))}
           </ul>

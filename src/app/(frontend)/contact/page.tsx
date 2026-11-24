@@ -9,7 +9,8 @@ import { Icon, type IconName } from '@/components/ui/Icon'
 import { OfficeMap } from '@/components/ui/OfficeMap'
 import { Panel } from '@/components/ui/Panel'
 import { issueFormToken } from '@/lib/contact/form-token'
-import { contactDetails, contactPage, enquiryTypes, phoneHref } from '@/lib/placeholder-content'
+import { contactDetails as readContactDetails, phoneHref } from '@/lib/cms/content'
+import { enquiryTypes } from '@/lib/contact/enquiry-types'
 
 export const metadata: Metadata = {
   title: 'Contact us',
@@ -43,6 +44,8 @@ function ContactRow({
 
 /** SRS 6.12 Contact (FR-CNT-01, FR-CNT-02); layout agreed with the owner (D-059). */
 export default async function ContactPage() {
+  const contactDetails = await readContactDetails()
+  const contactPage = contactDetails
   // Rendered per request: the form's spam check starts timing when the page is opened.
   await connection()
   const token = issueFormToken()
@@ -75,7 +78,7 @@ export default async function ContactPage() {
                   ))}
                 </ContactRow>
                 <ContactRow icon="phone" label="Phone">
-                  <a href={phoneHref} className={link}>
+                  <a href={phoneHref(contactDetails.phone)} className={link}>
                     {contactDetails.phone}
                   </a>
                 </ContactRow>
