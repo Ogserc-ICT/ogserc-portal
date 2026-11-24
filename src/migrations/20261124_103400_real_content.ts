@@ -136,9 +136,9 @@ export async function up({ payload, req }: MigrateUpArgs): Promise<void> {
   const api = payload as unknown as Api
 
   // One at a time: they share the migration's transaction, so a failure must stop at the first.
-  const heroIds = []
+  const heroIds: Id[] = []
   for (const photo of HERO_PHOTOS) heroIds.push(await image(api, req, photo))
-  const storyIds = []
+  const storyIds: Id[] = []
   for (const photo of STORY_PHOTOS) storyIds.push(await image(api, req, photo))
   const consultationCard = await image(api, req, CONSULTATION_CARD)
 
