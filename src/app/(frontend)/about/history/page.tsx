@@ -4,7 +4,7 @@ import { AboutNav } from '@/components/layout/AboutNav'
 import { PageBand } from '@/components/layout/PageBand'
 import { Container } from '@/components/ui/Container'
 import { hrefFor, routes } from '@/lib/navigation'
-import { ourHistory } from '@/lib/placeholder-content'
+import { ourHistory } from '@/lib/about/content'
 
 const page = routes.history
 

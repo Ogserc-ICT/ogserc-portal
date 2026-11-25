@@ -6,7 +6,7 @@ import { Icon, type IconName } from '@/components/ui/Icon'
 import { OfficeMap } from '@/components/ui/OfficeMap'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { hrefFor, routes } from '@/lib/navigation'
-import { contactDetails, phoneHref } from '@/lib/placeholder-content'
+import { contactDetails as readContactDetails, phoneHref } from '@/lib/cms/content'
 
 function ContactRow({
   icon,
@@ -31,7 +31,8 @@ function ContactRow({
 }
 
 /** FR-WEB-02 contact: office, phone, email, map. */
-export function ContactSection() {
+export async function ContactSection() {
+  const contactDetails = await readContactDetails()
   return (
     <section data-reveal aria-labelledby="contact-heading" className="bg-green-50 py-12 sm:py-16">
       <Container className="grid gap-8 lg:grid-cols-2 lg:gap-12">
@@ -46,7 +47,7 @@ export function ContactSection() {
               ))}
             </ContactRow>
             <ContactRow icon="phone" label="Phone">
-              <a href={phoneHref} className="text-green-700 underline underline-offset-4">
+              <a href={phoneHref(contactDetails.phone)} className="text-green-700 underline underline-offset-4">
                 {contactDetails.phone}
               </a>
             </ContactRow>

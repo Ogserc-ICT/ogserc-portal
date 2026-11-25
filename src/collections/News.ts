@@ -1,12 +1,23 @@
+import { BlocksFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
 import type { CollectionConfig } from 'payload'
 
-import { attachmentsField, dayField, relatedDocumentsField, summaryField } from '../fields/common'
+import { HighlightsBlock } from '../blocks/Highlights'
+import {
+  attachmentsField,
+  dayField,
+  linkInsteadField,
+  relatedDocumentsField,
+  relatedLinksField,
+  requiredUnlessLink,
+  summaryField,
+} from '../fields/common'
 import { slugField } from '../fields/slug'
 import { contentCollection } from './content/content-collection'
 
-// News stories (FR-NEWS-01, D-092): title, date, author, category, featured image, content,
+// News stories (FR-NEWS-01, D-092, D-095): title, date, author, category, featured image, content,
 // attachments, related documents. The photographs of a story sit with it (the NERC visit has seven);
-// stand-alone photo and video galleries are their own collection (FR-NEWS-04, slice 4).
+// stand-alone photo and video galleries are their own collection (FR-NEWS-04). An item that only
+// points at another page ("Order 002 is published") has a link instead of a story.
 export const News: CollectionConfig = contentCollection({
   slug: 'news',
   labels: { singular: 'News story', plural: 'News' },
@@ -18,6 +29,7 @@ export const News: CollectionConfig = contentCollection({
   fields: [
     { name: 'title', type: 'text', required: true, maxLength: 200 },
     slugField(),
+    linkInsteadField(),
     {
       type: 'row',
       fields: [
@@ -33,7 +45,13 @@ export const News: CollectionConfig = contentCollection({
       relationTo: 'media',
       admin: { description: 'Shown on the news card and at the top of the story. Its description (alt text) is set in Media.' },
     },
-    { name: 'body', label: 'Story', type: 'richText', required: true },
+    {
+      name: 'body',
+      label: 'Story',
+      type: 'richText',
+      validate: requiredUnlessLink,
+      editor: lexicalEditor({ features: ({ defaultFeatures }) => [...defaultFeatures, BlocksFeature({ blocks: [HighlightsBlock] })] }),
+    },
     {
       name: 'photos',
       type: 'upload',
@@ -43,5 +61,6 @@ export const News: CollectionConfig = contentCollection({
     },
     attachmentsField(),
     relatedDocumentsField(),
+    relatedLinksField(),
   ],
 })

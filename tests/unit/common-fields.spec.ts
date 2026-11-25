@@ -12,7 +12,8 @@ test('links must be full https addresses; empty is allowed', () => {
 })
 
 test('slide and settings links: a page of this site or an https address', async () => {
-  const { validateSiteLink, validateMapEmbed } = await import('../../src/globals/SiteSettings')
+  const { validateMapEmbed } = await import('../../src/globals/SiteSettings')
+  const { validateSiteLink } = await import('../../src/fields/common')
   for (const ok of ['/about-ogserc', '/regulatory-instruments/forms#reg-01a', 'https://example.org/a']) expect(validateSiteLink(ok), ok).toBe(true)
   for (const bad of ['', '//evil.example', '/About', 'javascript:alert(1)', 'http://example.org', '/a b']) {
     expect(validateSiteLink(bad), bad).not.toBe(true)
@@ -30,4 +31,16 @@ test('gallery videos: YouTube or Vimeo over https only', async () => {
   for (const bad of ['', 'http://www.youtube.com/watch?v=abc', 'https://youtube.com.evil.example/x', 'https://example.org/video.mp4', 'nonsense']) {
     expect(validateVideoUrl(bad), bad).not.toBe(true)
   }
+})
+
+test('rich text counts as written only with words or a block in it', async () => {
+  const { hasRichText, requiredUnlessLink } = await import('../../src/fields/common')
+  const para = (text: string) => ({ root: { children: [{ type: 'paragraph', children: [{ type: 'text', text }] }] } })
+  expect(hasRichText(para('Hello'))).toBe(true)
+  expect(hasRichText(para('   '))).toBe(false)
+  expect(hasRichText({ root: { children: [{ type: 'block', fields: {} }] } })).toBe(true)
+  expect(hasRichText(null)).toBe(false)
+  expect(requiredUnlessLink(para(''), { siblingData: { link: '/regulatory-instruments/forms' } })).toBe(true)
+  expect(requiredUnlessLink(para(''), { siblingData: {} })).not.toBe(true)
+  expect(requiredUnlessLink(para('Text'), { siblingData: {} })).toBe(true)
 })

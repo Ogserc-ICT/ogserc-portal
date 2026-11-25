@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
-import type { NewsPhoto } from '@/lib/news/news-articles'
+import type { NewsPhoto } from '@/lib/cms/content'
 
 const controlClasses =
   'inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-green-900/80 text-white hover:bg-green-700'

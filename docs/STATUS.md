@@ -66,7 +66,9 @@ Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3
 - Slice 3 (News, Announcements, Events, Tenders, D-092). PR #68 merged and deployed 2026-11-23.
 - Slice 4 (Reports, FAQs, Pages, Galleries, site settings, D-093). PR #69 merged and deployed 2026-11-23. The homepage
   switch moved to slice 5.
-- Slice 5a (`pnpm seed`, D-094): the development database is seeded (40 sample items).
+- Slice 5a (`pnpm seed`, D-094): PR #70 merged. The development database is seeded (40 sample items).
+- Admin import map fix (D-095): PR #71; CI now checks the types and import map are current.
+- Slice 5b (D-096): real content into the CMS by a data migration; pages read the CMS; `placeholder-content.ts` deleted.
 - Owner decisions (D-089): drafts with autosave on every content collection, so work resumes after a sign-out; uploaded
   files (images and documents) stay public, and the staff guide says not to upload anything confidential.
 - Hide admin controls that return 403 for editors (e.g. Publish on published documents).
@@ -75,9 +77,7 @@ Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-Step 4 slice 5a (`pnpm seed`, D-094) is on branch `feat/step-4-seed`. Then slice 5b (owner approved 2026-11-23): a data
-migration that puts OGSERC's real news story, public notice, homepage slides and contact details into the CMS in every
-database; an optional "link to" field on News and Announcements for homepage items that point at other pages; the homepage,
-footer, contact page and the news and notices pages reading the CMS (rich text rendered with Payload's own renderer);
-`placeholder-content.ts` deleted (About, History and Structure move to a file of their own until Step 5). Before and after
-screenshots for the owner before merging.
+Step 4 slice 5b (homepage and pages from the CMS, D-096) is on branch `feat/step-4-homepage-cms`, waiting for the owner's
+review of the before and after screenshots. After it is merged and deployed (the first start runs the content migration,
+about 30 seconds): check the homepage, a story, the notice and the contact page on the live site, then Step 4 is complete
+and Step 5 (static information pages) is next.

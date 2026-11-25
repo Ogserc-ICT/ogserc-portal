@@ -47,6 +47,9 @@ RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# The photographs the real-content migration uploads at first start (src/migrations/20261124_103400_real_content.ts,
+# D-096). Read once by the migration; pages are served from the CMS's copies.
+COPY --from=builder --chown=nextjs:nodejs /app/src/assets ./src/assets
 
 USER nextjs
 EXPOSE 3000

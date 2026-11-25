@@ -19,8 +19,8 @@ import {
   registrationGuide,
 } from '@/lib/forms/registration'
 import { hrefFor, routes } from '@/lib/navigation'
-import { REGISTRATION_NOTICE_SLUG, findNotice, noticeHref } from '@/lib/notices/public-notices'
-import { formsSubmission } from '@/lib/placeholder-content'
+import { contactDetails, findNotice, noticeHref } from '@/lib/cms/content'
+import { REGISTRATION_NOTICE_SLUG, formsSubmission } from '@/lib/forms/submission'
 
 const category = routes.forms
 const ORDER_PATH = routes.ordersAndDirectives.path
@@ -170,11 +170,15 @@ function SelectionGuide() {
 
 /**
  * The bank accounts from the registration notice, set apart from the guide's own text (it is not
- * part of Form REG-GUIDE) and placed before the rules at the owner's request (D-066).
+ * part of Form REG-GUIDE) and placed before the rules at the owner's request (D-066). Read from the
+ * notice in the CMS (D-096), so a correction there shows here too; left out if the notice is not
+ * published or has no accounts.
  */
-function PaymentDetails() {
-  const notice = findNotice(REGISTRATION_NOTICE_SLUG)
-  if (!notice) throw new Error(`Missing notice ${REGISTRATION_NOTICE_SLUG}`)
+async function PaymentDetails() {
+  const notice = await findNotice(REGISTRATION_NOTICE_SLUG)
+  const accounts = notice?.payment?.accounts ?? []
+  if (!notice || accounts.length === 0) return null
+  const issued = (notice.issuedDate ?? notice.postedDate).slice(0, 10)
   return (
     <section
       aria-labelledby="payment-details"
@@ -189,11 +193,11 @@ function PaymentDetails() {
           href={noticeHref(notice)}
           className="font-semibold text-green-700 underline underline-offset-4"
         >
-          public notice of {formatDate(notice.issuedDate)}
+          public notice of {formatDate(issued)}
         </Link>
         :
       </p>
-      <BankAccounts accounts={notice.payment.accounts} />
+      <BankAccounts accounts={accounts} />
     </section>
   )
 }
@@ -255,8 +259,9 @@ function FormEntry({ form }: { form: RegistrationForm }) {
   )
 }
 
-function HowToSubmit({ effectiveDate }: { effectiveDate?: string }) {
-  const { registry, email, officeHours, contactPerson } = formsSubmission
+async function HowToSubmit({ effectiveDate }: { effectiveDate?: string }) {
+  const { registry, email, contactPerson } = formsSubmission
+  const { officeHours } = await contactDetails()
   return (
     <section
       aria-labelledby="how-to-submit"

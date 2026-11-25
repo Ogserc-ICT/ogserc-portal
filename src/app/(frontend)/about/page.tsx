@@ -5,7 +5,7 @@ import { PageBand } from '@/components/layout/PageBand'
 import { Container } from '@/components/ui/Container'
 import { Icon } from '@/components/ui/Icon'
 import { routes } from '@/lib/navigation'
-import { aboutUs } from '@/lib/placeholder-content'
+import { aboutUs } from '@/lib/about/content'
 
 const page = routes.about
 

@@ -6,7 +6,7 @@ import { useEffect, useState, useSyncExternalStore, type FocusEvent } from 'reac
 import { ButtonLink } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
 import { Icon } from '@/components/ui/Icon'
-import type { HeroSlide } from '@/lib/placeholder-content'
+import type { HeroSlide } from '@/lib/cms/content'
 
 type Slide = HeroSlide & { image: StaticImageData }
 

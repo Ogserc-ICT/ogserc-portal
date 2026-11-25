@@ -5,7 +5,7 @@ import { Card, CardMedia } from '@/components/ui/Card'
 import { Container } from '@/components/ui/Container'
 import { byNewestFirst, formatDate } from '@/lib/format-date'
 import { routes } from '@/lib/navigation'
-import { latestUpdates } from '@/lib/placeholder-content'
+import { listNews } from '@/lib/cms/content'
 
 const page = routes.news
 
@@ -15,10 +15,11 @@ export const metadata: Metadata = {
 }
 
 /**
- * Media Center > News (D-068): the homepage's Latest updates, all of them, newest first. Build
- * step 9 replaces the list with the News collection (FR-NEWS-01).
+ * Media Center > News (D-068, D-096): every published item in the News collection (FR-NEWS-01),
+ * newest first. Build step 9 adds filters and pages of results.
  */
-export default function NewsPage() {
+export default async function NewsPage() {
+  const latestUpdates = await listNews()
   return (
     <>
       <PageBand

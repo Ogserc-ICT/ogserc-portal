@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
-import type { BankAccount } from '@/lib/notices/public-notices'
+/** A bank account as a notice prints it (Announcements' payment details, D-096). */
+export type BankAccount = { accountName: string; accountNumber: string; bank: string; description: string; amount: string }
 
 /**
  * OGSERC's bank accounts for registration fees, one card per account (a five-column table does not

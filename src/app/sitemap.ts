@@ -3,16 +3,18 @@ import type { MetadataRoute } from 'next'
 import { documentHref, documentsInCategory } from '@/lib/documents/catalogue'
 import { privacyPolicy, termsOfService } from '@/lib/legal/legal-pages'
 import { routes } from '@/lib/navigation'
-import { articleHref, newsArticles } from '@/lib/news/news-articles'
-import { noticeHref, publicNotices } from '@/lib/notices/public-notices'
+import { pagedItems } from '@/lib/cms/content'
 import { absoluteUrl } from '@/lib/site-url'
 
 /**
  * Every public page that exists, for search engines (D-078). Built from the same lists as the menu
  * and the pages themselves, so new content appears here without editing this file. Menu entries
- * that are not ready, and the "being prepared" and design-review pages, are left out.
+ * that are not ready, and the "being prepared" and design-review pages, are left out. Stories and
+ * notices come from the CMS, published ones with a page of their own only (D-049, D-096), so the
+ * sitemap is made when it is asked for.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const { news, notices } = await pagedItems()
   const pages = new Set<string>(['/', privacyPolicy.path, termsOfService.path])
   for (const route of Object.values(routes)) {
     if (route.ready) pages.add(route.path)
@@ -27,14 +29,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return [
     ...[...pages].map((path) => ({ url: absoluteUrl(path) })),
-    ...newsArticles.map((article) => ({
-      url: absoluteUrl(articleHref(article)),
-      lastModified: article.date,
-    })),
-    ...publicNotices.map((notice) => ({
-      url: absoluteUrl(noticeHref(notice)),
-      lastModified: notice.issuedDate,
-    })),
+    ...[...news, ...notices].map((item) => ({ url: absoluteUrl(item.path), lastModified: item.updatedAt })),
     ...documents,
   ]
 }

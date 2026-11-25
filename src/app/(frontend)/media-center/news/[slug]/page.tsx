@@ -9,56 +9,24 @@ import { buttonClasses } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
 import { Icon } from '@/components/ui/Icon'
 import { Panel } from '@/components/ui/Panel'
+import { RichText } from '@/components/content/RichText'
+import { findStory, storyPhotos } from '@/lib/cms/content'
 import { formatDate } from '@/lib/format-date'
 import { routes } from '@/lib/navigation'
-import {
-  type NewsArticle,
-  type StoryBlock,
-  findArticle,
-  newsArticles,
-} from '@/lib/news/news-articles'
+import type { News } from '@/payload-types'
 
 type Props = { params: Promise<{ slug: string }> }
 
-// Only the stories in the list exist; any other address is a 404.
-export const dynamicParams = false
-
-export function generateStaticParams() {
-  return newsArticles.map((article) => ({ slug: article.slug }))
-}
-
-async function load(params: Props['params']): Promise<NewsArticle> {
-  const article = findArticle((await params).slug)
-  if (!article) notFound()
-  return article
+// Published stories with a page of their own only (D-096); any other address is a 404.
+async function load(params: Props['params']): Promise<News> {
+  const story = await findStory((await params).slug)
+  if (!story) notFound()
+  return story
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const article = await load(params)
-  return { title: article.title, description: article.excerpt }
-}
-
-function Block({ block }: { block: StoryBlock }) {
-  if (block.kind === 'paragraph') return <p>{block.text}</p>
-  return (
-    <div className="rounded-lg border-l-4 border-gold-400 bg-green-50 p-5 sm:p-6">
-      <p className="font-semibold text-green-900">{block.intro}</p>
-      <ul className="mt-4 space-y-4">
-        {block.items.map((item) => (
-          <li key={item.term} className="flex gap-3">
-            <Icon
-              name="bolt"
-              className="mt-1.5 size-4 shrink-0 text-green-700"
-              fill="currentColor"
-            />
-            <span>
-              <strong className="font-semibold text-green-900">{item.term}:</strong> {item.text}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
+  const story = await load(params)
+  return { title: story.title, description: story.summary }
 }
 
 /**
@@ -67,7 +35,9 @@ function Block({ block }: { block: StoryBlock }) {
  */
 export default async function NewsArticlePage({ params }: Props) {
   const article = await load(params)
-  const [lead, ...gallery] = article.photos
+  const photos = storyPhotos(article)
+  const [lead, ...gallery] = photos
+  const date = article.publishedDate.slice(0, 10)
 
   return (
     <>
@@ -84,7 +54,7 @@ export default async function NewsArticlePage({ params }: Props) {
       >
         <p className="mt-6 inline-flex items-center gap-1.5 text-sm text-green-50">
           <Icon name="calendar" className="size-4" />
-          <time dateTime={article.date}>{formatDate(article.date)}</time>
+          <time dateTime={date}>{formatDate(date)}</time>
         </p>
       </PageBand>
 
@@ -104,11 +74,7 @@ export default async function NewsArticlePage({ params }: Props) {
               />
             ) : null}
 
-            <div className="space-y-6 p-5 text-lg leading-relaxed sm:p-8">
-              {article.body.map((block, i) => (
-                <Block key={i} block={block} />
-              ))}
-            </div>
+            <RichText data={article.body} className="space-y-6 p-5 text-lg leading-relaxed sm:p-8" />
 
             {gallery.length > 0 ? (
               <section
@@ -132,12 +98,12 @@ export default async function NewsArticlePage({ params }: Props) {
                 <div className="flex justify-between gap-4">
                   <dt className="text-ink-muted">Published</dt>
                   <dd className="text-right font-semibold">
-                    <time dateTime={article.date}>{formatDate(article.date)}</time>
+                    <time dateTime={date}>{formatDate(date)}</time>
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-ink-muted">Photos</dt>
-                  <dd className="text-right font-semibold">{article.photos.length}</dd>
+                  <dd className="text-right font-semibold">{photos.length}</dd>
                 </div>
               </dl>
               {gallery.length > 0 ? (

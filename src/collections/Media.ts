@@ -63,5 +63,9 @@ export const Media: CollectionConfig = {
     staticDir: process.env.MEDIA_DIR || 'media',
     // Exact types only: no wildcard, no SVG. Payload also checks these against the content.
     mimeTypes: [...IMAGE_MIME_TYPES],
+    // A smaller copy for cards and galleries (D-095), made only where sharp can run. On OGSERC's VPS
+    // (IMAGE_PROCESSING=off, D-056) none is made and pages use the original, which staff resize
+    // before uploading (D-082's option A).
+    imageSizes: [{ name: 'card', width: 640, withoutEnlargement: true }],
   },
 }
