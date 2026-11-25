@@ -13,6 +13,8 @@ import * as migration_20261124_081246_step4_links_payments from './20261124_0812
 import * as migration_20261124_103335_step4_notice_issued_under from './20261124_103335_step4_notice_issued_under';
 import * as migration_20261124_103400_real_content from './20261124_103400_real_content';
 import * as migration_20261125_090000_repair_content_photos from './20261125_090000_repair_content_photos';
+import * as migration_20261125_135837_step5_about_global from './20261125_135837_step5_about_global';
+import * as migration_20261125_135900_about_content from './20261125_135900_about_content';
 
 export const migrations = [
   {
@@ -78,7 +80,7 @@ export const migrations = [
   {
     up: migration_20261124_103335_step4_notice_issued_under.up,
     down: migration_20261124_103335_step4_notice_issued_under.down,
-    name: '20261124_103335_step4_notice_issued_under'
+    name: '20261124_103335_step4_notice_issued_under',
   },
   {
     up: migration_20261124_103400_real_content.up,
@@ -89,5 +91,15 @@ export const migrations = [
     up: migration_20261125_090000_repair_content_photos.up,
     down: migration_20261125_090000_repair_content_photos.down,
     name: '20261125_090000_repair_content_photos',
+  },
+  {
+    up: migration_20261125_135837_step5_about_global.up,
+    down: migration_20261125_135837_step5_about_global.down,
+    name: '20261125_135837_step5_about_global',
+  },
+  {
+    up: migration_20261125_135900_about_content.up,
+    down: migration_20261125_135900_about_content.down,
+    name: '20261125_135900_about_content',
   },
 ];

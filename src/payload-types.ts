@@ -117,9 +117,11 @@ export interface Config {
   fallbackLocale: null;
   globals: {
     'site-settings': SiteSetting;
+    'about-ogserc': AboutOgserc;
   };
   globalsSelect: {
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
+    'about-ogserc': AboutOgsercSelect<false> | AboutOgsercSelect<true>;
   };
   locale: null;
   widgets: {
@@ -827,6 +829,7 @@ export interface AuditLog {
         | 'pages'
         | 'galleries'
         | 'site-settings'
+        | 'about-ogserc'
         | 'e2e-drafts'
       )
     | null;
@@ -1592,6 +1595,133 @@ export interface SiteSetting {
   createdAt?: string | null;
 }
 /**
+ * The four About OGSERC pages. Changes show on the site straight away.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "about-ogserc".
+ */
+export interface AboutOgserc {
+  id: number;
+  aboutUs: {
+    /**
+     * One or two sentences shown under the page’s title in search results for About Us.
+     */
+    description: string;
+    introduction?:
+      | {
+          text: string;
+          id?: string | null;
+        }[]
+      | null;
+    whatWeDo?:
+      | {
+          title: string;
+          icon:
+            | 'licence'
+            | 'scales'
+            | 'bolt'
+            | 'eye'
+            | 'megaphone'
+            | 'document'
+            | 'register'
+            | 'question'
+            | 'calendar'
+            | 'clock'
+            | 'mapPin'
+            | 'phone'
+            | 'mail';
+          text: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  history: {
+    /**
+     * One or two sentences shown under the page’s title in search results for Our History.
+     */
+    description: string;
+    paragraphs?:
+      | {
+          text: string;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Shown as a timeline beside the story, in this order.
+     */
+    keyDates?:
+      | {
+          /**
+           * As it should read, for example "30 September 2024".
+           */
+          date: string;
+          text: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  mission: {
+    /**
+     * One or two sentences shown under the page’s title in search results for Vision, Mission and Values.
+     */
+    description: string;
+    vision: string;
+    mission: string;
+    /**
+     * Each card shows the value’s first letter, so the letters spell PRIDE in this order.
+     */
+    values?:
+      | {
+          name: string;
+          text: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  structure: {
+    /**
+     * One or two sentences shown under the page’s title in search results for OGSERC’s Structure.
+     */
+    description: string;
+    introduction?:
+      | {
+          text: string;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Read before the organogram; it describes the chart in words for anyone who cannot see it.
+     */
+    organogramNote: string;
+    office: {
+      name: string;
+      units?:
+        | {
+            name: string;
+            id?: string | null;
+          }[]
+        | null;
+    };
+    /**
+     * The divisions under the Chairman / CEO, left to right.
+     */
+    divisions?:
+      | {
+          name: string;
+          units?:
+            | {
+                name: string;
+                id?: string | null;
+              }[]
+            | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site-settings_select".
  */
@@ -1645,6 +1775,101 @@ export interface SiteSettingsSelect<T extends boolean = true> {
         actionContext?: T;
         actionLink?: T;
         id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "about-ogserc_select".
+ */
+export interface AboutOgsercSelect<T extends boolean = true> {
+  aboutUs?:
+    | T
+    | {
+        description?: T;
+        introduction?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+            };
+        whatWeDo?:
+          | T
+          | {
+              title?: T;
+              icon?: T;
+              text?: T;
+              id?: T;
+            };
+      };
+  history?:
+    | T
+    | {
+        description?: T;
+        paragraphs?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+            };
+        keyDates?:
+          | T
+          | {
+              date?: T;
+              text?: T;
+              id?: T;
+            };
+      };
+  mission?:
+    | T
+    | {
+        description?: T;
+        vision?: T;
+        mission?: T;
+        values?:
+          | T
+          | {
+              name?: T;
+              text?: T;
+              id?: T;
+            };
+      };
+  structure?:
+    | T
+    | {
+        description?: T;
+        introduction?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+            };
+        organogramNote?: T;
+        office?:
+          | T
+          | {
+              name?: T;
+              units?:
+                | T
+                | {
+                    name?: T;
+                    id?: T;
+                  };
+            };
+        divisions?:
+          | T
+          | {
+              name?: T;
+              units?:
+                | T
+                | {
+                    name?: T;
+                    id?: T;
+                  };
+              id?: T;
+            };
       };
   updatedAt?: T;
   createdAt?: T;

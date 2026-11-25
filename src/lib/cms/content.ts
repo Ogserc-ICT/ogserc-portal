@@ -6,7 +6,7 @@ import { cache } from 'react'
 
 import { mediaPath } from '@/lib/media-path'
 import { routes } from '@/lib/navigation'
-import type { Announcement, Media, News, SiteSetting } from '@/payload-types'
+import type { AboutOgserc, Announcement, Media, News, SiteSetting } from '@/payload-types'
 
 // What public pages read from the CMS (D-096). Every query runs as a visitor (`overrideAccess:
 // false` and no user), so only published items ever come back (D-049); never pass a request's
@@ -161,6 +161,9 @@ export const pagedItems = cache(async () => {
 
 /** The site settings (contact details, footer, slides). Public. */
 export const siteSettings = cache(async (): Promise<SiteSetting> => (await cms()).findGlobal({ slug: 'site-settings', ...PUBLIC, depth: 1 }))
+
+/** The About OGSERC pages' text (D-098). Public. */
+export const aboutOgserc = cache(async (): Promise<AboutOgserc> => (await cms()).findGlobal({ slug: 'about-ogserc', ...PUBLIC, depth: 0 }))
 
 /** The homepage slides, with their photographs. */
 export async function heroSlides(): Promise<HeroSlide[]> {
