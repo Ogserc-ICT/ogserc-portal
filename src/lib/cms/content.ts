@@ -51,10 +51,18 @@ const PUBLIC = { overrideAccess: false } as const
 /**
  * Payload, once the page is being made for a visitor. `connection()` keeps Next.js from making the
  * page in advance at build time, when there is no database (Dockerfile); pages are made per visit.
+ *
+ * Its own instance (`key`), never the default one the admin panel and API use. The production
+ * build bundles pages and route handlers separately, each with its own copy of Payload, while
+ * getPayload caches on a process-wide global (D-051). If a page started the shared instance first,
+ * the API's errors would be this copy's classes, Payload's error formatting in the route copy
+ * would not recognise them (`instanceof`), and replies would lose their details, for example the
+ * password rules on the admin's create-first-user form (caught by CI, D-096). The migrations have
+ * run at boot, so this instance's start applies none.
  */
 async function cms() {
   await connection()
-  return getPayload({ config })
+  return getPayload({ config, key: 'public-pages' })
 }
 
 /** YYYY-MM-DD, as the site's date helpers expect. */
