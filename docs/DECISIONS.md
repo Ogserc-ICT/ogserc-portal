@@ -1713,6 +1713,12 @@ Shared field builders (`src/fields/common.ts`) keep dates, attachments, related 
 
 **Tested:** unit tests (arguments, confirmation, refusal, every title marked, one draft per collection, all eleven categories, the files pass the upload checks); on the development database, a first run added 40 items and a second added none.
 
+## D-095 The admin import map is regenerated, and CI checks it (2026-11-23)
+
+**Problem:** Step 4 slices 2 to 4 added rich-text fields (a document's full text, a story, a notice's text, page text, FAQ answers) and ran `pnpm generate:types` but not `pnpm generate:importmap`. The admin panel finds the rich-text editor's components through the import map, so without them those fields showed no editor on the live admin panel (deployed 2026-11-23). Nothing else was affected; no content was lost (there was none yet).
+
+**Decision:** the import map is regenerated (the rich-text editor's components added), and CI's lint job now runs `pnpm generate:types` and `pnpm generate:importmap` and fails if either file differs from the committed one. Both are generated without S3 settings, as in CI; the S3 adapter's client upload handler is not needed, because client uploads are off (D-086).
+
 ## D-096 The homepage, news, notices and contact details come from the CMS (2026-11-24)
 
 **Decision (owner approved the approach on 2026-11-23):** Step 4 slice 5b moves the real content that sat in code into the CMS and switches the pages that show it:
