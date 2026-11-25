@@ -1734,3 +1734,14 @@ Shared field builders (`src/fields/common.ts`) keep dates, attachments, related 
 **Tested:** the full main suite (desktop and 360px, with axe) against a test database holding only the migrations, as in CI; `tests/e2e-db/public-pages.spec.ts`: drafts on no public page, not at their own address and not in the sitemap; a published story shows without a deploy; an editor's draft of a published story leaves the public text unchanged; the real content is present. Unit tests for the link check and the "text or link" rule.
 
 **Watch:** the first start after this deploy runs the migration, which uploads 11 photographs to the bucket; it took about 30 seconds against the hosted development database. A deploy that fails half way leaves photographs in the bucket without records; running it again is safe.
+
+## D-097 The content migration's photographs are repaired on the live site (2026-11-25)
+
+**Problem:** after D-096 was deployed, the owner saw that many photographs had changed. Checked from outside: the records were right (file names, sizes and descriptions), but ten of the eleven files in the bucket were copies of the first slide's photograph. With S3 storage, the storage plugin keeps the first file of a request in `req.context._payloadCloudStorage` and, for every later upload in the same request (the migration uploads all eleven in one), falls back to it (`getIncomingFiles`). Without S3 (development, CI) files go to disk directly, so no test saw it.
+
+**Decision:**
+- A repair migration, `20261125_090000_repair_content_photos`, uploads each original from `src/assets/` again over its own record, under the same file name (`overwriteExistingFiles`), clearing the plugin's saved file before each. Only the content migration's records are touched (file name and description both match); a photo staff have replaced or deleted is left alone. Pages, links and staff edits are unchanged.
+- The content migration clears the saved file before each upload too, so a fresh database (for example after a move to another host) never gets the copies.
+- **Rule for any future migration or script that uploads several files in one request:** clear `req.context._payloadCloudStorage`, `req.file` and `req.payloadUploadSizes` before each upload.
+
+**Checked:** on the development database (local files), the repair ran and the files match the originals byte for byte. After the deploy, every live photograph is compared with its original from outside (sha256), the check that found the problem. Staff did not need to upload anything again.

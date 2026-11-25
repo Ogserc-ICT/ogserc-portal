@@ -81,6 +81,17 @@ const CONSULTATION_CARD: Photo = {
   alt: 'Cover pages of consultation paper OGSERC/CP/2026/001 and the draft Order',
 }
 
+/**
+ * The S3 storage plugin keeps the first file of a request in `req.context` and reuses it for every
+ * later upload in the same request, so without this every photo after the first was stored as a
+ * copy of the first in the bucket (2026-11-25, D-097). Without S3 (CI, development) it did not show.
+ */
+function forgetPreviousUpload(req: PayloadRequest) {
+  if (req.context) delete (req.context as Record<string, unknown>)._payloadCloudStorage
+  req.file = undefined
+  req.payloadUploadSizes = undefined
+}
+
 async function image(api: Api, req: PayloadRequest, photo: Photo): Promise<Id> {
   // Reused only if it is this migration's own upload (same file name and description), never a
   // staff upload that happens to share the file name. A new upload of a taken name gets a new one.
@@ -93,6 +104,7 @@ async function image(api: Api, req: PayloadRequest, photo: Photo): Promise<Id> {
     req,
   })
   if (docs[0]) return docs[0].id as Id
+  forgetPreviousUpload(req)
   return (await api.create({ collection: 'media', data: { alt: photo.alt }, filePath: path.join(ASSETS, photo.file), req })).id
 }
 
