@@ -1,6 +1,6 @@
 # Project status
 
-Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3-plan.md`).
+Updated 2026-11-25. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3-plan.md`).
 
 ## Where things stand
 - **Steps 1, 2 and 2b** are merged. The live preview at `https://ogserc.org.ng` runs on OGSERC's VPS (D-054), with
@@ -67,8 +67,11 @@ Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3
 - Slice 4 (Reports, FAQs, Pages, Galleries, site settings, D-093). PR #69 merged and deployed 2026-11-23. The homepage
   switch moved to slice 5.
 - Slice 5a (`pnpm seed`, D-094): PR #70 merged. The development database is seeded (40 sample items).
-- Admin import map fix (D-095): PR #71; CI now checks the types and import map are current.
-- Slice 5b (D-096): real content into the CMS by a data migration; pages read the CMS; `placeholder-content.ts` deleted.
+- Admin import map fix (D-095): PR #71 merged; CI now checks the types and import map are current.
+- Slice 5b (D-096): PR #72 merged and deployed 2026-11-25. The content migration ran on the live site; checked from
+  outside: homepage slides and lists, the NERC story and photos (served from the bucket), the registration notice with both
+  bank accounts, the Notices page (five notices), the Forms page's accounts, the contact page and the sitemap.
+- **Step 4 is complete.**
 - Owner decisions (D-089): drafts with autosave on every content collection, so work resumes after a sign-out; uploaded
   files (images and documents) stay public, and the staff guide says not to upload anything confidential.
 - Hide admin controls that return 403 for editors (e.g. Publish on published documents).
@@ -77,7 +80,6 @@ Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
 ## Exact next step
-Step 4 slice 5b (homepage and pages from the CMS, D-096) is on branch `feat/step-4-homepage-cms`, waiting for the owner's
-review of the before and after screenshots. After it is merged and deployed (the first start runs the content migration,
-about 30 seconds): check the homepage, a story, the notice and the contact page on the live site, then Step 4 is complete
-and Step 5 (static information pages) is next.
+Step 5 (static information pages: About, Consumer Complaint landing, Contact, legal pages). Read the SRS sections, propose a
+plan and wait for approval. It includes moving the About OGSERC text (`src/lib/about/content.ts`) into the CMS (RUNBOOK
+Section 11), and deciding which pages read their text from the Pages collection.
