@@ -194,7 +194,8 @@ test('a file over the 25 MB upload ceiling is refused while it is read', async (
 })
 
 test('rejected uploads leave nothing behind', async () => {
-  const response = await admin.get('/api/media')
+  // Only this file's uploads (all described "[Test] image"); the content migration adds OGSERC's own (D-096).
+  const response = await admin.get(`/api/media?where[alt][equals]=${encodeURIComponent('[Test] image')}&limit=0`)
   // The PNG, the three real files and the image just under 10 MB; none of the rejected ones.
   expect(((await response.json()) as { totalDocs: number }).totalDocs).toBe(1 + REAL_FILES.length + 1)
 })
