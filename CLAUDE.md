@@ -10,7 +10,7 @@ Do NOT build, scaffold, or add placeholder code for Phase 2 or 3 features (publi
 
 ## Reference and design process
 
-- Reference screenshots live in `docs/reference/` (benchmark site structure and the OGSERC logo). Use them for layout and structure only; never copy the benchmark's branding, images, text, or code.
+- Benchmark screenshots were removed when the repository became public (D-099); the OGSERC logo is in `public/brand/`. If benchmark screenshots are needed again, keep them outside the repository. Use them for layout and structure only; never copy the benchmark's branding, images, text, or code.
 - Build the design system (Tailwind theme, buttons, cards, forms, navigation) and the homepage first, and stop for OGSERC's review before building other pages.
 - Use the seed script (`pnpm seed`) to load clearly marked placeholder content for every content type so pages can be reviewed. Placeholder text must read like "[Sample, OGSERC to supply]". Never invent real regulatory content.
 
@@ -85,6 +85,8 @@ Rules for anything that moves or responds to the pointer (SRS FR-WEB-08 to FR-WE
 
 ## Security and data rules
 
+- The repository is public (D-099). Commit nothing that is not fit to publish: no secrets, personal data, unpublished or draft regulatory documents (keep files such as `docs/source/` drafts local until OGSERC publishes them), or other organisations' material.
+
 - Never commit secrets. Use environment variables; keep `.env.example` current with placeholder values only.
 - Validate all form input on the server. Add spam protection and rate limiting to the contact form.
 - Restrict file uploads by type and size.
@@ -95,7 +97,7 @@ Rules for anything that moves or responds to the pointer (SRS FR-WEB-08 to FR-WE
 - Check file uploads by content type and size, store them outside the app code, and never execute them.
 - Never log passwords, tokens, payment data, or complaint/whistleblowing content. Never show stack traces to users.
 - Never ask for, print, or paste real secrets in chat or code. If a secret appears anywhere, say so and tell the user to rotate it.
-- Never commit screenshots of terminals, dashboards, hosting or account settings, browser developer tools, or anything that shows secrets, connection strings, tokens, email addresses or other personal data. The only intended images are the site's own assets (`public/`, `src/assets/`), design-review captures of our own pages (`docs/design-review/`) and benchmark layout references (`docs/reference/`). Open and check every image before committing it, including those, and crop or blank anything personal (for example a logged-in name on a benchmark page). If a sensitive image was committed, say so: removing it needs a history rewrite, and anything it showed must be treated as exposed.
+- Never commit screenshots of terminals, dashboards, hosting or account settings, browser developer tools, or anything that shows secrets, connection strings, tokens, email addresses or other personal data. The only intended images are the site's own assets (`public/`, `src/assets/`) and design-review captures of our own pages (`docs/design-review/`). Open and check every image before committing it, including those, and crop or blank anything personal (for example a logged-in name on a benchmark page). If a sensitive image was committed, say so: removing it needs a history rewrite, and anything it showed must be treated as exposed.
 - Enforce authorisation on the server for every collection and endpoint, not only in the UI.
 - Payload's Local API skips access control by default. Every query that feeds a public page, search or the sitemap must pass `overrideAccess: false` or filter explicitly to published documents. Use `overrideAccess: true` only in trusted server code (hooks, seed, migrations), never with values taken from the request. Step 4 must include a test proving a draft never appears on a public page, in search or in the sitemap (docs/DECISIONS.md D-049).
 - Every collection that uses `canSaveContent` also needs the `guardPublishedContent` hook, and every new `allowAll` must be added to the list in `tests/unit/config-access.spec.ts` and D-049 with its reason.
@@ -123,7 +125,7 @@ The site must be movable to any host that runs Node.js or Docker (a VPS, Railway
 4. Add or update a Playwright test for each user-facing flow you build.
 5. Update `README.md` and `docs/RUNBOOK.md` when setup, deployment, or operations change.
 6. If a requirement is ambiguous or conflicts with the SRS, ask instead of guessing.
-7. Work on a branch and open a pull request for each slice; do not commit directly to `main`. Every CI check (lint, typecheck, dependency audit, build, Playwright with axe accessibility, secret scan, Docker build) must be green before merging. GitHub does not enforce this on the current plan, so it is a rule to follow, not a setting (see docs/RUNBOOK.md Section 2).
+7. Work on a branch and open a pull request for each slice; do not commit directly to `main`. Every CI check (lint, typecheck, dependency audit, build, Playwright with axe accessibility, secret scan, Docker build) must be green before merging. GitHub enforces this with branch protection (administrators can bypass it in an emergency only; docs/RUNBOOK.md Section 2).
 8. Record important technical choices and the reasons in `docs/DECISIONS.md`.
 9. Include privacy-friendly analytics, a legal-pages footer (Privacy Policy and Terms of Service; cookies are a section of the Privacy Policy, docs/DECISIONS.md D-074), and PDF text extraction for search, as specified in the SRS.
 10. Update `docs/STATUS.md` at the end of each session: what was committed (with hashes), the latest CI results, open owner and OGSERC items, and the exact next step. Start each session by reading it.

@@ -156,7 +156,7 @@ Update 2026-10-29, two advisories published overnight, both ignored because noth
 
 ## D-018 Repository stays under the developer's account; account recovery documented (2026-10-09)
 
-**Decision:** Follows D-017. The repository stays under the `thekamiyeoladipo` GitHub account, which owns every file in `.github/CODEOWNERS`. The repository documentation no longer assumes it will move to an OGSERC organisation. `docs/RUNBOOK.md` gains Section 9, "Account access and recovery": an account register (GitHub, hosting, database, domain registrar, DNS/CDN, file storage, email sending, receiving mailbox, monitoring, analytics, and the payment provider for Phase 3), with placeholders for account holders, administrators, and where credentials are stored, plus recovery and move steps for each account. NFR-SEC-14 in the SRS is reworded for readability; its meaning is unchanged.
+**Superseded by D-099 (2026-11-26).** **Decision:** Follows D-017. The repository stays under the `thekamiyeoladipo` GitHub account, which owns every file in `.github/CODEOWNERS`. The repository documentation no longer assumes it will move to an OGSERC organisation. `docs/RUNBOOK.md` gains Section 9, "Account access and recovery": an account register (GitHub, hosting, database, domain registrar, DNS/CDN, file storage, email sending, receiving mailbox, monitoring, analytics, and the payment provider for Phase 3), with placeholders for account holders, administrators, and where credentials are stored, plus recovery and move steps for each account. NFR-SEC-14 in the SRS is reworded for readability; its meaning is unchanged.
 
 **Why:** Once ownership is no longer required (D-017), the SRS requires that access and recovery steps be recorded instead (Section 2.2, NFR-HOST-01, acceptance criterion 7). The register uses placeholders only: no passwords, keys, or recovery codes are kept in the repository (NFR-SEC-10).
 
@@ -1754,3 +1754,15 @@ Shared field builders (`src/fields/common.ts`) keep dates, attachments, related 
 - **How the text got in:** `20261125_135900_about_content`, a data migration reading a frozen copy (`src/migrations/data/about-2026-11.ts`) of `src/lib/about/content.ts` and the pages' descriptions and organogram note, word for word. It fills the global only while it is empty, so it never replaces what staff wrote. `src/lib/about/content.ts` is deleted (RUNBOOK Section 11).
 
 **Tested:** the About tests (desktop and 360px, with axe) read the same text from the CMS; `tests/e2e-db/content-collections.spec.ts`: visitors read the global, an editor cannot change it, a publisher's change shows on the page and is in the audit log.
+
+## D-099 The repository moved to OGSERC's organisation and is public (2026-11-26)
+
+**Problem:** on 2026-11-25 GitHub stopped running CI: the private repository on the owner's personal account had used more than the free plan's 2,000 Actions minutes a month (each run takes about 20 billable minutes across its jobs; November had about 150 runs), the overage ($12.52) was billed, and the payment failed. Nobody had set a budget, and the docs did not warn that CI could cost money.
+
+**Decision (owner, 2026-11-25 and 26):**
+- The repository moved from the owner's personal account to OGSERC's **`Ogserc-ICT`** organisation (it belongs to OGSERC; D-017's "stays on the personal account" is replaced), and the owner made it **public**: CI on public repositories uses no paid minutes. The charge stays with the personal account: the owner was given a waiver request for GitHub Support and the steps to set a $0 Actions budget there.
+- **Branch protection is now enforced on `main`** (RUNBOOK 2.5): a pull request, with the five CI checks required, no required approvals (one reviewer, who cannot approve their own pull request), no force pushes or deletion; administrators can bypass it in an emergency only. This replaces "a rule to follow, not a setting" (D-019); the pre-push hook, the Claude Code deny rules and the gitleaks job stay.
+- **What being public means:** anyone can read the code, the docs and the full history. Before and after the move: the gitleaks job scans every commit on every run and has always passed; no real IP addresses were ever committed; the benchmark screenshots were removed from `docs/reference/` (copies remain in old history, not worth a history rewrite for layout references); commit author emails in history are visible (owner informed). Nothing that is not fit to publish is committed from now on (CLAUDE.md): in particular, draft OGSERC documents stay local until published, and the draft Customer Service Standards regulation is in `.gitignore`.
+- The server's copy now fetches from the new address (`git remote set-url`; the read-only deploy key moved with the repository); first deploy from it on 2026-11-26.
+
+**If it is ever made private again:** set a $0 Actions budget with "stop usage" first, and expect CI to stop part-way through busy months.

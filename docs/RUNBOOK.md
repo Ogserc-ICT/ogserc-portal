@@ -29,20 +29,23 @@ Every setting comes from environment variables. The full list, with explanations
 
 ## 2. Protecting `main` and scanning for secrets
 
-The repository is private and on GitHub's free personal plan. On that plan, **GitHub does not enforce branch protection and does not offer secret scanning for private repositories.** NFR-OPS-01 and NFR-SEC-10 allow for this. Until the plan changes, `main` is protected by the rule, the hook, the Claude Code settings and the CI checks below, and secrets are caught by a scanner in CI (D-019 in `docs/DECISIONS.md`).
+The repository is **public**, in OGSERC's `Ogserc-ICT` organisation on GitHub's free plan (D-099). Public repositories get CI minutes, branch protection and secret scanning free, so since 2026-11-26 **GitHub enforces the rule below** (Section 2.5), and the hook, the Claude Code settings and the gitleaks job stay as extra layers (D-019). Anyone can read the code and its history: never commit anything that is not fit to publish (CLAUDE.md, Security and data rules).
 
 ### 2.1 The rule
 
 **Nothing is pushed directly to `main`.** Every change goes on a branch, then through a pull request, and is merged only when every CI check is green.
 
-> **GitHub will not stop you.** On this plan, the *Merge pull request* button works even when checks are failing or still running. **You must wait until every check shows a green tick before merging.** A red or yellow check means do not merge.
+> **GitHub enforces this.** The *Merge pull request* button stays disabled until every check below is green. Administrators can bypass the rule; do that only in a real emergency (for example GitHub's checks are down), and record why in the pull request or `docs/DECISIONS.md`.
 
 The checks that must all be green on every pull request:
 
-- `Lint, typecheck, audit`
+- `Lint, typecheck, unit tests, audit`
 - `Build and end-to-end tests (Playwright + axe)`
-- `Secret scan (gitleaks)`
+- `Builds and serves without sharp (VPS workaround)`
 - `Docker image builds`
+- `Secret scan (gitleaks)`
+
+A new or renamed CI job must be added to the branch protection rule too (Section 2.5), or it is not required.
 
 ### 2.2 Local pre-push hook (install once per clone)
 
@@ -67,21 +70,21 @@ The `Secret scan (gitleaks)` CI job scans the **entire commit history** with [gi
 
 If it fails:
 
-1. Treat the secret as leaked, even though the repository is private. **Rotate it first** (create a new key or password with the provider and revoke the old one), then update the environment variables where it is used.
+1. Treat the secret as leaked: the repository is public. **Rotate it first** (create a new key or password with the provider and revoke the old one), then update the environment variables where it is used.
 2. Remove it from the code. Because the scan covers history, a later commit that deletes the secret does not clear the check. Ask for help to rewrite the branch history before merging.
 3. If the finding is a false positive (not a real secret), add `gitleaks:allow` as a comment on that line, or add the finding's fingerprint (shown in the CI log) to a `.gitleaksignore` file, and explain it in the pull request.
 
 **Upgrading gitleaks:** Dependabot does not update it. To upgrade, change `GITLEAKS_VERSION` in `.github/workflows/ci.yml` and replace `GITLEAKS_SHA256` with the `linux_x64.tar.gz` line from that release's `checksums.txt`.
 
-### 2.5 GitHub settings that do work on the free plan
+### 2.5 GitHub settings
 
 Do these once, and again if the repository is transferred to another account (see Section 9):
 
-1. **Dependabot.** Settings → Advanced Security (or Code security) → turn on *Dependabot alerts* and *Dependabot security updates*. Version updates are already configured in `.github/dependabot.yml`.
-2. **Account security.** Turn on two-factor authentication for every GitHub account with access to the repository.
-3. **Keep the repository private.** Settings → General → Danger Zone should show *Change visibility: private*.
-
-**If the plan is upgraded** (or the repository moves to an organisation plan that supports these features): add a branch ruleset for `main` (Settings → Rules → Rulesets) that requires a pull request and all four checks above, blocks force pushes, and restricts deletion. Turn on GitHub secret scanning and push protection too. Keep the gitleaks job. Record the change in `docs/DECISIONS.md`.
+1. **Branch protection for `main`** (set on 2026-11-26). Settings → Branches → rule for `main`: *Require a pull request before merging* with **no required approvals** (GitHub does not let you approve your own pull request, and there is one reviewer); *Require status checks to pass* with the five checks in Section 2.1 (not *up to date*); force pushes and deletion not allowed; *Do not allow bypassing* left off, so an administrator can merge in an emergency. Check it with `gh api repos/Ogserc-ICT/ogserc-portal/branches/main/protection`.
+2. **Secret scanning.** Settings → Advanced Security (or Code security) → turn on *Secret Protection* (secret scanning) and *Push protection*. Keep the gitleaks job as well.
+3. **Dependabot.** In the same place, turn on *Dependabot alerts* and *Dependabot security updates*. Version updates are already configured in `.github/dependabot.yml`.
+4. **Account security.** Turn on two-factor authentication for every GitHub account with access, and require it for the organisation's members (organisation Settings → Authentication security).
+5. **Actions spending.** CI on a public repository uses no paid minutes. If the repository is ever made private again, set a $0 Actions budget with *Stop usage when budget limit is reached* first (Billing and licensing → Budgets and alerts), because CI uses about 20 minutes a run and the free plan has 2,000 a month (D-099).
 
 ## 3. Database migrations
 
@@ -330,7 +333,7 @@ cat ~/.ssh/github_deploy.pub
 Add the printed public key in GitHub: repository Settings, Deploy keys, Add deploy key, leaving "Allow write access" off. Then:
 ```sh
 printf 'Host github.com\n  IdentityFile ~/.ssh/github_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config && chmod 600 ~/.ssh/config
-git clone git@github.com:thekamiyeoladipo/ogserc-portal.git /opt/ogserc
+git clone git@github.com:Ogserc-ICT/ogserc-portal.git /opt/ogserc
 ```
 
 **E. The server's `.env`** (as `deploy`). The secrets are generated on the server and never displayed. Replace the `ACME_EMAIL` value with a shared OGSERC IT mailbox.
@@ -618,7 +621,7 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 
 | Account | Used for | Provider | Account holder | Administrators | Credentials stored in | Status |
 |---|---|---|---|---|---|---|
-| GitHub | Source code, CI, Dependabot | GitHub | `thekamiyeoladipo` (personal account) | `<name>`, `<name>` | `<password manager / vault>` | Active |
+| GitHub | Source code, CI, Dependabot | GitHub | `Ogserc-ICT` organisation (public repository, D-099) | `<name>`, `<name>` | `<password manager / vault>` | Active |
 | Hosting | Runs the website | `<Vercel or Docker host>` | `<account / team name>` | `<name>`, `<name>` | `<password manager / vault>` | Step 13 |
 | Database | PostgreSQL (dev branch, staging, production) | `<Neon / Supabase / other>` | `<account / project name>` | `<name>`, `<name>` | `<password manager / vault>` | Dev in use |
 | Domain registrar | Domain name registration | `<registrar>` | `<account>` | `<name>`, `<name>` | `<password manager / vault>` | `<domain to be confirmed>` |
@@ -639,7 +642,7 @@ Required by SRS Section 2.2 and NFR-HOST-01. The accounts behind the site may be
 
 **GitHub**
 - Recover: sign in with recovery codes, or use GitHub's account recovery from the sign-in page.
-- Move: Settings → General → Danger Zone → *Transfer ownership* to another user or organisation. Issues, pull requests, and history move with it. Afterwards, update `.github/CODEOWNERS`, check that the repository is still private, redo the GitHub settings in Section 2.5, and run `pnpm hooks:install` in any new clone (Section 2.2). If the new account's plan supports branch rulesets and secret scanning, turn them on as described at the end of Section 2.5.
+- Move: Settings → General → Danger Zone → *Transfer ownership* to another user or organisation. Issues, pull requests, and history move with it. Afterwards, update `.github/CODEOWNERS`, redo the GitHub settings in Section 2.5, point the server's copy at the new address (`git remote set-url origin` in `/opt/ogserc`; the read-only deploy key moves with the repository), and run `pnpm hooks:install` in any new clone (Section 2.2).
 
 **Hosting**
 - Recover: through another member of the hosting team or project, or the provider's recovery process.
