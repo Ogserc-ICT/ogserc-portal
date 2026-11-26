@@ -75,7 +75,7 @@ OGSERC's identity (supplied by OGSERC) is used throughout the site.
 
 ### 2.5 Design process and approvals
 
-- Reference screenshots of the benchmark site and the OGSERC logo are stored in `docs/reference/` and used for **layout and structure only**.
+- Reference screenshots of the benchmark site are used for **layout and structure only**. They are kept outside the repository, which is public (D-099); the OGSERC logo is in `public/brand/`.
 - The design system (colours, typography, spacing, buttons, cards, forms) and the **homepage** are built and approved by OGSERC before any other page is built.
 - OGSERC shall approve in writing, before the build starts: this SRS (scope and phases), the sitemap (Section 4), and the brand (Section 2.4). Later changes to scope go through a short written change note.
 

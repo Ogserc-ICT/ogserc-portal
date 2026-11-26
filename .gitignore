@@ -36,3 +36,6 @@ npm-debug.log*
 
 # Files the owner hands over for checking before they are placed in the site (never committed)
 /incoming/
+
+# Draft OGSERC documents not yet published (the repository is public, D-099)
+docs/source/OGSERC_Customer_Service_Standards_and_Protection_Regulation_2026.docx
