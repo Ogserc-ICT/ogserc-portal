@@ -21,6 +21,7 @@ import { Reports } from './collections/Reports'
 import { Tenders } from './collections/Tenders'
 import { TEST_COLLECTIONS, testCollectionsEnabled } from './collections/test'
 import { Users } from './collections/Users'
+import { AboutOgserc } from './globals/AboutOgserc'
 import { SiteSettings } from './globals/SiteSettings'
 import { twoFactor } from './lib/auth/two-factor'
 import { noSendEmail } from './lib/email/no-send'
@@ -79,7 +80,7 @@ export const portalConfig = async ({
       },
     },
     collections: [Users, Documents, News, Announcements, Events, Tenders, Reports, Galleries, Faqs, Pages, Media, DocumentFiles, AuditLog, RateLimits, ...(withTestCollections ? TEST_COLLECTIONS : [])],
-    globals: [SiteSettings],
+    globals: [SiteSettings, AboutOgserc],
     editor: lexicalEditor(),
     // Scheduled publishing (FR-CMS-04, D-090): the admin panel queues a job; the server's cron job
     // runs due jobs through /api/payload-jobs/run with JOBS_RUN_SECRET (deploy/run-jobs.sh). There is

@@ -4,18 +4,17 @@ import { AboutNav } from '@/components/layout/AboutNav'
 import { PageBand } from '@/components/layout/PageBand'
 import { Container } from '@/components/ui/Container'
 import { hrefFor, routes } from '@/lib/navigation'
-import { ourHistory } from '@/lib/about/content'
+import { aboutOgserc } from '@/lib/cms/content'
 
 const page = routes.history
 
-export const metadata: Metadata = {
-  title: page.label,
-  description:
-    'How the Ogun State Electricity Regulatory Commission was established, from the Electricity Act, 2023 to the Ogun State Power Law, 2024.',
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: page.label, description: (await aboutOgserc()).history.description }
 }
 
 /** SRS Section 4 "Our History" (D-064): the story, then its key dates. */
-export default function HistoryPage() {
+export default async function HistoryPage() {
+  const { history } = await aboutOgserc()
   return (
     <>
       <PageBand
@@ -32,8 +31,8 @@ export default function HistoryPage() {
       <div className="bg-green-50 py-12 sm:py-16">
         <Container className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="max-w-3xl space-y-5 text-lg leading-relaxed">
-            {ourHistory.paragraphs.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
+            {(history.paragraphs ?? []).map((paragraph, n) => (
+              <p key={paragraph.id ?? n}>{paragraph.text}</p>
             ))}
           </div>
 
@@ -43,8 +42,8 @@ export default function HistoryPage() {
             </h2>
             <span aria-hidden="true" className="mt-3 block h-1 w-12 rounded-full bg-gold-400" />
             <ol className="mt-6 border-l-2 border-green-700">
-              {ourHistory.keyDates.map((item) => (
-                <li key={item.date} className="relative pb-6 pl-6 last:pb-0">
+              {(history.keyDates ?? []).map((item, n) => (
+                <li key={item.id ?? n} className="relative pb-6 pl-6 last:pb-0">
                   <span
                     aria-hidden="true"
                     className="absolute top-1.5 -left-[7px] size-3 rounded-full bg-gold-400 ring-2 ring-green-700"

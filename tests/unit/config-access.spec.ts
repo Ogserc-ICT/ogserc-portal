@@ -17,6 +17,7 @@ import configPromise, { portalConfig } from '../../src/payload.config'
 const ALLOW_ALL_USES: Record<string, string> = {
   'media.read': 'Images are only ever used on public pages (see docs/DECISIONS.md for Step 4 drafts).',
   'site-settings.read': 'Contact details, office hours, social links and slides are on every public page (D-093).',
+  'about-ogserc.read': 'The About OGSERC pages are public, and the global has no drafts (D-098).',
   'document-files.read': 'Uploaded document files are public from upload, by the owner’s choice (D-089, D-090).',
 }
 

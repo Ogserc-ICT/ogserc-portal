@@ -146,6 +146,24 @@ test.describe('site settings (D-093)', () => {
     expect(entry?.details?.fields).toContain('footerSummary')
   })
 
+  test('About OGSERC (D-098): visitors read it, editors cannot change it, a publisher’s change shows on the page and is logged', async () => {
+    expect((await visitor.get('/api/globals/about-ogserc')).status()).toBe(200)
+    expect((await editor.post('/api/globals/about-ogserc', { data: { mission: { vision: '[Test] by an editor' } } })).status()).toBe(403)
+    const original = (await (await publisher.get('/api/globals/about-ogserc?depth=0')).json()) as { mission: Record<string, unknown> }
+    const vision = `[Test] vision ${unique()}`
+    try {
+      const saved = await publisher.post('/api/globals/about-ogserc', { data: { mission: { ...original.mission, vision } } })
+      expect(saved.status(), await saved.text()).toBe(200)
+      expect(await (await visitor.get('/about/mission')).text()).toContain(vision)
+      const log = await admin.get('/api/audit-log?where[targetType][equals]=about-ogserc&sort=-createdAt&limit=1&depth=0')
+      const [entry] = ((await log.json()) as { docs: { action?: string; details?: { fields?: string[] } }[] }).docs
+      expect(entry?.action).toBe('settings.updated')
+      expect(entry?.details?.fields).toEqual(['mission'])
+    } finally {
+      await publisher.post('/api/globals/about-ogserc', { data: { mission: original.mission } })
+    }
+  })
+
   test('a slide button cannot link to another site over plain http or a script', async () => {
     for (const actionLink of ['http://example.org', 'javascript:alert(1)', '//evil.example']) {
       const response = await publisher.post('/api/globals/site-settings', {

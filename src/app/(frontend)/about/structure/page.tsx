@@ -5,17 +5,21 @@ import { AboutNav } from '@/components/layout/AboutNav'
 import { PageBand } from '@/components/layout/PageBand'
 import { Container } from '@/components/ui/Container'
 import { hrefFor, routes } from '@/lib/navigation'
-import { ogsercStructure } from '@/lib/about/content'
+import { aboutOgserc } from '@/lib/cms/content'
+import type { AboutOgserc } from '@/payload-types'
 
 const page = routes.structure
 
-export const metadata: Metadata = {
-  title: page.label,
-  description:
-    'How the Ogun State Electricity Regulatory Commission is organised: its Commissioners, its five divisions and its organogram.',
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: page.label, description: (await aboutOgserc()).structure.description }
 }
 
 type Division = { name: string; units: string[] }
+
+const toDivision = ({ name, units }: { name: string; units?: AboutOgserc['structure']['office']['units'] }): Division => ({
+  name,
+  units: (units ?? []).map((unit) => unit.name),
+})
 
 const anchorFor = (name: string): string =>
   name
@@ -24,8 +28,10 @@ const anchorFor = (name: string): string =>
     .replace(/^-|-$/g, '')
 
 /** SRS Section 4 "OGSERC's Structure" (D-064): the text OGSERC supplied, then the organogram. */
-export default function StructurePage() {
-  const { introduction, officeOfTheChairman, divisions } = ogsercStructure
+export default async function StructurePage() {
+  const structure = (await aboutOgserc()).structure
+  const officeOfTheChairman = toDivision(structure.office)
+  const divisions = (structure.divisions ?? []).map(toDivision)
   // The text lists the Office of the Chairman last; the organogram draws it beside the Chairman.
   const allDivisions = [...divisions, officeOfTheChairman]
 
@@ -45,8 +51,8 @@ export default function StructurePage() {
       <div className="bg-green-50 py-12 sm:py-16">
         <Container className="space-y-12">
           <div className="max-w-3xl space-y-5 text-lg leading-relaxed">
-            {introduction.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
+            {(structure.introduction ?? []).map((paragraph, n) => (
+              <p key={paragraph.id ?? n}>{paragraph.text}</p>
             ))}
             <ul className="list-disc space-y-1 pl-6">
               {allDivisions.map((division) => (
@@ -67,11 +73,7 @@ export default function StructurePage() {
               Organogram
             </h2>
             <span aria-hidden="true" className="mt-3 block h-1 w-12 rounded-full bg-gold-400" />
-            <p className="mt-4 max-w-3xl text-ink-muted">
-              The Commission sits at the top, with the Chairman / CEO under it. Internal Audit,
-              Public Affairs and Stakeholder, and Registry sit with the Chairman / CEO. The four
-              divisions below each hold the units listed under them.
-            </p>
+            <p className="mt-4 max-w-3xl text-ink-muted">{structure.organogramNote}</p>
             <Organogram office={officeOfTheChairman} divisions={divisions} />
           </section>
         </Container>

@@ -1745,3 +1745,12 @@ Shared field builders (`src/fields/common.ts`) keep dates, attachments, related 
 - **Rule for any future migration or script that uploads several files in one request:** clear `req.context._payloadCloudStorage`, `req.file` and `req.payloadUploadSizes` before each upload.
 
 **Checked:** on the development database (local files), the repair ran and the files match the originals byte for byte. After the deploy, every live photograph is compared with its original from outside (sha256), the check that found the problem. Staff did not need to upload anything again.
+
+## D-098 The About OGSERC pages come from the CMS (2026-11-25)
+
+**Decision (owner approved the Step 5 plan on 2026-11-25, `docs/step-5-plan.md`):** the four About OGSERC pages (About Us, Our History, Vision, Mission and Values, OGSERC's Structure) read an **About OGSERC** global (`src/globals/AboutOgserc.ts`), one tab per page, with fields that match each page's layout: paragraphs, the "What we do" cards (title, text and an icon chosen from a list), the key dates, the PRIDE values, the organogram's description in words, the office beside the Chairman / CEO, and the divisions with their units. Each page's search engine description is a field too. Section headings ("What we do", "Key dates", "Our values: PRIDE", "Organogram") stay in code.
+- **Why fields and not one rich-text box:** the approved layouts (cards, timeline, organogram) are drawn from the parts; a free-form box would lose them, or let an edit break them.
+- **Why a global without drafts:** like the site settings (D-093), it is one set of text that is always public. Publishers and administrators change it (editors cannot), each change shows straight away, it is in the audit log (`settings.updated`, target "About OGSERC pages"), and the last 50 versions are kept, so a change can be undone from the admin panel. Read access is `allowAll`, listed in the access audit.
+- **How the text got in:** `20261125_135900_about_content`, a data migration reading a frozen copy (`src/migrations/data/about-2026-11.ts`) of `src/lib/about/content.ts` and the pages' descriptions and organogram note, word for word. It fills the global only while it is empty, so it never replaces what staff wrote. `src/lib/about/content.ts` is deleted (RUNBOOK Section 11).
+
+**Tested:** the About tests (desktop and 360px, with axe) read the same text from the CMS; `tests/e2e-db/content-collections.spec.ts`: visitors read the global, an editor cannot change it, a publisher's change shows on the page and is in the audit log.

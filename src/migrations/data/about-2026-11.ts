@@ -1,9 +1,6 @@
-// The About OGSERC pages' text, as supplied by OGSERC (D-061, D-064). Moved out of
-// placeholder-content.ts when the homepage moved to the CMS (D-096). Build step 5 (static information
-// pages) decides how staff edit it; until then it is a TEMPORARY EXCEPTION to "content is edited in
-// the CMS", listed in docs/RUNBOOK.md Section 11.
-
-import type { IconName } from '@/components/ui/Icon'
+// A frozen copy of the About OGSERC pages' text as it stood in src/lib/about/content.ts on
+// 2026-11-25, as supplied by OGSERC (D-061, D-064). 20261125_135900_about_content puts it into the
+// About OGSERC global (D-098). Never edit: the migration must put in the same text wherever it runs.
 
 /** Vision, mission and values (PRIDE), as supplied by OGSERC on 2026-10-29 (D-061). */
 export const visionMissionValues = {
@@ -61,9 +58,6 @@ export const aboutUs = {
       text: 'We make the regulations, codes and standards that govern safety, technical operations and commercial conduct in the market.',
     },
   ],
-} satisfies {
-  introduction: string[]
-  whatWeDo: { title: string; icon: IconName; text: string }[]
 }
 
 /**
@@ -137,4 +131,16 @@ export const ogsercStructure = {
       units: ['Market Analysis', 'Tariff and Rates', 'Policy Planning and Innovation', 'Research'],
     },
   ],
+}
+
+/** Read before the organogram (it was in the Structure page's code). */
+export const organogramNote =
+  'The Commission sits at the top, with the Chairman / CEO under it. Internal Audit, Public Affairs and Stakeholder, and Registry sit with the Chairman / CEO. The four divisions below each hold the units listed under them.'
+
+/** The pages' search engine descriptions (they were in each page's code). */
+export const descriptions = {
+  aboutUs: 'Who the Ogun State Electricity Regulatory Commission is, and what it does for consumers and investors in Ogun State.',
+  history: 'How the Ogun State Electricity Regulatory Commission was established, from the Electricity Act, 2023 to the Ogun State Power Law, 2024.',
+  mission: 'The vision, mission and values (PRIDE) of the Ogun State Electricity Regulatory Commission.',
+  structure: 'How the Ogun State Electricity Regulatory Commission is organised: its Commissioners, its five divisions and its organogram.',
 }
