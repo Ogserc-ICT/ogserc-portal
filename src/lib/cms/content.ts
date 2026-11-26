@@ -6,7 +6,7 @@ import { cache } from 'react'
 
 import { mediaPath } from '@/lib/media-path'
 import { routes } from '@/lib/navigation'
-import type { AboutOgserc, Announcement, Media, News, SiteSetting } from '@/payload-types'
+import type { AboutOgserc, Announcement, Media, News, Page, SiteSetting } from '@/payload-types'
 
 // What public pages read from the CMS (D-096). Every query runs as a visitor (`overrideAccess:
 // false` and no user), so only published items ever come back (D-049); never pass a request's
@@ -142,6 +142,12 @@ export const findNotice = cache(async (slug: string): Promise<Announcement | nul
     limit: 1,
     depth: 0,
   })
+  return docs[0] ?? null
+})
+
+/** A published information page (the Pages collection) by its web address, or null (D-100). */
+export const findPage = cache(async (slug: string): Promise<Page | null> => {
+  const { docs } = await (await cms()).find({ collection: 'pages', ...PUBLIC, where: { slug: { equals: slug } }, limit: 1, depth: 0 })
   return docs[0] ?? null
 })
 

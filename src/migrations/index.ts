@@ -15,6 +15,8 @@ import * as migration_20261124_103400_real_content from './20261124_103400_real_
 import * as migration_20261125_090000_repair_content_photos from './20261125_090000_repair_content_photos';
 import * as migration_20261125_135837_step5_about_global from './20261125_135837_step5_about_global';
 import * as migration_20261125_135900_about_content from './20261125_135900_about_content';
+import * as migration_20261126_182624_step5_pages_last_updated from './20261126_182624_step5_pages_last_updated';
+import * as migration_20261126_182700_legal_pages from './20261126_182700_legal_pages';
 
 export const migrations = [
   {
@@ -101,5 +103,15 @@ export const migrations = [
     up: migration_20261125_135900_about_content.up,
     down: migration_20261125_135900_about_content.down,
     name: '20261125_135900_about_content',
+  },
+  {
+    up: migration_20261126_182624_step5_pages_last_updated.up,
+    down: migration_20261126_182624_step5_pages_last_updated.down,
+    name: '20261126_182624_step5_pages_last_updated',
+  },
+  {
+    up: migration_20261126_182700_legal_pages.up,
+    down: migration_20261126_182700_legal_pages.down,
+    name: '20261126_182700_legal_pages',
   },
 ];

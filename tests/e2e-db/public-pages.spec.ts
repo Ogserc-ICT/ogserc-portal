@@ -96,6 +96,22 @@ test('after an editor saves a draft of a published story, the public still sees 
   expect(story.body).not.toContain('Unpublished change')
 })
 
+test('the legal pages come from the CMS (D-100); an editor’s draft of one leaves the public text unchanged', async () => {
+  const before = await html('/privacy-policy')
+  expect(before.status).toBe(200)
+  expect(before.body).toContain('We do not sell your personal information to anyone.')
+  expect(before.body).toContain('Last updated: November 2026')
+  expect((await html('/terms-of-service')).body).toContain('If you do not agree, please do not use the platform.')
+
+  const { docs } = (await (await publisher.get('/api/pages?where[slug][equals]=privacy-policy&depth=0')).json()) as { docs: { id: number }[] }
+  const draft = `[Test] Unpublished policy change ${tag}`
+  const response = await editor.patch(`/api/pages/${docs[0]!.id}?draft=true&depth=0`, { data: { title: draft, body: text(draft) } })
+  expect(response.status()).toBe(200)
+  const after = await html('/privacy-policy')
+  expect(after.body).toContain('We do not sell your personal information to anyone.')
+  expect(after.body).not.toContain(draft)
+})
+
 test('the real content is there: the NERC story, the registration notice and the contact details', async () => {
   const story = await html('/media-center/news/ogserc-visits-nerc')
   expect(story.status).toBe(200)

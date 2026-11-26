@@ -748,6 +748,10 @@ export interface Page {
    * Optional: shown under the title, and in search results and link previews.
    */
   summary?: string | null;
+  /**
+   * Optional: shown under the title as "Last updated: …", for example "November 2026". Used by the legal pages (D-100).
+   */
+  lastUpdated?: string | null;
   body: {
     root: {
       type: string;
@@ -1356,6 +1360,7 @@ export interface PagesSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
   summary?: T;
+  lastUpdated?: T;
   body?: T;
   updatedAt?: T;
   createdAt?: T;
