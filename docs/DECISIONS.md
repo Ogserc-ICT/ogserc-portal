@@ -1754,3 +1754,12 @@ Shared field builders (`src/fields/common.ts`) keep dates, attachments, related 
 - **How the text got in:** `20261125_135900_about_content`, a data migration reading a frozen copy (`src/migrations/data/about-2026-11.ts`) of `src/lib/about/content.ts` and the pages' descriptions and organogram note, word for word. It fills the global only while it is empty, so it never replaces what staff wrote. `src/lib/about/content.ts` is deleted (RUNBOOK Section 11).
 
 **Tested:** the About tests (desktop and 360px, with axe) read the same text from the CMS; `tests/e2e-db/content-collections.spec.ts`: visitors read the global, an editor cannot change it, a publisher's change shows on the page and is in the audit log.
+
+## D-100 The Privacy Policy and Terms of Service come from the CMS (2026-11-26)
+
+**Decision (Step 5 slice 2, `docs/step-5-plan.md`):** the two legal pages (FR-WEB-06, D-074) read their text from **Pages** entries with the web addresses `privacy-policy` and `terms-of-service`, so staff change them in the admin panel like any content: drafts with autosave, a publisher publishes, every change is in the audit log and version history. Pages gains a **Last updated** field (shown under the title as "Last updated: …"); the summary is the search engine description. The pages' addresses and titles stay in `src/lib/legal/legal-pages.ts` for the footer and the sitemap; if a page is unpublished, its address answers "not found", never a draft.
+- **How the text got in:** `20261126_182700_legal_pages`, a data migration reading a frozen copy (`src/migrations/data/legal-2026-11.ts`), word for word: each numbered section becomes a heading, then its paragraphs and bullet list; the "Contact Us" line links the contact email from the site settings at the time the migration runs (info@ogserc.org.ng). It adds a page only if none has its address.
+- **One difference from before:** the email in "Contact Us" was read from the site settings on every visit; it is now a link in the text, so if the contact email changes, staff change it on these two pages too.
+- **Look:** drawn by the site's rich-text converter, with the legal pages' larger section headings and spacing kept by a `.legal-text` rule in `globals.css`.
+
+**Tested:** the legal page tests (desktop and 360px, with axe; the same headings, quote, date and email link) against the CMS text; `tests/e2e-db/public-pages.spec.ts`: the pages come from the CMS, and an editor's unpublished change leaves the public text unchanged.

@@ -162,3 +162,15 @@ html:has(.lightbox[open]) .back-to-top {
     transition: none;
   }
 }
+
+/* Legal pages (D-100): CMS text drawn as the hand-built pages were, with larger section headings
+   and more room between sections than in a news story. */
+.legal-text > h2 {
+  font-size: var(--text-2xl);
+  line-height: var(--text-2xl--line-height);
+  padding-top: 1.5rem;
+}
+
+.legal-text > h2:first-child {
+  padding-top: 0;
+}

@@ -17,7 +17,7 @@ FR-WEB-06 with D-074 (Privacy Policy and Terms of Service; cookies are a section
    office beside the Chairman / CEO, the divisions and their units). A data migration puts today's text in word for word;
    `src/lib/about/content.ts` is deleted.
 2. **Legal pages into the CMS.** The Privacy Policy and Terms of Service become Pages entries with a "last updated"
-   field, filled word for word by a migration. The Cookies section's placeholder stays until OGSERC supplies its text.
+   field, filled word for word by a migration (D-100). (The Cookies section already has approved text, D-077.)
 3. **Consumer Complaint landing page** at `/consumer-complaint` (FR-CON-01/02), information only (the complaint portal is
    Phase 2): rights and obligations, how to complain and how complaints escalate, what to include, service standards,
    billing, disconnection and reconnection, safety, FAQs on the topic, and contacts (the complaints email from the site
