@@ -8,7 +8,7 @@ export function LegalPageView({ page }: { page: Page }) {
   return (
     <>
       <PageBand breadcrumbs={[{ label: page.title }]} eyebrow="Legal" titleId="page-title" title={page.title}>
-        {page.lastUpdated && <p className="mt-4 text-green-50">Last updated: {page.lastUpdated}</p>}
+        {page.lastUpdated && <p className="mt-4 text-green-50">{`Last updated: ${page.lastUpdated}`}</p>}
       </PageBand>
 
       <div className="bg-green-50 py-12 sm:py-16">
