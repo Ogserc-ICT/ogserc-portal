@@ -27,7 +27,7 @@ test.describe('Consultation listing', () => {
     const paper = cards.filter({ hasText: 'OGSERC/CP/2026/001' })
     await expect(paper.getByRole('link', { name: PAPER_TITLE })).toHaveAttribute('href', PAPER)
     await expect(paper.getByText('16 November 2026')).toBeVisible()
-    await expect(paper.getByText('Comments by 30 November 2026')).toBeVisible()
+    await expect(paper.getByText('Comments by 7 December 2026')).toBeVisible()
     await expect(paper.getByText('PDF, 1.0 MB, 24 pages')).toBeVisible()
     const draft = cards.filter({ hasText: 'Draft Order' })
     await expect(draft.getByRole('link', { name: DRAFT_TITLE })).toHaveAttribute('href', DRAFT)
@@ -58,8 +58,8 @@ test.describe('Consultation documents', () => {
     await page.goto(PAPER)
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(PAPER_TITLE)
     const say = page.getByRole('region', { name: 'Have your say' })
-    await expect(say.getByText('30 November 2026')).toBeVisible()
-    await expect(say.getByText('3 December 2026, Abeokuta')).toBeVisible()
+    await expect(say.getByText('7 December 2026')).toBeVisible()
+    await expect(say.getByText('16 December 2026, Abeokuta')).toBeVisible()
     await expect(say.getByText(SUBJECT)).toBeVisible()
     await expect(say.getByRole('link', { name: 'info@ogserc.org.ng' })).toHaveAttribute(
       'href',
@@ -83,7 +83,7 @@ test.describe('Consultation documents', () => {
     await expect(details.getByText('Draft Order', { exact: true })).toBeVisible()
     await expect(details.getByText('OGSERC/ORD/2026/[●] (draft)')).toBeVisible()
     await expect(page.getByRole('region', { name: 'Have your say' })).toContainText(
-      '30 November 2026',
+      '7 December 2026',
     )
     await expect(
       page

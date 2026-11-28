@@ -4,8 +4,8 @@ import type { Consultation, RegulatoryDocument } from './types'
 
 // Consultation paper OGSERC/CP/2026/001: document control table, "How to respond" and "Hearing".
 const CP_2026_001: Consultation = {
-  closingDate: '2026-11-30',
-  hearing: { date: '2026-12-03', place: 'Abeokuta' },
+  closingDate: '2026-12-07',
+  hearing: { date: '2026-12-16', place: 'Abeokuta' },
   email: 'info@ogserc.org.ng',
   address: 'The Secretary to the Commission, OGSERC, Floor 5, OPIC Towers, Oke-Ilewo, Abeokuta',
   subjectLine: 'Response to CP/2026/001: Regularization of Distribution in the Areas',
