@@ -3,6 +3,7 @@ import { type JSXConvertersFunction, RichText as PayloadRichText } from '@payloa
 import Link from 'next/link'
 
 import { Icon } from '@/components/ui/Icon'
+import { headingId, plainText } from '@/lib/cms/outline'
 import { safeHref } from '@/lib/safe-href'
 
 // Rich text from the CMS (D-096), drawn with Payload's own converter (no new library) in the site's
@@ -37,7 +38,9 @@ const converters: JSXConvertersFunction = ({ defaultConverters }) => ({
   heading: ({ node, nodesToJSX }) => {
     const children = nodesToJSX({ nodes: node.children })
     if (node.tag === 'h3' || node.tag === 'h4') return <h3 className="text-lg font-bold text-green-900 sm:text-xl">{children}</h3>
-    return <h2 className="pt-4 text-xl font-bold text-green-900 first:pt-0 sm:text-2xl">{children}</h2>
+    // The id lets an "On this page" list link here (outlineOf, D-101).
+    const id = headingId(plainText(node)) || undefined
+    return <h2 id={id} className="scroll-mt-6 pt-4 text-xl font-bold text-green-900 first:pt-0 sm:text-2xl">{children}</h2>
   },
   list: ({ node, nodesToJSX }) => {
     const children = nodesToJSX({ nodes: node.children })

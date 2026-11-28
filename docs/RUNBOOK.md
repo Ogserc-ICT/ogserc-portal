@@ -708,6 +708,7 @@ Build step 2 added temporary placeholders so OGSERC could review the design befo
 - [x] `src/lib/placeholder-content.ts` deleted; all homepage content comes from the CMS (done in step 4 slice 5b, D-096).
 - [x] `src/lib/about/content.ts` deleted: the About OGSERC pages' text (About Us, History, Mission, Structure) is in the CMS, so staff can change it (step 5 slice 1, D-098).
 - [ ] No text containing "OGSERC to supply" on any page (search the site and the database).
+- [ ] The Consumer Complaint page (Pages entry `consumer-complaint`) checked against the approved Customer Service Standards and Protection Regulations and published, with its safety advice supplied (D-101). Until then `/consumer-complaint` says "This section is being prepared".
 - [x] The `ink` colour set to `#483A16`, sampled from OGSERC's full logo lockup (D-033). Re-run the checks if OGSERC supplies an exact brand value.
 - [x] Crest placeholder replaced with the Ogun State crest image (step 2b).
 - [x] Hero photographs supplied (step 2b, D-037).

@@ -34,7 +34,8 @@ export const routes = {
   licences: pending('Licences', '/licences'),
   faqs: pending('FAQs', '/faqs'),
   search: pending('Search', '/search'),
-  consumerComplaint: pending('Consumer Complaint', '/consumer-complaint'),
+  // The page itself shows "This section is being prepared" until its CMS text is published (D-101).
+  consumerComplaint: { label: 'Consumer Complaint', path: '/consumer-complaint', ready: true },
   regulatoryInstruments: pending('Regulatory Instruments', '/regulatory-instruments'),
   energyCaps: pending('Energy Caps', '/regulatory-instruments/energy-caps'),
   forms: { label: 'Forms', path: '/regulatory-instruments/forms', ready: true },
@@ -171,7 +172,7 @@ export const footerQuickLinks: ResolvedLink[] = [
   pending('Regulatory Framework', '/regulatory-instruments'),
   routes.energyCaps,
   pending('Licences & Permits', '/licences'),
-  pending('Consumer Complaints', '/consumer-complaint'),
+  { ...routes.consumerComplaint, label: 'Consumer Complaints' },
   pending('News & Updates', '/media-center/news'),
 ].map(resolve)
 

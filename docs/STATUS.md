@@ -1,6 +1,6 @@
 # Project status
 
-Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3-plan.md`).
+Updated 2026-11-27. Plan for Step 5: `docs/step-5-plan.md` (Step 4: `docs/step-4-plan.md`).
 
 ## Where things stand
 - **Steps 1, 2 and 2b** are merged. The live preview at `https://ogserc.org.ng` runs on OGSERC's VPS (D-054), with
@@ -36,7 +36,8 @@ Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3
   lists before merging #17. Payload 3.92.1 ships undici 7.30.1, so the undici override can go then (D-012).
 - The image "option A" decision (pre-optimise images while the VPS lacks SSE4.2; revisit hosting before launch) is still to be
   recorded as D-082.
-- `docs/source/OGSERC_Customer_Service_Standards_and_Protection_Regulation_2026.docx` is untracked: probably the next content item.
+- `docs/source/OGSERC_Customer_Service_Standards_and_Protection_Regulation_2026.docx` stays untracked (a draft regulation; D-101).
+- PR #73 (Step 4 STATUS) is out of date, branched before Step 5; this file replaces it, so it can be closed.
 - How the contact form sends email: OGSERC's Microsoft 365 (SMTP AUTH on one mailbox) or a sending service (D-059).
 - OGSERC to confirm: the slide 2 and 3 headlines, the contact page introduction and department descriptions, the weekend
   closure, and the sitemap wording change (D-061) at sign-off.
@@ -76,8 +77,17 @@ Updated 2026-11-23. Plan for Step 4: `docs/step-4-plan.md` (Step 3: `docs/step-3
 - Watch the drafts test's second `payload run` in CI (time, silent exits: D-047).
 - The S3 storage adapter (D-013) could use the same Backblaze account as the off-server backups (D-080), with its own bucket and key.
 
+## Step 5 notes
+- Slice 1 (About OGSERC global, D-098): PR #75 merged, deployed and checked live 2026-11-26.
+- Slice 2 (Privacy Policy and Terms of Service from Pages, D-100): PR #77 (`4fde606`, fix `ee2a70a`) merged as `c1aec15`,
+  deployed and checked live 2026-11-27.
+- Slice 3 (Consumer Complaint, D-101): branch `feat/step-5-consumer-complaint`. The text summarises OGSERC's **draft**
+  Customer Service Standards and Protection Regulations, 2026, and goes in **unpublished**; `/consumer-complaint` shows
+  "This section is being prepared" until a publisher publishes it.
+- Waiting on OGSERC: approval of the Regulations (then check the page against them and publish), the general safety advice
+  line, and the draft's inconsistencies listed in D-101.
+
 ## Exact next step
-Step 4 slice 5b (homepage and pages from the CMS, D-096) is on branch `feat/step-4-homepage-cms`, waiting for the owner's
-review of the before and after screenshots. After it is merged and deployed (the first start runs the content migration,
-about 30 seconds): check the homepage, a story, the notice and the contact page on the live site, then Step 4 is complete
-and Step 5 (static information pages) is next.
+Merge and deploy Step 5 slice 3 (its first start runs one data migration, `20261127_120000_consumer_complaint`), then check
+`/consumer-complaint` on the live site says "being prepared" and that the draft is in the admin panel under Pages. Step 5 is
+then complete and Step 6 (Regulatory Instruments: document listings, filters, detail pages, status handling) is next.

@@ -17,6 +17,7 @@ import * as migration_20261125_135837_step5_about_global from './20261125_135837
 import * as migration_20261125_135900_about_content from './20261125_135900_about_content';
 import * as migration_20261126_182624_step5_pages_last_updated from './20261126_182624_step5_pages_last_updated';
 import * as migration_20261126_182700_legal_pages from './20261126_182700_legal_pages';
+import * as migration_20261127_120000_consumer_complaint from './20261127_120000_consumer_complaint';
 
 export const migrations = [
   {
@@ -113,5 +114,10 @@ export const migrations = [
     up: migration_20261126_182700_legal_pages.up,
     down: migration_20261126_182700_legal_pages.down,
     name: '20261126_182700_legal_pages',
+  },
+  {
+    up: migration_20261127_120000_consumer_complaint.up,
+    down: migration_20261127_120000_consumer_complaint.down,
+    name: '20261127_120000_consumer_complaint',
   },
 ];

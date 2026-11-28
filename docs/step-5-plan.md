@@ -21,7 +21,9 @@ FR-WEB-06 with D-074 (Privacy Policy and Terms of Service; cookies are a section
 3. **Consumer Complaint landing page** at `/consumer-complaint` (FR-CON-01/02), information only (the complaint portal is
    Phase 2): rights and obligations, how to complain and how complaints escalate, what to include, service standards,
    billing, disconnection and reconnection, safety, FAQs on the topic, and contacts (the complaints email from the site
-   settings). Every section is edited in the CMS and starts as a placeholder. The menu entry goes live.
+   settings). Every section is edited in the CMS. The menu entry goes live. Done as D-101: the text summarises
+   OGSERC's draft Customer Service Standards and Protection Regulations, 2026, and stays unpublished until they are
+   approved.
 
 Each slice: Playwright tests at 360px and desktop with axe, a test that drafts never show (where the content has
 drafts), before and after screenshots for review, and the docs (DECISIONS, RUNBOOK, STATUS).

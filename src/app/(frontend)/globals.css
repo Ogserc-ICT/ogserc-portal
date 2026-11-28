@@ -174,3 +174,54 @@ html:has(.lightbox[open]) .back-to-top {
 .legal-text > h2:first-child {
   padding-top: 0;
 }
+
+/* Consumer Complaint page (D-101): section headings as on the legal pages, and its numbered list
+   (the complaint steps) drawn as numbered steps joined by a line. Plain CSS, no JavaScript. */
+.consumer-text > h2 {
+  font-size: var(--text-2xl);
+  line-height: var(--text-2xl--line-height);
+  padding-top: 1.5rem;
+}
+
+.consumer-text > h2:first-child {
+  padding-top: 0;
+}
+
+.consumer-text > ol {
+  counter-reset: step;
+  list-style: none;
+  padding-left: 0;
+}
+
+.consumer-text > ol > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 3.25rem;
+  padding-bottom: 0.75rem;
+}
+
+.consumer-text > ol > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background-color: var(--color-green-700);
+  color: var(--color-white);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.consumer-text > ol > li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: calc(1.125rem - 1px);
+  top: 2.5rem;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--color-line);
+}
