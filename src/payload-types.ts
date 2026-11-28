@@ -246,6 +246,10 @@ export interface Document {
    */
   fileDescription?: string | null;
   /**
+   * Optional: shown beside the file size, for example "PDF, 2.5 MB, 20 pages".
+   */
+  filePages?: number | null;
+  /**
    * Optional cover image for listings.
    */
   thumbnail?: (number | null) | Media;
@@ -1142,6 +1146,7 @@ export interface DocumentsSelect<T extends boolean = true> {
   description?: T;
   file?: T;
   fileDescription?: T;
+  filePages?: T;
   thumbnail?: T;
   body?: T;
   codeFamily?: T;

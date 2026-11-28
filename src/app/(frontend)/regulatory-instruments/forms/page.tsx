@@ -7,7 +7,7 @@ import { BankAccounts } from '@/components/notices/BankAccounts'
 import { Container } from '@/components/ui/Container'
 import { Icon } from '@/components/ui/Icon'
 import { buttonClasses } from '@/components/ui/Button'
-import { documentHref, findDocument } from '@/lib/documents/catalogue'
+import { documentHref, findDocument } from '@/lib/documents/store'
 import { formatDate } from '@/lib/format-date'
 import {
   FORM_VERSION,
@@ -36,9 +36,9 @@ export const metadata: Metadata = {
  * Regulatory Instruments > Forms (D-063): the selection guide as text, then forms A to K with one
  * Word download each, then how to submit. Static files until build step 4 (FR-DOC-01).
  */
-export default function FormsPage() {
-  const order = findDocument(ORDER_PATH, ORDER_SLUG)
-  if (!order) throw new Error(`Missing document ${ORDER_SLUG}`)
+export default async function FormsPage() {
+  // The Order, linked if it is published (D-102).
+  const order = await findDocument(ORDER_PATH, ORDER_SLUG)
 
   return (
     <>
@@ -56,9 +56,13 @@ export default function FormsPage() {
       >
         <p className="mt-4 max-w-2xl text-lg text-green-50">
           Registration forms under{' '}
-          <Link href={documentHref(order)} className="font-semibold underline underline-offset-4">
-            Order {order.reference}
-          </Link>
+          {order ? (
+            <Link href={documentHref(order)} className="font-semibold underline underline-offset-4">
+              Order {order.reference}
+            </Link>
+          ) : (
+            'Order OGSERC/ORD/2026/001'
+          )}
           : use the guide below to find your form, then download it.
         </p>
       </PageBand>
@@ -69,7 +73,7 @@ export default function FormsPage() {
           <div className="min-w-0 space-y-10">
             <SelectionGuide />
             <FormList />
-            <HowToSubmit effectiveDate={order.effectiveDate} />
+            <HowToSubmit effectiveDate={order?.effectiveDate} />
           </div>
         </Container>
       </div>

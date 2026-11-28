@@ -7,8 +7,8 @@ const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 const LIST = '/regulatory-instruments/consultation'
 const PAPER = `${LIST}/ogserc-cp-2026-001`
 const DRAFT = `${LIST}/draft-order-state-grid-and-ogem`
-const PAPER_PDF = '/documents/consultation/ogserc-cp-2026-001.pdf'
-const DRAFT_PDF = '/documents/consultation/draft-order-state-grid-and-ogem.pdf'
+const PAPER_PDF = '/api/document-files/file/OGSERC-CP-2026-001.pdf'
+const DRAFT_PDF = '/api/document-files/file/OGSERC-Draft-Order-State-Grid-and-OGEM.pdf'
 const PAPER_TITLE =
   'Regularization of Unlicensed Electricity Distribution in the Sagamu Interchange, Ota and Agbara Areas, and Gas Supply for Embedded Generation'
 const DRAFT_TITLE =
@@ -110,7 +110,7 @@ test.describe('Consultation documents', () => {
       const downloads = await files
         .locator('a[download]')
         .evaluateAll((links) => links.map((a) => a.getAttribute('href')))
-      expect([...downloads].sort()).toEqual([DRAFT_PDF, PAPER_PDF])
+      expect([...downloads].sort()).toEqual([DRAFT_PDF, PAPER_PDF].sort())
     })
   }
 

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { StatusBadge } from '@/components/documents/StatusBadge'
 import { Badge } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
-import { documentHref, fileSummary } from '@/lib/documents/catalogue'
+import { documentHref, fileSummary } from '@/lib/documents/store'
 import type { RegulatoryDocument } from '@/lib/documents/types'
 import { formatDate } from '@/lib/format-date'
 
@@ -14,7 +14,7 @@ export function DocumentCard({ doc }: { doc: RegulatoryDocument }) {
     <article className="flex gap-4 rounded-lg border border-line bg-white p-5 sm:p-6">
       <span className="hidden size-12 shrink-0 flex-col items-center justify-center rounded-lg bg-green-50 text-green-700 sm:flex">
         <Icon name="document" className="size-5" />
-        <span className="text-[0.625rem] font-bold">PDF</span>
+        <span className="text-[0.625rem] font-bold">{doc.file.kind}</span>
       </span>
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">

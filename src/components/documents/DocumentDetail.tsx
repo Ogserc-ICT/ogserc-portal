@@ -12,12 +12,7 @@ import { buttonClasses } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
 import { Icon } from '@/components/ui/Icon'
 import { Panel } from '@/components/ui/Panel'
-import {
-  consultationDocuments,
-  documentHref,
-  fileSummary,
-  relatedDocuments,
-} from '@/lib/documents/catalogue'
+import { consultationDocuments, documentHref, fileSummary } from '@/lib/documents/store'
 import type { RegulatoryDocument } from '@/lib/documents/types'
 import { formatDate } from '@/lib/format-date'
 import { hrefFor, routes } from '@/lib/navigation'
@@ -56,7 +51,7 @@ function Details({ doc }: { doc: RegulatoryDocument }) {
 }
 
 function Related({ doc }: { doc: RegulatoryDocument }) {
-  const related = relatedDocuments(doc)
+  const related = doc.related
   if (related.length === 0) return null
   return (
     <Panel id="related-documents" title="Related documents">
@@ -84,7 +79,7 @@ function FileHeader({ doc, heading }: { doc: RegulatoryDocument; heading: ReactN
     <div className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
       <div className="flex min-w-0 items-start gap-3">
         <span className="mt-0.5 shrink-0 rounded bg-danger px-2 py-1 text-xs font-bold text-white">
-          PDF
+          {doc.file.kind}
         </span>
         <div className="min-w-0">{heading}</div>
       </div>

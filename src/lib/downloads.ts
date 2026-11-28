@@ -1,4 +1,5 @@
-import { documentHref, documentsInCategory, fileSummary } from '@/lib/documents/catalogue'
+import { allDocuments, documentHref, fileSummary } from '@/lib/documents/store'
+import type { RegulatoryDocument } from '@/lib/documents/types'
 import type { DocumentStatus } from '@/lib/documents/types'
 import {
   FORM_VERSION,
@@ -49,27 +50,26 @@ const formItem = (form: RegistrationForm): DownloadItem => ({
   version: FORM_VERSION,
 })
 
-const itemsIn = (categoryPath: string): DownloadItem[] =>
-  categoryPath === routes.forms.path
-    ? registrationForms.map(formItem)
-    : documentsInCategory(categoryPath).map((doc) => ({
-        id: doc.slug,
-        title: doc.title,
-        reference: doc.reference,
-        fileSummary: fileSummary(doc),
-        href: doc.file.href,
-        downloadName: doc.file.downloadName,
-        downloadLabel: `Download ${doc.reference}, ${fileSummary(doc)}`,
-        pageHref: documentHref(doc),
-        date: doc.publicationDate,
-        status: doc.status,
-      }))
+const documentItem = (doc: RegulatoryDocument): DownloadItem => ({
+  id: doc.slug,
+  title: doc.title,
+  reference: doc.reference,
+  fileSummary: fileSummary(doc),
+  href: doc.file.href,
+  downloadName: doc.file.downloadName,
+  downloadLabel: `Download ${doc.reference}, ${fileSummary(doc)}`,
+  pageHref: documentHref(doc),
+  date: doc.publicationDate,
+  status: doc.status,
+})
 
-export const downloadGroups = (): DownloadGroup[] =>
-  instrumentCategories()
-    .map((category) => ({
-      id: category.path.split('/').pop() ?? category.path,
-      label: category.label,
-      items: itemsIn(category.path),
-    }))
+export async function downloadGroups(): Promise<DownloadGroup[]> {
+  const documents = await allDocuments()
+  const itemsIn = (categoryPath: string): DownloadItem[] =>
+    categoryPath === routes.forms.path
+      ? registrationForms.map(formItem)
+      : documents.filter((doc) => doc.categoryPath === categoryPath).map(documentItem)
+  return instrumentCategories()
+    .map((category) => ({ id: category.path.split('/').pop() ?? category.path, label: category.label, items: itemsIn(category.path) }))
     .filter((group) => group.items.length > 0)
+}

@@ -1,12 +1,15 @@
+import { BlocksFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
 import type { CollectionConfig, Condition } from 'payload'
+
+import { DocumentTableBlock } from '../blocks/DocumentTable'
+import { SignatoriesBlock } from '../blocks/Signatories'
 
 import { slugField } from '../fields/slug'
 import { contentCollection } from './content/content-collection'
 
 // Regulatory documents (SRS FR-DOC-01/02/05, FR-DRAFT-01, FR-CODE-01/02, D-091). One collection for
 // every Regulatory Instruments category; the category decides which listing page shows a document.
-// Its fields follow src/lib/documents/types.ts, so the documents now in catalogue.ts move in
-// unchanged in build step 6.
+// The first four documents moved in from code in build step 6 (D-102).
 
 /** The Regulatory Instruments categories (FR-DOC-01), in menu order. Values are the page addresses. */
 export const DOCUMENT_CATEGORIES = [
@@ -129,6 +132,14 @@ export const Documents: CollectionConfig = contentCollection({
           maxLength: 120,
           admin: { description: 'Shown beside the file, for example "Signed copy, scanned".' },
         },
+        {
+          name: 'filePages',
+          label: 'Number of pages',
+          type: 'number',
+          min: 1,
+          max: 5000,
+          admin: { description: 'Optional: shown beside the file size, for example "PDF, 2.5 MB, 20 pages".' },
+        },
       ],
     },
     {
@@ -141,6 +152,8 @@ export const Documents: CollectionConfig = contentCollection({
       name: 'body',
       label: 'Full text',
       type: 'richText',
+      // Tables and signatories have blocks of their own (D-102).
+      editor: lexicalEditor({ features: ({ defaultFeatures }) => [...defaultFeatures, BlocksFeature({ blocks: [DocumentTableBlock, SignatoriesBlock] })] }),
       admin: { description: 'Optional: the document’s text, exactly as issued, so it can be read and searched on the page.' },
     },
     {

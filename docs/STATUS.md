@@ -1,6 +1,6 @@
 # Project status
 
-Updated 2026-11-27. Plan for Step 5: `docs/step-5-plan.md` (Step 4: `docs/step-4-plan.md`).
+Updated 2026-11-28. Plan for Step 6: `docs/step-6-plan.md` (Step 5: `docs/step-5-plan.md`).
 
 ## Where things stand
 - **Steps 1, 2 and 2b** are merged. The live preview at `https://ogserc.org.ng` runs on OGSERC's VPS (D-054), with
@@ -87,7 +87,15 @@ Updated 2026-11-27. Plan for Step 5: `docs/step-5-plan.md` (Step 4: `docs/step-4
 - Waiting on OGSERC: approval of the Regulations (then check the page against them and publish), the general safety advice
   line, and the draft's inconsistencies listed in D-101.
 
+## Step 6 notes
+- Step 5 is complete: slice 3 (Consumer Complaint, D-101) PR #78 merged as `19385a3`, deployed and checked live 2026-11-28
+  ("being prepared" until OGSERC approves the regulation).
+- Plan approved 2026-11-28 (empty categories say "No documents have been published in this category yet").
+- Slice 1 (the four documents into the CMS, D-102): branch `feat/step-6-documents-cms`. CP/2026/001's dates extended to
+  7 December (comments) and 16 December (hearing) at the owner's word; the PDF still prints the old dates.
+
 ## Exact next step
-Merge and deploy Step 5 slice 3 (its first start runs one data migration, `20261127_120000_consumer_complaint`), then check
-`/consumer-complaint` on the live site says "being prepared" and that the draft is in the admin panel under Pages. Step 5 is
-then complete and Step 6 (Regulatory Instruments: document listings, filters, detail pages, status handling) is next.
+Merge and deploy Step 6 slice 1. Its first start runs two migrations (`20261128_154308_step6_document_pages`, then
+`20261128_154400_documents`, which uploads four PDFs to the bucket). Then check on the live site: the four document
+pages, their PDFs (from `/api/document-files/file/…`), the old `/documents/…pdf` addresses redirecting, Downloads, and
+the consultation dates. Then slice 2 (registration forms into the CMS).

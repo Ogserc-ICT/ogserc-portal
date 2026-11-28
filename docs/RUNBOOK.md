@@ -716,7 +716,8 @@ Build step 2 added temporary placeholders so OGSERC could review the design befo
 - [x] Hero slide headlines and action wording: slide 1 is OGSERC's tagline; the slide 2 and 3 headlines were drafted for the owner (D-057). OGSERC to confirm them before launch.
 - [ ] The inline splash script is hashed in, or moved out of, the Content-Security-Policy (step 12, D-038).
 - [x] Contact section map added, loading from Google only on request (D-058). The strict CSP must allow `frame-src https://www.google.com` (step 12).
-- [ ] `src/lib/documents/catalogue.ts` emptied: every document moved into the Documents collection, its PDF into object storage, and `public/documents/` deleted (step 6, D-060).
+- [x] `src/lib/documents/catalogue.ts` deleted: the four documents are in the Documents collection, their PDFs in object storage, and `public/documents/` gone; the old addresses redirect (step 6 slice 1, D-102).
+- [ ] `src/lib/forms/registration.ts` deleted: the registration forms in the Documents collection and `public/forms/` gone (step 6 slice 2).
 - [ ] The contact form sends email, with rate limiting, a configurable inbox and SPF/DKIM/DMARC; until then it offers a `mailto:` link (D-059).
 - [ ] `src/app/(frontend)/design-system/` (the review page) deleted (D-031).
 - [ ] No menu entry in `src/lib/navigation.ts` still has `ready: false`, and `/being-prepared` is removed or unused (D-027).
