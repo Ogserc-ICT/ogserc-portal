@@ -62,6 +62,7 @@ export default defineConfig({
     { name: 'documents', testMatch: 'documents.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'public-pages', testMatch: 'public-pages.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'consumer-complaint', testMatch: 'consumer-complaint.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
+    { name: 'document-pages', testMatch: 'document-pages.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     { name: 'content-collections', testMatch: 'content-collections.spec.ts', dependencies: ['first-user'], use: { ...devices['Desktop Chrome'] } },
     {
       name: 'document-files',

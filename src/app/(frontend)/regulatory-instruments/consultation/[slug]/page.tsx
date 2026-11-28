@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
 import { DocumentDetail } from '@/components/documents/DocumentDetail'
-import { documentsInCategory, findDocument } from '@/lib/documents/catalogue'
+import { findDocument } from '@/lib/documents/store'
 import type { RegulatoryDocument } from '@/lib/documents/types'
 import { routes } from '@/lib/navigation'
 
@@ -10,15 +10,9 @@ const category = routes.consultation
 
 type Props = { params: Promise<{ slug: string }> }
 
-// Only the documents in the catalogue exist; any other address is a 404.
-export const dynamicParams = false
-
-export function generateStaticParams() {
-  return documentsInCategory(category.path).map((doc) => ({ slug: doc.slug }))
-}
-
 async function load(params: Props['params']): Promise<RegulatoryDocument> {
-  const doc = findDocument(category.path, (await params).slug)
+  // Published documents only (D-102); any other address, a draft's included, is a 404.
+  const doc = await findDocument(category.path, (await params).slug)
   if (!doc) notFound()
   return doc
 }

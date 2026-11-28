@@ -21,8 +21,8 @@ export const metadata: Metadata = {
 const countLabel = (n: number) => `${n} ${n === 1 ? 'file' : 'files'}`
 
 /** Resources > Downloads (D-067): every file on the site, grouped by document type. */
-export default function DownloadsPage() {
-  const groups = downloadGroups()
+export default async function DownloadsPage() {
+  const groups = await downloadGroups()
 
   return (
     <>

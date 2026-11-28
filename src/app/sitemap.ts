@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-import { documentHref, documentsInCategory } from '@/lib/documents/catalogue'
+import { allDocuments, documentHref } from '@/lib/documents/store'
 import { privacyPolicy, termsOfService } from '@/lib/legal/legal-pages'
 import { routes } from '@/lib/navigation'
 import { findPage, pagedItems } from '@/lib/cms/content'
@@ -23,12 +23,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Ready in the menu, but only a real page once its CMS text is published (D-101).
   if (!(await findPage(CONSUMER_COMPLAINT_SLUG))) pages.delete(routes.consumerComplaint.path)
 
-  const documents = [routes.ordersAndDirectives, routes.consultation].flatMap((category) =>
-    documentsInCategory(category.path).map((doc) => ({
-      url: absoluteUrl(documentHref(doc)),
-      lastModified: doc.publicationDate,
-    })),
-  )
+  const documents = (await allDocuments()).map((doc) => ({
+    url: absoluteUrl(documentHref(doc)),
+    lastModified: doc.publicationDate,
+  }))
 
   return [
     ...[...pages].map((path) => ({ url: absoluteUrl(path) })),

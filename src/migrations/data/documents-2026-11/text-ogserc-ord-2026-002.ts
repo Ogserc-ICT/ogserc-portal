@@ -1,6 +1,7 @@
 import type { DocumentBlock } from './types'
 
-// Text of Order OGSERC/ORD/2026/002, typed from OGSERC's signed scan (D-070): no Word file was
+// A frozen copy (2026-11-28, D-102), for the documents migration only. The text of
+// Order OGSERC/ORD/2026/002, typed from OGSERC's signed scan (D-070): no Word file was
 // supplied. Do not edit the wording: it must match the signed copy, including its spelling
 // ("license", "regularization") and slips. Corrections come from OGSERC as a new file.
 export const textOgsercOrd2026002: DocumentBlock[] = [

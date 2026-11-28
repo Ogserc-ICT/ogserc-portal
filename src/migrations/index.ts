@@ -18,6 +18,8 @@ import * as migration_20261125_135900_about_content from './20261125_135900_abou
 import * as migration_20261126_182624_step5_pages_last_updated from './20261126_182624_step5_pages_last_updated';
 import * as migration_20261126_182700_legal_pages from './20261126_182700_legal_pages';
 import * as migration_20261127_120000_consumer_complaint from './20261127_120000_consumer_complaint';
+import * as migration_20261128_154308_step6_document_pages from './20261128_154308_step6_document_pages';
+import * as migration_20261128_154400_documents from './20261128_154400_documents';
 
 export const migrations = [
   {
@@ -119,5 +121,15 @@ export const migrations = [
     up: migration_20261127_120000_consumer_complaint.up,
     down: migration_20261127_120000_consumer_complaint.down,
     name: '20261127_120000_consumer_complaint',
+  },
+  {
+    up: migration_20261128_154308_step6_document_pages.up,
+    down: migration_20261128_154308_step6_document_pages.down,
+    name: '20261128_154308_step6_document_pages',
+  },
+  {
+    up: migration_20261128_154400_documents.up,
+    down: migration_20261128_154400_documents.down,
+    name: '20261128_154400_documents',
   },
 ];

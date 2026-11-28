@@ -10,18 +10,19 @@ const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 const PAGE = '/resources/downloads'
 const PUBLIC = path.join(process.cwd(), 'public')
 
-/** Every document and form file under public/, as site addresses. */
+/** The documents' files in the CMS (D-102), and the forms under public/, as site addresses. */
+const DOCUMENT_FILES = [
+  '/api/document-files/file/OGSERC-CP-2026-001.pdf',
+  '/api/document-files/file/OGSERC-Draft-Order-State-Grid-and-OGEM.pdf',
+  '/api/document-files/file/OGSERC-ORD-2026-001.pdf',
+  '/api/document-files/file/OGSERC-ORD-2026-002.pdf',
+]
+
 function publishedFiles(): string[] {
-  const walk = (dir: string): string[] =>
-    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-      const full = path.join(dir, entry.name)
-      return entry.isDirectory() ? walk(full) : [full]
-    })
-  return ['documents', 'forms']
-    .flatMap((dir) => walk(path.join(PUBLIC, dir)))
+  const forms = readdirSync(path.join(PUBLIC, 'forms', 'registration'))
     .filter((file) => /\.(pdf|docx?|xlsx?)$/i.test(file))
-    .map((file) => '/' + path.relative(PUBLIC, file).split(path.sep).join('/'))
-    .sort()
+    .map((file) => `/forms/registration/${file}`)
+  return [...DOCUMENT_FILES, ...forms].sort()
 }
 
 test.describe('Downloads page', () => {

@@ -1,5 +1,5 @@
-// Regulatory documents (SRS FR-DOC-02). Until the Documents collection exists (build steps 4 and 6)
-// they are listed in catalogue.ts; the fields follow FR-DOC-02 so the move to the CMS is direct.
+// Regulatory documents (SRS FR-DOC-02) as the pages show them, read from the Documents collection
+// (src/lib/documents/store.ts, D-102).
 
 export type DocumentStatus = 'draft' | 'published' | 'superseded' | 'revoked'
 
@@ -18,9 +18,9 @@ export type DocumentBlock =
       text: string
       /** A lettered or numbered item under a sub-paragraph. */
       indent?: boolean
-      /** The opening words ("WHEREAS:", "NOW THEREFORE", "MADE at") are shown in bold. */
-      strongLead?: boolean
-      /** A reference line under a schedule heading, such as "(Paragraph 12)". */
+      /** Opening words shown in bold, such as "WHEREAS:" (the start of `text`). */
+      lead?: string
+      /** A reference line under a schedule heading, such as "(Paragraph 12)", in italics. */
       note?: boolean
     }
   | { type: 'list'; items: string[] }
@@ -28,12 +28,14 @@ export type DocumentBlock =
   | { type: 'signatories'; people: { name: string; role: string; organisation: string }[] }
 
 export type DocumentFile = {
-  /** Path under public/. */
+  /** The file's address. */
   href: string
+  /** "PDF", "Word" or "Excel". */
+  kind: string
   /** File name offered when downloading. */
   downloadName: string
   sizeBytes: number
-  pages: number
+  pages?: number
   /** Shown beside the file, e.g. "Signed copy, scanned". */
   description: string
 }
@@ -69,7 +71,7 @@ export type RegulatoryDocument = {
   enquiries?: { email: string; note: string }
   /** A document published for comment (FR-DRAFT-01, FR-DRAFT-02), as the consultation paper sets out. */
   consultation?: Consultation
-  /** Slugs of related documents. */
-  related: string[]
+  /** Related documents the public may see. */
+  related: RegulatoryDocument[]
   tags: string[]
 }

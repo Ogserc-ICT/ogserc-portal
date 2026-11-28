@@ -5,13 +5,13 @@ import { InstrumentNav } from '@/components/documents/InstrumentNav'
 import { PageBand } from '@/components/layout/PageBand'
 import { Container } from '@/components/ui/Container'
 import { Icon } from '@/components/ui/Icon'
-import { documentsInCategory } from '@/lib/documents/catalogue'
+import { documentsInCategory } from '@/lib/documents/store'
 import { hrefFor, routes } from '@/lib/navigation'
 
 type Category = { label: string; path: string }
 
 /** A Regulatory Instruments category: its documents as cards, newest first (FR-DOC-03, D-060). */
-export function DocumentCategoryPage({
+export async function DocumentCategoryPage({
   category,
   intro,
   children,
@@ -21,7 +21,7 @@ export function DocumentCategoryPage({
   /** Shown above the list, e.g. how to comment on a consultation. */
   children?: ReactNode
 }) {
-  const documents = documentsInCategory(category.path)
+  const documents = await documentsInCategory(category.path)
   const count = `${documents.length} ${documents.length === 1 ? 'document' : 'documents'}`
 
   return (

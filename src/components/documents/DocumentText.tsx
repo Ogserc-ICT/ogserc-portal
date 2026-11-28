@@ -14,10 +14,8 @@ function anchorFor(text: string): string | undefined {
   return undefined
 }
 
-const LEAD = /^(WHEREAS:|NOW THEREFORE|MADE)/
-
 function Paragraph({ block }: { block: Extract<DocumentBlock, { type: 'paragraph' }> }) {
-  const lead = block.strongLead ? LEAD.exec(block.text)?.[0] : undefined
+  const lead = block.lead && block.text.startsWith(block.lead) ? block.lead : undefined
   const className = block.note
     ? 'text-sm text-ink-muted italic'
     : block.indent

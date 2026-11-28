@@ -60,7 +60,7 @@ const PUBLIC = { overrideAccess: false } as const
  * password rules on the admin's create-first-user form (caught by CI, D-096). The migrations have
  * run at boot, so this instance's start applies none.
  */
-async function cms() {
+export async function cms() {
   await connection()
   return getPayload({ config, key: 'public-pages' })
 }

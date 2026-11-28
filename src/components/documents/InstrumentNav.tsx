@@ -1,13 +1,10 @@
 import Link from 'next/link'
 
 import { Icon } from '@/components/ui/Icon'
-import { countInCategory } from '@/lib/documents/catalogue'
+import { categoryCounts } from '@/lib/documents/store'
 import { registrationForms } from '@/lib/forms/registration'
 import { hrefFor, instrumentCategories, routes } from '@/lib/navigation'
 
-// The forms are static files, not catalogue documents, until build step 4 (D-063).
-const itemCount = (path: string): number =>
-  path === routes.forms.path ? registrationForms.length : countInCategory(path)
 
 /**
  * The Regulatory Instruments categories beside a document list or page. A row of pills that
@@ -15,7 +12,10 @@ const itemCount = (path: string): number =>
  * `min-w-0` keeps the pill row from widening its grid column, and `relative` on each link keeps
  * its screen-reader count inside the scrolling row; either would otherwise widen the whole page.
  */
-export function InstrumentNav({ currentPath }: { currentPath: string }) {
+export async function InstrumentNav({ currentPath }: { currentPath: string }) {
+  const counts = await categoryCounts()
+  // The registration forms are static files until step 6 slice 2 (D-063).
+  const itemCount = (path: string): number => (path === routes.forms.path ? registrationForms.length : (counts.get(path) ?? 0))
   return (
     <nav aria-labelledby="instrument-types" className="min-w-0">
       <h2

@@ -6,7 +6,9 @@ import { expect, test } from '@playwright/test'
 const WCAG_21_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 const LIST = '/regulatory-instruments/orders-and-directives'
 const ORDER = `${LIST}/ogserc-ord-2026-001`
-const PDF = '/documents/orders-and-directives/ogserc-ord-2026-001.pdf'
+// The file in the CMS (D-102); its old address under public/ redirects to it.
+const PDF = '/api/document-files/file/OGSERC-ORD-2026-001.pdf'
+const OLD_PDF = '/documents/orders-and-directives/ogserc-ord-2026-001.pdf'
 const TITLE =
   'Order on the Commencement of Operations of the Commission and the Mandatory Registration of Licensees and Electricity Operators in Ogun State, 2026'
 
@@ -98,6 +100,13 @@ test.describe('Order page', () => {
     expect((await response.body()).subarray(0, 5).toString()).toBe('%PDF-')
   })
 
+  test('the old PDF address redirects to it, and an unknown one is not found', async ({ request }) => {
+    const response = await request.get(OLD_PDF, { maxRedirects: 0 })
+    expect(response.status()).toBe(308)
+    expect(response.headers()['location']).toBe(PDF)
+    expect((await request.get('/documents/orders-and-directives/no-such-order.pdf')).status()).toBe(404)
+  })
+
   test('has no WCAG 2.1 AA violations', async ({ page }) => {
     const results = await new AxeBuilder({ page }).withTags(WCAG_21_AA).analyze()
     expect(results.violations).toEqual([])
@@ -111,7 +120,7 @@ test.describe('Order page', () => {
 
 test.describe('Order 002 (D-070)', () => {
   const ORDER_2 = `${LIST}/ogserc-ord-2026-002`
-  const PDF_2 = '/documents/orders-and-directives/ogserc-ord-2026-002.pdf'
+  const PDF_2 = '/api/document-files/file/OGSERC-ORD-2026-002.pdf'
   const TITLE_2 =
     'Order on the Transitional Adoption of NERC Regulatory Instruments in the Ogun State Electricity Market'
 
