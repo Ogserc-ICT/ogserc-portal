@@ -110,7 +110,7 @@ test.describe('Consultation documents', () => {
       const downloads = await files
         .locator('a[download]')
         .evaluateAll((links) => links.map((a) => a.getAttribute('href')))
-      expect([...downloads].sort()).toEqual([DRAFT_PDF, PAPER_PDF])
+      expect([...downloads].sort()).toEqual([DRAFT_PDF, PAPER_PDF].sort())
     })
   }
 

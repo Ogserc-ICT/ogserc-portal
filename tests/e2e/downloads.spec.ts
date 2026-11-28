@@ -54,13 +54,15 @@ test.describe('Downloads page', () => {
   })
 
   test('every download returns its file', async ({ page, request }) => {
-    // Fifteen files through the dev server; HEAD checks each one without downloading it.
+    // Fifteen files through the dev server, fetched as a browser downloads them (GET). A HEAD request
+    // to the CMS's file route (D-102) answered 404 for one file in CI while GET served it; not
+    // investigated further, as browsers do not use HEAD to download.
     test.setTimeout(120_000)
     const hrefs = await page
       .locator('main a[download]')
       .evaluateAll((links) => links.map((a) => a.getAttribute('href') ?? ''))
     for (const href of hrefs) {
-      const response = await request.head(href)
+      const response = await request.get(href)
       expect(response.status(), href).toBe(200)
     }
   })
